@@ -1,0 +1,3 @@
+[submodule "thirdparty/api-connectors"]
+	path = thirdparty/api-connectors
+	url = git@github.com:rorymcstay/api-connectors.git
