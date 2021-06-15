@@ -10,6 +10,7 @@
 
 #include <model/Quote.h>
 #include <model/Instrument.h>
+#include <filesystem>
 #include <model/Trade.h>
 #include <thread>
 #include <iomanip>
@@ -22,7 +23,6 @@
 
 using namespace io::swagger::client;
 namespace ws = web::websockets;
-
 
 
 
@@ -73,16 +73,30 @@ class BatchWriter
     std::string _dateString;
     std::string _tableName;
     std::string _symbol;
+    std::string _storage;
     std::string _fileLocation;
+
+    void update_file_location() {
+        _dateString = formatTime(std::chrono::system_clock::now());
+        std::string location = _storage+ "/" + _dateString;
+        auto directoryLocation = std::filesystem::path(location);
+        if (not std::filesystem::exists(directoryLocation))
+        {
+            std::filesystem::create_directories(directoryLocation);
+        }
+        _fileLocation = location + "/" + _tableName + "_" + _symbol + ".json";
+    }
+
 public:
-    BatchWriter(std::string tableName_, std::string symbol_)
+    BatchWriter(std::string tableName_, std::string symbol_, std::string storage_)
     :   _batchSize(1000)
     ,   _filehandle()
     ,   _batch()
     ,   _dateString(formatTime(std::chrono::system_clock::now()))
     ,   _tableName(std::move(tableName_))
     ,   _symbol(std::move(symbol_))
-    ,   _fileLocation(_dateString + "/" + _tableName + "_"+ _symbol +".json")
+    ,   _storage(std::move(storage_))
+    ,   _fileLocation(_storage + "/" +_dateString + "/" + _tableName + "_"+ _symbol +".json")
     {
         _batch.reserve(_batchSize);
     }
@@ -98,10 +112,11 @@ public:
         _filehandle.open(_fileLocation, std::ios::app);
         for (auto& message : _batch)
         {
-            _filehandle << *message;
+            _filehandle << *message << "\n";
         }
         _filehandle.close();
         _batch.clear();
+        update_file_location();
     }
 
 };
@@ -112,9 +127,9 @@ int main() {
     auto marketData = std::make_shared<MarketData>();
     std::string date_string = formatTime(std::chrono::system_clock::now());
     std::string symbol = "XBTUSD";
-    auto trades = std::make_shared<BatchWriter>("trades", symbol);
-    auto instruments = std::make_shared<BatchWriter>("instruments", symbol);
-    auto quotes = std::make_shared<BatchWriter>("quotes", symbol);
+    auto trades = std::make_shared<BatchWriter>("trades", symbol, "/home/rory/dev/tradingo/");
+    auto instruments = std::make_shared<BatchWriter>("instruments", symbol, "/home/rory/dev/tradingo/");
+    auto quotes = std::make_shared<BatchWriter>("quotes", symbol, "/home/rory/dev/tradingo/");
 
     wsclient->set_message_handler(
             [&marketData](const ws::client::websocket_incoming_message& in_msg) {
