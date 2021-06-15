@@ -6,7 +6,7 @@ project(trading_bot)
 add_subdirectory(thirdparty)
 set(CMAKE_CXX_STANDARD 20)
 
-add_library(trading_funcs Event.cpp MarketData.cpp)
+add_library(trading_funcs Event.cpp MarketData.cpp BatchWriter.cpp)
 
 add_executable(trading_bot main.cpp)
 
