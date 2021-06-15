@@ -6,12 +6,12 @@
 #include "MarketData.h"
 
 std::string MarketData::getConnectionString() {
-    return _connectionString + "/realtime?subscriber=trade:" + _symbol + ",instrument:"+_symbol + ",quote:"+_symbol;
+    return _connectionString + "/realtime?subscribe=trade:" + _symbol + ",instrument:"+_symbol + ",quote:"+_symbol;
 }
 
 std::shared_ptr<Event> MarketData::read() {
-    //std::lock_guard<decltype(_mutex)> lock(_mutex);
-    auto event = _eventBuffer.empty() ? nullptr : _eventBuffer.top();
+    std::lock_guard<decltype(_mutex)> lock(_mutex);
+    auto event= _eventBuffer.empty() ? nullptr : _eventBuffer.top();
     if (event) {
         std::cout << "event_queue.size()=" << _eventBuffer.size() << "    ";
         _eventBuffer.pop();
@@ -34,7 +34,7 @@ MarketData::MarketData(std::string connectionString_, std::string symbol_)
             [&](const ws::client::websocket_incoming_message& in_msg) {
                 auto msg = in_msg.extract_string();
                 auto stringVal = msg.get();
-                std::cout << stringVal << std::endl;
+                //std::cout << stringVal << std::endl;
                 web::json::value msgJson = web::json::value::parse(stringVal);
                 if (msgJson.has_field("info")) {
                     return;

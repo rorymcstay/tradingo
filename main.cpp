@@ -36,7 +36,6 @@ int main(int argc, char **argv) {
 
     while (marketData)
     {
-        std::this_thread::sleep_for(std::chrono::seconds(5));
         auto data = marketData->read();
         if (data) {
             switch (data->eventType()) {case (EventType::BBO): {
