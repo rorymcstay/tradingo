@@ -57,18 +57,7 @@ public:
     void setEventType(EventType eventType_) {
         _eventType = eventType_;
     }
-    void setAction(const std::string& action_)
-    {
-        if (action_ == "update") {
-            _actionType = ActionType::Update;
-        } else if (action_ == "delete") {
-            _actionType = ActionType::Delete;
-        } else if (action_ == "insert") {
-            _actionType = ActionType::Insert;
-        } else if (action_ == "partial") {
-            _actionType = ActionType::Partial;
-        }
-    }
+    void setAction(const std::string& action_);
     const std::shared_ptr<model::Instrument> &getInstrument() const {
         return _instrument;
     }
