@@ -48,10 +48,10 @@ MarketData::MarketData(std::string connectionString_, std::string symbol_)
                 const std::string &action = msgJson.at("action").as_string();
                 web::json::array &data = msgJson.at("data").as_array();
                 if (table == "quote") {
-                    auto qts = getData<model::Quote>(data);
+                    auto qts = getData<model::Quote, decltype(_quotePool)>(data, _quotePool);
                     update(qts);
                 } else if (table == "trade") {
-                    auto trds = getData<model::Trade>(data);
+                    auto trds = getData<model::Trade, decltype(_tradePool)>(data, _tradePool);
                     update(trds);
                 }
             });

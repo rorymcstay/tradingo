@@ -35,7 +35,7 @@ void
 ObjectPool<T, size_, Releaser>::replace(T* ptr_, int pos)
 {
     auto releaser = [this, pos](T* ptr) { Releaser()(ptr); replace(ptr, pos); };
-    _freeObjectRegistry[pos] = std::shared_ptr<T>(ptr_, releaser);  
+    _freeObjectRegistry[pos] = std::shared_ptr<T>(ptr_, releaser);
 }
 
 template<typename T, size_t size_, typename Releaser>
@@ -56,7 +56,7 @@ ObjectPool<T, size_, Releaser>::get()
         if (index >= _size)
             throw std::out_of_range("Pool fully allocated");
     }
-    Ptr out = _freeObjectRegistry[index];
+    TPtr out = _freeObjectRegistry[index];
     _freeObjectRegistry[index] = nullptr;
     return out;
 }

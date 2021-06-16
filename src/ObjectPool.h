@@ -39,7 +39,8 @@ template<typename T, size_t size_, typename Releaser>
 class ObjectPool
 {
 public:
-    using Ptr = std::shared_ptr<T>;
+    using TPtr = std::shared_ptr<T>;
+    using Ptr = std::shared_ptr<ObjectPool<T,size_,Releaser>>;
     ObjectPool();
     ~ObjectPool() {};
     std::shared_ptr<T> get();
@@ -49,8 +50,8 @@ private:
 
     Deleter<T>          _releaser; 
     size_t              _size;
-    std::vector<Ptr>    _freeObjectRegistry;
-    std::vector<Ptr>    _usedObjectRegistry;
+    std::vector<TPtr>    _freeObjectRegistry;
+    std::vector<TPtr>    _usedObjectRegistry;
 private:
     void initialise();
     void replace(T* ptr_, int pos );

@@ -2,31 +2,51 @@
 #include <string>
 #include <filesystem>
 
+#include <boost/program_options.hpp>
+
 #include "MarketData.h"
 #include "Event.h"
 #include "BatchWriter.h"
 #include "InputParser.h"
+#include "Utils.h"
 
 
 using namespace io::swagger::client;
 namespace ws = web::websockets;
+namespace po = boost::program_options;
 
 // TODO Move to app, src directory
 
 int main(int argc, char **argv) {
 
+    po::options_description desc("Allowed options");
+    desc.add_options()
+            ("help", "produce help message")
+            ("storage", po::value<std::string>(), "where to store files")
+            ("symbol", po::value<std::string>(), "symbol")
+            ("connection", po::value<std::string>(), "base url of bitmex exchange");
+
     auto cliParser = std::make_shared<InputParser>(argc, argv);
+
 
     std::string connectionString = "wss://www.bitmex.com";
     std::string symbol = "XBTUSD";
     std::string storage = "/home/rory/dev/tradingo/";
 
-    if (cliParser->cmdOptionExists("symbol"))
-        symbol = cliParser->getCmdOption("symbol");
-    if (cliParser->cmdOptionExists("connection"))
-        connectionString = cliParser->getCmdOption("connection");
-    if (cliParser->cmdOptionExists("storage"))
-        storage = cliParser->getCmdOption("storage");
+    po::variables_map vm;
+    po::store(po::parse_command_line(argc, argv, desc), vm);
+    po::notify(vm);
+
+    if (vm.contains("storage")) {
+        storage = vm.at("storage").as<std::string>();
+    }
+    if (vm.contains("connection")) {
+        connectionString = vm.at("connection").as<std::string>();
+    }
+    if (vm.contains("symbol")) {
+        symbol = vm.at("symbol").as<std::string>();
+    }
+    INFO("Starting tick recording with " << LOG_VAR(symbol) << LOG_VAR(connectionString) << LOG_VAR(storage));
 
     auto marketData = std::make_shared<MarketData>(connectionString, symbol);
 
