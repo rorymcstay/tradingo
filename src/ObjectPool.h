@@ -61,7 +61,7 @@ private:
 
 } // cache
 
-#include "cache.hpp"
+#include "ObjectPool.hpp"
 
 #endif
 
