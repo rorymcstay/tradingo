@@ -11,6 +11,7 @@
 using namespace io::swagger::client;
 namespace ws = web::websockets;
 
+// TODO Move to app, src directory
 
 int main(int argc, char **argv) {
 
@@ -40,13 +41,11 @@ int main(int argc, char **argv) {
         if (data) {
             switch (data->eventType()) {case (EventType::BBO): {
                     auto qt = data->getQuote();
-                    std::cout << "Quote[" << qt->toJson().serialize() << "]\n";
                     quotes->write(qt);
                     break;
                 }
                 case EventType::TradeUpdate: {
                     auto trd = data->getTrade();
-                    std::cout << "Trade[" << trd->toJson().serialize() << "]\n";
                     trades->write(trd);
                     break;
                 }
@@ -54,7 +53,6 @@ int main(int argc, char **argv) {
                     auto instr = data->getInstrument();
                     // TODO: use base class
                     // auto http = model::ModelBase;
-                    std::cout << "Instrument[" << instr->toJson().serialize() << "]\n";
                     instruments->write(instr);
                 }
             }

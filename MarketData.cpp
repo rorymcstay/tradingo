@@ -13,7 +13,7 @@ std::shared_ptr<Event> MarketData::read() {
     std::lock_guard<decltype(_mutex)> lock(_mutex);
     auto event= _eventBuffer.empty() ? nullptr : _eventBuffer.top();
     if (event) {
-        std::cout << "event_queue.size()=" << _eventBuffer.size() << "    ";
+        //std::cout << "event_queue.size()=" << _eventBuffer.size() << "    \n";
         _eventBuffer.pop();
     }
     return event;
