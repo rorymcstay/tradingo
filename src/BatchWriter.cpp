@@ -2,6 +2,7 @@
 // Created by rory on 15/06/2021.
 //
 #include "BatchWriter.h"
+#include "Utils.h"
 
 using timestamp_t = std::chrono::time_point<std::chrono::system_clock>;
 
@@ -25,20 +26,21 @@ void BatchWriter::update_file_location() {
     auto directoryLocation = std::filesystem::path(location);
     if (not std::filesystem::exists(directoryLocation))
     {
+        INFO("Creating new directory " << LOG_VAR(directoryLocation));
         std::filesystem::create_directories(directoryLocation);
     }
     _fileLocation = location + "/" + _tableName + "_" + _symbol + ".json";
 }
 
 BatchWriter::BatchWriter(std::string tableName_, std::string symbol_, std::string storage_)
-        :   _batchSize(1000)
-        ,   _filehandle()
-        ,   _batch()
-        ,   _dateString(formatTime(std::chrono::system_clock::now()))
-        ,   _tableName(std::move(tableName_))
-        ,   _symbol(std::move(symbol_))
-        ,   _storage(std::move(storage_))
-        ,   _fileLocation(_storage + "/" +_dateString + "/" + _tableName + "_"+ _symbol +".json")
+:   _batchSize(1000)
+,   _filehandle()
+,   _batch()
+,   _dateString(formatTime(std::chrono::system_clock::now()))
+,   _tableName(std::move(tableName_))
+,   _symbol(std::move(symbol_))
+,   _storage(std::move(storage_))
+,   _fileLocation(_storage + "/" +_dateString + "/" + _tableName + "_"+ _symbol +".json")
 {
     _batch.reserve(_batchSize);
 }
@@ -50,7 +52,7 @@ void BatchWriter::write(std::shared_ptr<model::ModelBase> item_) {
 }
 
 void BatchWriter::write_batch() {
-    std::cout << "Writing batch " << _tableName << '\n';
+    INFO("Writing batch " << LOG_VAR(_tableName) << " to " << LOG_VAR(_fileLocation));
     _filehandle.open(_fileLocation, std::ios::app);
     for (auto& message : _batch)
     {
