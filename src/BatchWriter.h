@@ -5,24 +5,18 @@
 #ifndef TRADING_BOT_BATCHWRITER_H
 #define TRADING_BOT_BATCHWRITER_H
 
-#include "Event.h"
-#include "MarketData.h"
 #include <iomanip>
 #include <thread>
-#include <model/Trade.h>
-#include <filesystem>
-#include <model/Instrument.h>
-#include <model/Quote.h>
-#include <ranges>
 #include <mutex>
-#include <cpprest/json.h>
-#include <cpprest/ws_client.h>
+#include <ModelBase.h>
+
 #include <sstream>
 #include <string>
 #include <map>
 #include <iostream>
 #include <cstdlib>
 
+using namespace io::swagger::client;
 
 class BatchWriter
 {

@@ -5,8 +5,6 @@
 #include <functional>
 
 
-
-
 namespace cache
 {
 
@@ -40,18 +38,15 @@ ObjectPool<T, size_, Releaser>::replace(T* ptr_, int pos)
 
 template<typename T, size_t size_, typename Releaser>
 size_t
-ObjectPool<T, size_, Releaser>::size()
-{
+ObjectPool<T, size_, Releaser>::size() {
     return _size;
 }
 
 template<typename T, size_t size_, typename Releaser>
 std::shared_ptr<T>
-ObjectPool<T, size_, Releaser>::get()
-{
+ObjectPool<T, size_, Releaser>::get() {
     size_t index(0);
-    while (!_freeObjectRegistry[index].get())
-    {
+    while (!_freeObjectRegistry[index].get()) {
         ++index;
         if (index >= _size)
             throw std::out_of_range("Pool fully allocated");
