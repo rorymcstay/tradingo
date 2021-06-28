@@ -7,7 +7,6 @@
 #include "MarketData.h"
 #include "Event.h"
 #include "BatchWriter.h"
-#include "InputParser.h"
 #include "Utils.h"
 
 
@@ -25,9 +24,6 @@ int main(int argc, char **argv) {
             ("storage", po::value<std::string>(), "where to store files")
             ("symbol", po::value<std::string>(), "symbol")
             ("connection", po::value<std::string>(), "base url of bitmex exchange");
-
-    auto cliParser = std::make_shared<InputParser>(argc, argv);
-
 
     std::string connectionString = "wss://www.bitmex.com";
     std::string symbol = "XBTUSD";

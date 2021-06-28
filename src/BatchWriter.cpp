@@ -1,18 +1,18 @@
 //
 // Created by rory on 15/06/2021.
 //
+#include <model/Trade.h>
+#include <filesystem>
 #include "BatchWriter.h"
 
 using timestamp_t = std::chrono::time_point<std::chrono::system_clock>;
 
-std::ostream& operator << (std::ostream& ss_, const model::ModelBase& modelBase)
-{
+std::ostream& operator << (std::ostream& ss_, const model::ModelBase& modelBase) {
     ss_ << modelBase.toJson().serialize();
     return ss_;
 }
 
-std::string formatTime(timestamp_t time_)
-{
+std::string formatTime(timestamp_t time_) {
     auto outTime = std::chrono::system_clock::to_time_t(time_);
     std::stringstream ss;
     ss << std::put_time(localtime(&outTime), "%Y-%m-%d");

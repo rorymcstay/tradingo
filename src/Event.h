@@ -26,6 +26,7 @@ enum class ActionType {Update, Delete, Insert, Partial};
 class Event
 {
 private:
+    // TODO add execution, remove _instrument
     std::shared_ptr<io::swagger::client::model::Instrument> _instrument;
     std::shared_ptr<io::swagger::client::model::Trade> _trade;
     std::shared_ptr<io::swagger::client::model::Quote> _quote;

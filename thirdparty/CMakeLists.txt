@@ -1,10 +1,15 @@
 #### Third party ####
 
-# Installed packages
+# Installed packagesbb
 find_package(CPPRESTSDK REQUIRED)
 find_package(OpenSSL REQUIRED)
 find_package(Boost REQUIRED)
 find_package(Threads REQUIRED)
+
+#set(CPPREST_LIBRARY ${CPPREST_ROOT}/lib/libcpprest.dylib PARENT_SCOPE)
+
+include_directories(${OPENSSL_INCLUDE_DIR})
+include_directories(${BOOST_INCLUDE_DIR})
 
 ### BITMEX CPPRest swagger ###
 add_subdirectory(api-connectors/auto-generated/cpprest)
