@@ -23,21 +23,21 @@ ObjectPool<T, size_, Releaser>::initialise()
     _freeObjectRegistry.reserve(_size);
     for (size_t i(0); i < _size; i++)
     {
-        auto releaser = [this, i](T* ptr) { Releaser()(ptr); replace(ptr, i); };
+        auto releaser = [this, i](T* ptr) {
+            Releaser()(ptr);
+            replace(ptr, i);
+        };
         _freeObjectRegistry.emplace_back(new T(), releaser);
     }
 }
 
 template<typename T, size_t size_, typename Releaser>
 void
-ObjectPool<T, size_, Releaser>::replace(const std::shared_ptr<T>& ptr_, int pos)
+ObjectPool<T, size_, Releaser>::replace(T* ptr_, int pos)
 {
-    auto releaser = [this, pos](const std::shared_ptr<T>& ptr) {
-        Releaser()(ptr);
-        _freeObjectRegistry[pos] = ptr;
-    };
-    ptr_.
-
+    auto& toReplace = _freeObjectRegistry[pos];
+    //toReplace.reset(ptr_, Releaser()(ptr_.get()));
+    ptr_ = nullptr;
 }
 
 template<typename T, size_t size_, typename Releaser>

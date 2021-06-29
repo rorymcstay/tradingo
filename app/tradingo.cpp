@@ -40,7 +40,7 @@ int main(int argc, char **argv) {
 
     while (strategy->shouldEval()) {
         strategy->evaluate();
-        std::this_thread::sleep_for(std::chrono::seconds(1));
+        std::this_thread::sleep_for(std::chrono::(1));
     }
     INFO("exiting");
 }

@@ -53,7 +53,7 @@ std::vector<std::shared_ptr<T>>  getData(web::json::array& data_, ObjPool& pool_
 
 struct TradeReleaser {
 
-    void operator () (model::Trade* model_) {
+   void operator () (model::Trade* model_) {
         model_->unsetForeignNotional();
         model_->unsetGrossValue();
         model_->unsetHomeNotional();

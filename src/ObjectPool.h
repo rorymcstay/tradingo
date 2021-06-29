@@ -54,7 +54,7 @@ private:
     std::vector<TPtr>    _usedObjectRegistry;
 private:
     void initialise();
-    void replace(const std::shared_ptr<T>& ptr_, int pos );
+    void replace(T* ptr_, int pos );
 
 };
 
