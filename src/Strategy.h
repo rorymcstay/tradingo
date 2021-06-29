@@ -40,15 +40,15 @@ Strategy<TOrdApi>::Strategy(std::shared_ptr<MarketDataInterface> md_, std::share
 
 template<typename TOrdApi>
 void Strategy<TOrdApi>::evaluate() {
-    INFO("Evaluating strategy");
     auto event = _marketData->read();
     if (!event) {
         return;
     }
     if (event->eventType() == EventType::BBO)
     {
-        INFO("BBO Update " << LOG_NVP("AskPrice",event->getQuote()->getAskPrice())
-                     << LOG_NVP("BidPrice",event->getQuote()->getBidPrice()));
+        auto quote = event->getQuote();
+        INFO("BBO Update Bid=" << quote->getBidSize() << '@' << quote->getBidPrice()
+                    << " Ask=" << quote->getAskSize() << '@' << quote->getAskPrice());
     }
     if (event->eventType() == EventType::TradeUpdate)
     {

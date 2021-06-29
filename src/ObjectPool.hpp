@@ -30,10 +30,14 @@ ObjectPool<T, size_, Releaser>::initialise()
 
 template<typename T, size_t size_, typename Releaser>
 void
-ObjectPool<T, size_, Releaser>::replace(T* ptr_, int pos)
+ObjectPool<T, size_, Releaser>::replace(const std::shared_ptr<T>& ptr_, int pos)
 {
-    auto releaser = [this, pos](T* ptr) { Releaser()(ptr); replace(ptr, pos); };
-    _freeObjectRegistry[pos] = std::shared_ptr<T>(ptr_, releaser);
+    auto releaser = [this, pos](const std::shared_ptr<T>& ptr) {
+        Releaser()(ptr);
+        _freeObjectRegistry[pos] = ptr;
+    };
+    ptr_.
+
 }
 
 template<typename T, size_t size_, typename Releaser>
