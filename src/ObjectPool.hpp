@@ -35,9 +35,7 @@ template<typename T, size_t size_, typename Releaser>
 void
 ObjectPool<T, size_, Releaser>::replace(T* ptr_, int pos)
 {
-    auto& toReplace = _freeObjectRegistry[pos];
-    //toReplace.reset(ptr_, Releaser()(ptr_.get()));
-    ptr_ = nullptr;
+    _freeObjectRegistry[pos] = std::make_shared<T>(std::move(*ptr_));
 }
 
 template<typename T, size_t size_, typename Releaser>
