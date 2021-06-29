@@ -4,6 +4,7 @@
 
 
 #include "MarketData.h"
+#include "Utils.h"
 #include <model/Position.h>
 #include <model/Order.h>
 
@@ -19,7 +20,7 @@ std::shared_ptr<Event> MarketDataInterface::read() {
     std::lock_guard<decltype(_mutex)> lock(_mutex);
     auto event= _eventBuffer.empty() ? nullptr : _eventBuffer.top();
     if (event) {
-        //std::cout << "event_queue.size()=" << _eventBuffer.size() << "    \n";
+        std::cout << "event_queue.size()=" << _eventBuffer.size() << "    \n";
         _eventBuffer.pop();
     }
     return event;
@@ -43,10 +44,13 @@ MarketData::MarketData(std::string connectionString_, std::string symbol_)
                 //std::cout << stringVal << std::endl;
                 web::json::value msgJson = web::json::value::parse(stringVal);
                 if (msgJson.has_field("info")) {
+                    INFO("info: " << msgJson["info"].as_string());
+                    INFO("response" << msgJson.serialize());
                     return;
                 }
                 if (msgJson.has_field("success") && msgJson.at("success").as_bool()) {
                     _initialised = true;
+                    INFO("Initialised " << msgJson.serialize());
                     return;
                 }
 
@@ -88,8 +92,10 @@ MarketData::MarketData(std::string connectionString_, std::string symbol_)
 template<typename T>
 void MarketDataInterface::update(const std::vector<std::shared_ptr<T>> &data_) {
     std::lock_guard<decltype(_mutex)> lock(_mutex);
-    for (const auto& row : data_)
+    for (const auto& row : data_) {
         _eventBuffer.push(std::make_shared<Event>(row));
+    }
+
 }
 
 void MarketDataInterface::updatePositions(const std::vector<std::shared_ptr<model::Position>>& positions_) {

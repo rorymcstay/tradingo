@@ -25,7 +25,7 @@ using namespace io::swagger::client;
 
 class TestEnv
 {
-    using OrderApi = OrderInterface<TestOrdersApi>;
+    using OrderApi = TestOrdersApi;
     using TStrategy = Strategy<OrderApi>;
 
     std::shared_ptr<TestMarketData> _marketDataProvider;

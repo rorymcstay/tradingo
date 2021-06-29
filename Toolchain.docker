@@ -28,9 +28,10 @@ RUN apt-get update \
       python \
   && apt-get clean
 
-RUN apt-get install libcpprest-dev
-RUN apt-get install libgtest-dev
-RUN apt-get install libboost-all-dev
+RUN apt-get install -y \
+  libcpprest-dev \
+  libgtest-dev \
+  libboost-all-dev
 
 RUN ( \
     echo 'LogLevel INFO'; \
