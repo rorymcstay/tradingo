@@ -118,15 +118,15 @@ bool Strategy<TOrdApi>::createOrders(price_t bid, price_t ask) {
     _allocatedAsk += size;
     _sellOrder = sell;
 
-    _orderEngine->order_newBulk(
+    auto tsk = _orderEngine->order_newBulk(
             [buy, sell]() {
-                thread_local std::vector<std::string> orders;
-                orders.reserve(2);
-                orders.clear();
+                auto orders = web::json::value::array(2);
+                int count = 0;
                 for (auto& ord : {buy, sell})
-                    orders.push_back(ord->toJson().serialize());
+                    orders[count] = ord->toJson();
+                return orders.serialize();
             }());
-    );
+    tsk.get();
 }
 
 #endif //TRADINGO_STRATEGY_H

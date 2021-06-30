@@ -34,7 +34,8 @@ int main(int argc, char **argv) {
     auto apiConfig = std::make_shared<api::ApiConfiguration>();
     apiConfig->setBaseUrl(config->get("baseUrl"));
     apiConfig->setApiKey("apiKey", config->get("apiKey"));
-    auto orderManager = std::make_shared<api::OrderApi>( std::make_shared<api::ApiClient>(apiConfig));
+    auto apiClient = std::make_shared<api::ApiClient>(apiConfig);
+    auto orderManager = std::make_shared<api::OrderApi>( apiClient);
     auto strategy = std::make_shared<Strategy<api::OrderApi>>(marketData, orderManager);
     strategy->init(config);
 
