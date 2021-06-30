@@ -17,6 +17,7 @@ add_library(trading_funcs
         ObjectPool.hpp
         # templated
         Strategy.h
+        Context.cpp
         Config.cpp)
 
 target_link_libraries(trading_funcs

@@ -4,10 +4,17 @@
 #include "Utils.h"
 #include "Config.h"
 #include "MarketData.h"
+#include <openssl/hmac.h>
+
+
+#include <cpprest/oauth2.h>
+
+
 
 using namespace io::swagger::client;
 namespace ws = web::websockets;
 namespace po = boost::program_options;
+
 
 
 int main(int argc, char **argv) {
@@ -33,10 +40,21 @@ int main(int argc, char **argv) {
     auto marketData = std::make_shared<MarketData>(url, symbol);
     auto apiConfig = std::make_shared<api::ApiConfiguration>();
     apiConfig->setBaseUrl(config->get("baseUrl"));
-    apiConfig->setApiKey("apiKey", config->get("apiKey"));
+    auto httpConfig = web::http::client::http_client_config();
+    apiConfig->setApiKey("api-key", config->get("apiKey"));
+    std::stringstream sigstream;
+
+    auto ctx = HMAC_CTX_new();
+    //HMAC_Init_ex(ctx, config->get("key"), );
+    //web::http::oauth2::experimental::oauth2_config;
+
+    //sigstream << std::hex << ;
+    //apiConfig->setApiKey("api-expires", config->get(""));
+    //apiConfig->setApiKey("api-signature", config->get("apiSignature"));
     auto apiClient = std::make_shared<api::ApiClient>(apiConfig);
     auto orderManager = std::make_shared<api::OrderApi>( apiClient);
     auto strategy = std::make_shared<Strategy<api::OrderApi>>(marketData, orderManager);
+
     strategy->init(config);
 
     while (strategy->shouldEval()) {
@@ -44,4 +62,5 @@ int main(int argc, char **argv) {
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
     INFO("exiting");
+    return 0;
 }
