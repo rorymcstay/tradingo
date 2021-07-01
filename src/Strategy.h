@@ -26,7 +26,7 @@ class Strategy {
     std::vector<OrderPtr> _buyOrders;
     std::vector<OrderPtr> _sellOrders;
 
-    size_t _inventory;
+    size_t _inventory = 100;
     size_t _allocatedAsk = 0;
     size_t _allocatedBid = 0;
 
@@ -35,9 +35,10 @@ class Strategy {
 
     std::shared_ptr<model::Order> _sellOrder;
     std::shared_ptr<model::Order> _buyOrder;
+    int _attempted;
 
-    std::string _symbol;
-    std::string _clOrdIdPrefix;
+    std::string _symbol = "XBTUSD";
+    std::string _clOrdIdPrefix = "MCST";
     int _oidSeed;
 public:
     Strategy(std::shared_ptr<MarketDataInterface> mdPtr_,  std::shared_ptr<TOrdApi> od_);
@@ -98,35 +99,59 @@ bool Strategy<TOrdApi>::shouldEval() {
 
 template<typename TOrdApi>
 bool Strategy<TOrdApi>::createOrders(price_t bid, price_t ask) {
+    if (_attempted) {
+        return false;
+    }
     auto size = _inventory / 2;
     auto buy = std::make_shared<model::Order>();
     buy->setPrice(bid);
     buy->setSide("Buy");
     buy->setOrderQty(size);
     buy->setSymbol(_symbol);
-    buy->setClOrdID(_clOrdIdPrefix + std::to_string(_oidSeed));
-    _allocatedBid += size;
-    _buyOrder = buy;
-
+    buy->setClOrdID(_clOrdIdPrefix + std::to_string(_oidSeed++));
+    buy->setSymbol(_symbol);
 
     auto sell = std::make_shared<model::Order>();
     sell->setPrice(ask);
     sell->setSide("Sell");
     sell->setOrderQty(size - _allocatedAsk);
     sell->setSymbol(_symbol);
-    sell->setClOrdID(_clOrdIdPrefix + std::to_string(_oidSeed));
-    _allocatedAsk += size;
-    _sellOrder = sell;
+    sell->setClOrdID(_clOrdIdPrefix + std::to_string(_oidSeed++));
+    sell->setSymbol(_symbol);
 
-    auto tsk = _orderEngine->order_newBulk(
+    pplx::task<std::vector<std::shared_ptr<model::Order>>> tsk = _orderEngine->order_newBulk(
             [buy, sell]() {
                 auto orders = web::json::value::array(2);
                 int count = 0;
                 for (auto& ord : {buy, sell})
-                    orders[count] = ord->toJson();
-                return orders.serialize();
+                    orders[count++] = ord->toJson();
+                auto ordString = orders.serialize();
+                return ordString;
             }());
-    tsk.get();
+        tsk.then(
+                [=, this] (pplx::task<std::vector<std::shared_ptr<model::Order>>> task_) {
+                    try {
+                        INFO("send order callback.");
+                        INFO(task_.get()[0]->toJson().serialize());
+
+                    } catch (api::ApiException& apiException) {
+                        auto reason = apiException.getContent();
+                        INFO("APIException caught failed to send order: " << LOG_VAR(apiException.what())
+                                                                          << " ExceptionContent=" << reason->rdbuf());
+                        return;
+                    } catch (web::http::http_exception& httpException) {
+                        INFO("Failed to send order! " << LOG_VAR(httpException.what()) << LOG_VAR(httpException.error_code()));
+                        return;
+                    }
+                    _allocatedBid += size;
+                    _buyOrder = buy;
+                    _allocatedAsk += size;
+                    _sellOrder = sell;
+                });
+
+
+    _attempted = true;
+    return true;
 }
 
 #endif //TRADINGO_STRATEGY_H

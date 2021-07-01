@@ -42,17 +42,10 @@ int main(int argc, char **argv) {
     apiConfig->setBaseUrl(config->get("baseUrl"));
     auto httpConfig = web::http::client::http_client_config();
     apiConfig->setApiKey("api-key", config->get("apiKey"));
-    std::stringstream sigstream;
+    apiConfig->setApiKey("api-secret", config->get("apiSecret"));
 
-    auto ctx = HMAC_CTX_new();
-    //HMAC_Init_ex(ctx, config->get("key"), );
-    //web::http::oauth2::experimental::oauth2_config;
-
-    //sigstream << std::hex << ;
-    //apiConfig->setApiKey("api-expires", config->get(""));
-    //apiConfig->setApiKey("api-signature", config->get("apiSignature"));
     auto apiClient = std::make_shared<api::ApiClient>(apiConfig);
-    auto orderManager = std::make_shared<api::OrderApi>( apiClient);
+    auto orderManager = std::make_shared<api::OrderApi>(apiClient);
     auto strategy = std::make_shared<Strategy<api::OrderApi>>(marketData, orderManager);
 
     strategy->init(config);
