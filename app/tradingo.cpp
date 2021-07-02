@@ -35,26 +35,19 @@ int main(int argc, char **argv) {
     auto configfile = vm.at("config").as<std::string>();
     auto config = std::make_shared<Config>(configfile);
     std::string symbol = config->get("symbol");
-    std::string url = config->get("connectionString");
 
-    auto marketData = std::make_shared<MarketData>(url, symbol);
+    auto marketData = std::make_shared<MarketData>(config);
     auto apiConfig = std::make_shared<api::ApiConfiguration>();
     apiConfig->setBaseUrl(config->get("baseUrl"));
     auto httpConfig = web::http::client::http_client_config();
     apiConfig->setApiKey("api-key", config->get("apiKey"));
-    std::stringstream sigstream;
+    apiConfig->setApiKey("api-secret", config->get("apiSecret"));
 
-    auto ctx = HMAC_CTX_new();
-    //HMAC_Init_ex(ctx, config->get("key"), );
-    //web::http::oauth2::experimental::oauth2_config;
-
-    //sigstream << std::hex << ;
-    //apiConfig->setApiKey("api-expires", config->get(""));
-    //apiConfig->setApiKey("api-signature", config->get("apiSignature"));
     auto apiClient = std::make_shared<api::ApiClient>(apiConfig);
     auto orderManager = std::make_shared<api::OrderApi>( apiClient);
-    auto strategy = std::make_shared<Strategy<api::OrderApi>>(marketData, orderManager);
 
+    auto strategy = std::make_shared<Strategy<api::OrderApi>>(marketData, orderManager);
+    marketData->init();
     strategy->init(config);
 
     while (strategy->shouldEval()) {

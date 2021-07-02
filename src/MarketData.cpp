@@ -5,9 +5,11 @@
 
 #include "MarketData.h"
 #include "Utils.h"
+#include "Config.h"
 #include <model/Position.h>
 #include <model/Order.h>
 
+#include <auth_helpers.h>
 
 
 
@@ -30,13 +32,21 @@ MarketData::~MarketData() {
     _wsClient->close();
 }
 
-MarketData::MarketData(std::string connectionString_, std::string symbol_)
+
+
+MarketData::MarketData(const std::shared_ptr<Config>& config_)
 :   MarketDataInterface()
-,   _connectionString(std::move(connectionString_))
-,   _symbol(std::move(symbol_))
+,   _connectionString(config_->get("connectionString"))
+,   _apiKey(config_->get("apiKey"))
+,   _symbol(config_->get("symbol"))
 ,   _wsClient(std::make_shared<ws::client::websocket_callback_client>())
 ,   _initialised(false)
 {
+
+}
+
+void MarketData::init() {
+
     _wsClient->set_message_handler(
             [&](const ws::client::websocket_incoming_message& in_msg) {
                 auto msg = in_msg.extract_string();
@@ -87,6 +97,21 @@ MarketData::MarketData(std::string connectionString_, std::string symbol_)
     {
         std::this_thread::sleep_for(std::chrono::seconds(1));
     }
+
+    // Authorise
+    std::string expires = std::to_string(std::chrono::system_clock::now().time_since_epoch().count() % 10000 + 5);
+    std::string signature = hex_hmac_sha256("GET"+getConnectionString()+expires, _apiKey);
+    std::string  payload = R"({"op": "authKeyExpires", "args": [" )" + _apiKey + R"(", )" + expires + R"(", ")" + signature + R"(""]})";
+    web::websockets::client::websocket_outgoing_message message;
+    message.set_utf8_message(payload);
+    _wsClient->send(message);
+
+    std::string subScribePayload = R"({"op": "subscribe", "args": ["execution:)"+_symbol+ R"(","position:)"+_symbol+ R"("]})";
+    web::websockets::client::websocket_outgoing_message subMessage;
+    subMessage.set_utf8_message(subScribePayload);
+    _wsClient->send(subMessage);
+
+
 }
 
 template<typename T>

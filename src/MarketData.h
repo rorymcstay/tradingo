@@ -22,6 +22,7 @@
 
 #include "Event.h"
 #include "ObjectPool.h"
+#include "Config.h"
 
 
 using namespace io::swagger::client;
@@ -175,14 +176,18 @@ class MarketData
 
     bool _initialised;
 
+    std::string _apiKey;
+
+
+
 private:
-
-
-
     std::string getConnectionString();
 public:
-    explicit MarketData(std::string connectionString_, std::string symbol_);
+    explicit MarketData(const std::shared_ptr<Config>& config_);
+
     ~MarketData();
+
+    void init();
 };
 
 #endif //TRADING_BOT_MARKETDATA_H
