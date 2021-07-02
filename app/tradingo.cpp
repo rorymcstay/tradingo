@@ -35,9 +35,8 @@ int main(int argc, char **argv) {
     auto configfile = vm.at("config").as<std::string>();
     auto config = std::make_shared<Config>(configfile);
     std::string symbol = config->get("symbol");
-    std::string url = config->get("connectionString");
 
-    auto marketData = std::make_shared<MarketData>(url, symbol);
+    auto marketData = std::make_shared<MarketData>(config);
     auto apiConfig = std::make_shared<api::ApiConfiguration>();
     apiConfig->setBaseUrl(config->get("baseUrl"));
     auto httpConfig = web::http::client::http_client_config();
@@ -47,7 +46,8 @@ int main(int argc, char **argv) {
     auto apiClient = std::make_shared<api::ApiClient>(apiConfig);
     auto orderManager = std::make_shared<api::OrderApi>(apiClient);
     auto strategy = std::make_shared<Strategy<api::OrderApi>>(marketData, orderManager);
-
+    marketData->init();
+    marketData->subscribe();
     strategy->init(config);
 
     while (strategy->shouldEval()) {

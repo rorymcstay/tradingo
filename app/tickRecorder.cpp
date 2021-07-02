@@ -23,6 +23,7 @@ int main(int argc, char **argv) {
             ("help", "produce help message")
             ("storage", po::value<std::string>(), "where to store files")
             ("symbol", po::value<std::string>(), "symbol")
+            ("config", po::value<std::string>(), "config file")
             ("connection", po::value<std::string>(), "base url of bitmex exchange");
 
     std::string connectionString = "wss://www.bitmex.com";
@@ -33,18 +34,26 @@ int main(int argc, char **argv) {
     po::store(po::parse_command_line(argc, argv, desc), vm);
     po::notify(vm);
 
-    if (vm.contains("storage")) {
-        storage = vm.at("storage").as<std::string>();
-    }
-    if (vm.contains("connection")) {
-        connectionString = vm.at("connection").as<std::string>();
-    }
-    if (vm.contains("symbol")) {
-        symbol = vm.at("symbol").as<std::string>();
+    std::shared_ptr<Config> config;
+    if (vm.contains("config")) {
+        config = std::make_shared<Config>("./config/trading.cfg");
+        storage = config->get("storage");
+        symbol = config->get("symbol");
+        connectionString = config->get("webSocketUrl");
+    } else {
+        if (vm.contains("storage")) {
+            storage = vm.at("storage").as<std::string>();
+        }
+        if (vm.contains("connection")) {
+            connectionString = vm.at("connection").as<std::string>();
+        }
+        if (vm.contains("symbol")) {
+            symbol = vm.at("symbol").as<std::string>();
+        }
     }
     INFO("Starting tick recording with " << LOG_VAR(symbol) << LOG_VAR(connectionString) << LOG_VAR(storage));
 
-    auto marketData = std::make_shared<MarketData>(connectionString, symbol);
+    auto marketData = std::make_shared<MarketData>(config);
 
     // table writers
     auto trades = std::make_shared<BatchWriter>("trades", symbol, storage);

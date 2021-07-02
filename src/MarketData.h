@@ -22,6 +22,7 @@
 
 #include "Event.h"
 #include "ObjectPool.h"
+#include "Config.h"
 
 
 using namespace io::swagger::client;
@@ -164,6 +165,9 @@ protected:
 public:
     ~MarketDataInterface() {};
     std::shared_ptr<Event> read();
+
+
+
 };
 
 class MarketData
@@ -173,16 +177,21 @@ class MarketData
     std::string _symbol;
     std::shared_ptr<ws::client::websocket_callback_client> _wsClient;
 
+    std::string _apiSecret;
+    std::string _apiKey;
     bool _initialised;
 
 private:
-
-
-
-    std::string getConnectionString();
+    std::string getConnectionUri();
+    std::string getBaseUrl();
 public:
-    explicit MarketData(std::string connectionString_, std::string symbol_);
+
+    void subscribe();
+    explicit MarketData(const std::shared_ptr<Config>& config_);
+
     ~MarketData();
+
+    void init();
 };
 
 #endif //TRADING_BOT_MARKETDATA_H

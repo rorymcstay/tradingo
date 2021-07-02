@@ -1,19 +1,25 @@
 //
 // Created by rory on 14/06/2021.
 //
-
+#include "absl/strings/str_join.h"
 
 #include "MarketData.h"
 #include "Utils.h"
+#include "Config.h"
 #include <model/Position.h>
 #include <model/Order.h>
 
+#include <auth_helpers.h>
 
 
 
-std::string MarketData::getConnectionString() {
+std::string MarketData::getConnectionUri() {
     // TODO handle auth
-    return _connectionString + "/realtime?subscribe=trade:" + _symbol + ",instrument:"+_symbol + ",quote:"+_symbol;
+    return "/realtime/websocket";
+}
+
+std::string MarketData::getBaseUrl() {
+    return _connectionString;
 }
 
 std::shared_ptr<Event> MarketDataInterface::read() {
@@ -30,13 +36,21 @@ MarketData::~MarketData() {
     _wsClient->close();
 }
 
-MarketData::MarketData(std::string connectionString_, std::string symbol_)
+
+
+MarketData::MarketData(const std::shared_ptr<Config>& config_)
 :   MarketDataInterface()
-,   _connectionString(std::move(connectionString_))
-,   _symbol(std::move(symbol_))
+,   _connectionString(config_->get("connectionString"))
+,   _apiKey(config_->get("apiKey"))
+,   _apiSecret(config_->get("apiSecret"))
+,   _symbol(config_->get("symbol"))
 ,   _wsClient(std::make_shared<ws::client::websocket_callback_client>())
-,   _initialised(false)
-{
+,   _initialised(false) {
+
+}
+
+void MarketData::init() {
+
     _wsClient->set_message_handler(
             [&](const ws::client::websocket_incoming_message& in_msg) {
                 auto msg = in_msg.extract_string();
@@ -46,11 +60,15 @@ MarketData::MarketData(std::string connectionString_, std::string symbol_)
                 if (msgJson.has_field("info")) {
                     INFO("info: " << msgJson["info"].as_string());
                     INFO("response" << msgJson.serialize());
+                    _initialised = true;
                     return;
                 }
                 if (msgJson.has_field("success") && msgJson.at("success").as_bool()) {
-                    _initialised = true;
-                    INFO("Initialised " << msgJson.serialize());
+                    INFO("Operation success: " << msgJson.serialize());
+                    return;
+                }
+                if (msgJson.has_field("error")) {
+                    ERROR("Websocket Error :" << stringVal);
                     return;
                 }
 
@@ -77,16 +95,56 @@ MarketData::MarketData(std::string connectionString_, std::string symbol_)
             });
 
     _wsClient->set_close_handler(
-            [](ws::client::websocket_close_status stat, const std::string& message_, std::error_code err_) { std::cout << message_ << '\n';}
-    );
-    std::string conString = getConnectionString();
+            [](ws::client::websocket_close_status stat, const std::string& message_, std::error_code err_) {
+                std::cout << message_ << '\n';
+            });
+
+    std::string conString = getBaseUrl() + getConnectionUri();
+    INFO("Connecting to " << LOG_VAR(conString));
     _wsClient->connect(conString);
 
     // sleep until connected.
+    int count = 0;
     while (not _initialised)
     {
+        count++;
         std::this_thread::sleep_for(std::chrono::seconds(1));
+        if (count > 30) {
+            ERROR("Timed out after 30 seconds waiting for log on message.");
+            throw std::runtime_error("timed out after 30 seconds connecting to "+ conString);
+        }
     }
+
+    // Authorise
+    std::string expires = std::to_string(getExpires());
+    std::string signature = hex_hmac_sha256( _apiSecret, "GET/realtime" + expires);
+    std::string payload = R"({"op": "authKeyExpires", "args": [")" + _apiKey + R"(", )" + expires + R"(, ")" + signature + R"("]})";
+    INFO("Authenticating on websocket " << LOG_VAR(payload));
+    web::websockets::client::websocket_outgoing_message message;
+    message.set_utf8_message(payload);
+    _wsClient->send(message);
+
+}
+
+void MarketData::subscribe() {
+
+    std::string subScribePayload = R"({"op": "subscribe", "args": ["execution:)"+_symbol+ R"(","position:)"+_symbol+ R"("]})";
+    std::vector<std::string> topics = {
+            "position",
+            "order",
+            "execution:"+_symbol,
+            "quote:"+_symbol,
+            "trade:"+_symbol
+    };
+    auto payload = web::json::value::parse(R"({"op": "subscribe", "args": []})");
+    int num = 0;
+    for (auto& topic : topics) {
+        payload.at("args").as_array()[num++] = web::json::value(topic);
+    }
+    web::websockets::client::websocket_outgoing_message subMessage;
+    subMessage.set_utf8_message(payload.serialize());
+    INFO("Doing subscribe " << payload.serialize());
+    _wsClient->send(subMessage);
 }
 
 template<typename T>

@@ -106,7 +106,7 @@ bool Strategy<TOrdApi>::createOrders(price_t bid, price_t ask) {
     auto buy = std::make_shared<model::Order>();
     buy->setPrice(bid);
     buy->setSide("Buy");
-    buy->setOrderQty(size);
+    buy->setOrderQty(size - _allocatedBid);
     buy->setSymbol(_symbol);
     buy->setClOrdID(_clOrdIdPrefix + std::to_string(_oidSeed++));
     buy->setSymbol(_symbol);
