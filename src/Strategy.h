@@ -129,7 +129,7 @@ bool Strategy<TOrdApi>::createOrders(price_t bid, price_t ask) {
                 return ordString;
             }());
         tsk.then(
-                [=, this] (pplx::task<std::vector<std::shared_ptr<model::Order>>> task_) {
+                [=, this] (const pplx::task<std::vector<std::shared_ptr<model::Order>>>& task_) {
                     try {
                         INFO("send order callback.");
                         INFO(task_.get()[0]->toJson().serialize());

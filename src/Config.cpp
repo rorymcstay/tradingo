@@ -38,9 +38,20 @@ Config::Config(const std::string& file_)
 }
 
 std::string Config::get(const std::string &name_) {
-    return _data.at(name_);
+    try {
+        _data.at(name_);
+    } catch (const std::exception& ex_) {
+        std::stringstream message;
+        message << "Missing Configuiration value "<< LOG_NVP("name", name_);
+        INFO(message.str());
+        throw std::runtime_error( message.str() );
+    }
 }
 
 void Config::set(const std::string& key_, const std::string& val_) {
     _data[key_] = val_;
+}
+
+Config::Config() : _data() {
+
 }

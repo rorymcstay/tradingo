@@ -20,6 +20,7 @@ add_executable(test_trading_funcs
 
         # test files
         TestBitMexAPI.cpp
+        test_api_OrderApi.cpp
         test_main.cpp
         )
 

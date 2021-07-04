@@ -3,7 +3,6 @@
 //
 
 #include "Context.h"
-#include "absl/strings/str_join.h"
 #include <cpprest/http_client.h>
 
 Context::Context(std::shared_ptr<MarketData> md_, std::shared_ptr<api::ApiConfiguration> apiConfig_, std::string apiKey_)

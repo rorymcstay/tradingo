@@ -14,6 +14,7 @@ class Config {
     std::unordered_map<std::string, std::string> _data;
 
 public:
+    Config();
     explicit Config(const std::string& file_);
     std::string get(const std::string& name_ );
     void set(const std::string& key_, const std::string& val_);
