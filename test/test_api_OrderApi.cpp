@@ -29,7 +29,7 @@ TEST(OrderApi, order_newBulk) {
     std::string orders = R"([{"clOrdID":"MCST0","orderID":"","orderQty":50,"price":33709.5,"side":"Buy","symbol":"XBTUSD"},{"clOrdID":"MCST1","orderID":"","orderQty":50,"price":33710,"side":"Sell","symbol":"XBTUSD"}])";
     auto newOrders = orderManager->order_newBulk(orders).then(
             [](const std::vector<std::shared_ptr<model::Order>> &orders_) {
-                for (auto order : orders_) {
+                for (const auto& order : orders_) {
                     std::cout << order->toJson().serialize() << '\n';
                 }
             }
