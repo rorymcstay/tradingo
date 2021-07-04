@@ -43,6 +43,8 @@ int main(int argc, char **argv) {
     apiConfig->setApiKey("api-key", config->get("apiKey"));
     apiConfig->setApiKey("api-secret", config->get("apiSecret"));
 
+    apiConfig->setHttpConfig(httpConfig);
+
     auto apiClient = std::make_shared<api::ApiClient>(apiConfig);
     auto orderManager = std::make_shared<api::OrderApi>(apiClient);
     auto strategy = std::make_shared<Strategy<api::OrderApi>>(marketData, orderManager);

@@ -39,7 +39,7 @@ Config::Config(const std::string& file_)
 
 std::string Config::get(const std::string &name_) {
     try {
-        _data.at(name_);
+        return _data.at(name_);
     } catch (const std::exception& ex_) {
         std::stringstream message;
         message << "Missing Configuiration value "<< LOG_NVP("name", name_);
