@@ -1,6 +1,9 @@
 [submodule "thirdparty/api-connectors"]
 	path = thirdparty/api-connectors
 	url = git@github.com:rorymcstay/api-connectors.git
-[submodule "thirdparty/websocketpp"]
+[submodule "thirdparty/CPPLogger"]
 	path = thirdparty/websocketpp
-	url = git@github.com:zaphoyd/websocketpp.git
+	url = https://github.com/carun/CPPLogger.git 
+[submodle "thirdparty/abseil-cpp"]
+	path = thirdparty/abseil-cpp
+	url = https://github.com/abseil/abseil-cpp
