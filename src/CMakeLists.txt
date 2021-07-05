@@ -21,7 +21,10 @@ add_library(trading_funcs
         Strategy.h # templated
         Context.cpp
         Config.cpp
-        ${CPPLOGGER_HEADER})
+
+        Signal.cpp
+        #${CPPLOGGER_HEADER}
+        )
 
 target_link_libraries(trading_funcs
         CppRestSwaggerClient

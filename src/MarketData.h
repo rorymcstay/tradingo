@@ -124,6 +124,7 @@ struct OrderReleaser {
 namespace ws = web::websockets;
 using namespace io::swagger::client;
 
+
 class MarketDataInterface {
 
 public:
@@ -135,7 +136,11 @@ public:
 
 private:
     std::priority_queue<std::shared_ptr<Event>, std::vector<std::shared_ptr<Event>>, QueueArrange> _eventBuffer;
-
+    std::unordered_map<std::string, std::shared_ptr<Signal>> _signals;
+private:
+    void updateSignals();
+public:
+    void initSignals(const std::string config& cfg_);
 protected:
     std::mutex _mutex;
     std::vector<std::string> _positionKey;
@@ -174,7 +179,7 @@ public:
     std::shared_ptr<Event> read();
     const std::unordered_map<std::string, OrderPtr>& getOrders() const;
     const std::queue<ExecPtr>& getExecutions() const;
-    const std::vector<PositionPtr>& getPositions() const;
+    const std::unordered_map<std::string, PositionPtr>& getPositions() const;
 };
 
 class MarketData

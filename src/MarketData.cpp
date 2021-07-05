@@ -244,6 +244,20 @@ const std::queue<MarketDataInterface::ExecPtr> &MarketDataInterface::getExecutio
     return _executions;
 }
 
+const std::unordered_map<std::string, MarketDataInterface::PositionPtr> &MarketDataInterface::getPositions() const {
+    return _positions;
+}
+
+void MarketDataInterface::updateSignals() {
+    for (auto& signal : _signals) {
+        signal.second->update(this);
+    }
+}
+
+void MarketDataInterface::initSignals(const std::string& config) {
+    auto conf = std::shared_ptr<Config>(config);
+}
+
 std::string getPositionKey(const std::shared_ptr<model::Position> &pos_) {
     return std::to_string(pos_->getAccount())+":"+pos_->getSymbol();
 }

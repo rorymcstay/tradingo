@@ -2,7 +2,7 @@
 	path = thirdparty/api-connectors
 	url = git@github.com:rorymcstay/api-connectors.git
 [submodule "thirdparty/CPPLogger"]
-	path = thirdparty/websocketpp
+	path = thirdparty/CPPLogger
 	url = https://github.com/carun/CPPLogger.git 
 [submodle "thirdparty/abseil-cpp"]
 	path = thirdparty/abseil-cpp

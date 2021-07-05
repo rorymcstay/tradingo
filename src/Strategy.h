@@ -42,7 +42,10 @@ class Strategy {
     int _oidSeed;
     std::shared_ptr<Config> _config;
 
-    void onExecution(const std::shared_ptr<Event>& event_);
+    void onExecution(const std::shared_ptr<Event>& event_) = 0;
+    void onTrade(const std::shared_ptr<Event>& event_) = 0;
+    void onBBO(const std::shared_ptr<Event>& event_) = 0;
+
 public:
     Strategy(std::shared_ptr<MarketDataInterface> mdPtr_,  std::shared_ptr<TOrdApi> od_);
     void evaluate();
@@ -61,11 +64,6 @@ Strategy<TOrdApi>::Strategy(std::shared_ptr<MarketDataInterface> md_, std::share
 
 }
 
-template<typename TOrdApi>
-void Strategy<TOrdApi>::onExecution(const std::shared_ptr<Event>& event_) {
-    INFO("Execution: " << event_->getExec());
-    _attempted = false;
-}
 
 template<typename TOrdApi>
 void Strategy<TOrdApi>::evaluate() {
@@ -73,15 +71,20 @@ void Strategy<TOrdApi>::evaluate() {
     if (!event) {
         return;
     }
+    // call one of three handlers.
     if (event->eventType() == EventType::BBO) {
         auto quote = event->getQuote();
         _bid = quote->getBidPrice();
         _ask = quote->getAskPrice();
-        INFO("BBO Update Bid=" << quote->getBidSize() << '@' << quote->getBidPrice()
+        onBBO(event);
+        DEBUG("BBO Update Bid=" << quote->getBidSize() << '@' << quote->getBidPrice()
                     << " Ask=" << quote->getAskSize() << '@' << quote->getAskPrice());
-    }
-    if (event->eventType() == EventType::TradeUpdate) {
-        INFO( "Trade: " << event->getTrade()->toJson().serialize());
+    } else if (event->eventType() == EventType::TradeUpdate) {
+        DEBUG( "Trade: " << event->getTrade()->toJson().serialize());
+        onTrade(event);
+    } else if (event->eventType() == EventType::Exec) {
+        DEBUG("Execution: " << event->getExec()->toJson().serialize());
+        onExecution(event);
     }
     if (_allocatedAsk > 0 || _allocatedBid > 0) {
         //
@@ -92,6 +95,8 @@ void Strategy<TOrdApi>::evaluate() {
 
 template<typename TOrdApi>
 void Strategy<TOrdApi>::init(const std::string& config_) {
+    auto _config = std::make_shared<Config>(config_);
+    init(_config);
     INFO("Initializing strategy");
 }
 

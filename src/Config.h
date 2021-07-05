@@ -18,6 +18,7 @@ public:
     Config(std::initializer_list<std::pair<std::string,std::string>>);
     explicit Config(const std::string& file_);
     std::string get(const std::string& name_ );
+    std::string get(const std::string& name_, const std::string& default_);
     void set(const std::string& key_, const std::string& val_);
 };
 

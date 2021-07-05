@@ -62,3 +62,10 @@ Config::Config(std::initializer_list<std::pair<std::string, std::string>> kvps)
         set(kvp.first, kvp.second);
     }
 }
+
+std::string Config::get(const std::string &name_, const std::string &default_) {
+    if (_data.find(name_) == _data.end())
+        return default_;
+    else
+        return _data[name_];
+}
