@@ -55,3 +55,10 @@ void Config::set(const std::string& key_, const std::string& val_) {
 Config::Config() : _data() {
 
 }
+
+Config::Config(std::initializer_list<std::pair<std::string, std::string>> kvps)
+:   _data() {
+    for (auto& kvp : kvps) {
+        set(kvp.first, kvp.second);
+    }
+}

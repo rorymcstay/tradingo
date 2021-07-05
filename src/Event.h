@@ -7,6 +7,7 @@
 #include <thread>
 #include <model/Trade.h>
 #include <model/Instrument.h>
+#include <model/Execution.h>
 #include <model/Quote.h>
 #include <mutex>
 #include <cpprest/json.h>
@@ -17,10 +18,11 @@
 #include <iostream>
 #include <cstdlib>
 
+
 using namespace io::swagger::client;
 namespace ws = web::websockets;
 
-enum class EventType {TradeUpdate, BBO, Instrument};
+enum class EventType {TradeUpdate, BBO, Instrument, Exec};
 enum class ActionType {Update, Delete, Insert, Partial};
 
 class Event
@@ -30,6 +32,7 @@ private:
     std::shared_ptr<io::swagger::client::model::Instrument> _instrument;
     std::shared_ptr<io::swagger::client::model::Trade> _trade;
     std::shared_ptr<io::swagger::client::model::Quote> _quote;
+    std::shared_ptr<io::swagger::client::model::Execution> _exec;
     EventType _eventType;
     ActionType _actionType;
     std::chrono::system_clock::time_point _timeStamp;
@@ -39,40 +42,39 @@ public:
             :   _instrument(std::move(instr_))
             ,   _trade(nullptr)
             ,   _quote(nullptr)
-            ,   _eventType(EventType::Instrument)
-    {}
+            ,   _exec(nullptr)
+            ,   _eventType(EventType::Instrument) {}
 
     Event(std::shared_ptr<model::Trade> trade_)
             :   _instrument(nullptr)
             ,   _trade(std::move(trade_))
             ,   _quote(nullptr)
-            ,   _eventType(EventType::TradeUpdate)
-    {}
+            ,   _exec(nullptr)
+            ,   _eventType(EventType::TradeUpdate) {}
+
     Event(std::shared_ptr<model::Quote> quote_)
             :   _instrument(nullptr)
             ,   _trade(nullptr)
             ,   _quote(std::move(quote_))
-            ,   _eventType(EventType::BBO)
-    {}
+            ,   _exec(nullptr)
+            ,   _eventType(EventType::BBO) {}
 
-    void setEventType(EventType eventType_) {
-        _eventType = eventType_;
-    }
+    Event(std::shared_ptr<model::Execution> exec_)
+            :   _instrument(nullptr)
+            ,   _trade(nullptr)
+            ,   _quote(nullptr)
+            ,   _exec(std::move(exec_))
+            ,   _eventType(EventType::Exec) {}
+
+    void setEventType(EventType eventType_) { _eventType = eventType_; }
     void setAction(const std::string& action_);
-    const std::shared_ptr<model::Instrument> &getInstrument() const {
-        return _instrument;
-    }
-    const std::shared_ptr<model::Trade> &getTrade() const {
-        return _trade;
-    }
-    const std::shared_ptr<model::Quote> &getQuote() const {
-        return _quote;
-    }
-    // TODO operator <<
+    const std::shared_ptr<model::Instrument>& getInstrument() const { return _instrument; }
+    const std::shared_ptr<model::Trade>& getTrade() const { return _trade; }
+    const std::shared_ptr<model::Quote>& getQuote() const { return _quote; }
+    const std::shared_ptr<model::Execution>& getExec() const { return _exec; }
     EventType eventType() const { return _eventType; }
     std::chrono::system_clock::time_point timeStamp() { return _timeStamp; }
 
-public:
 };
 
 #endif //TRADING_BOT_EVENT_H

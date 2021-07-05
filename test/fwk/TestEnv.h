@@ -32,9 +32,11 @@ class TestEnv
     std::shared_ptr<OrderApi> _orderApi;
     std::shared_ptr<TStrategy> _strategy;
 
+    std::shared_ptr<Config> _config;
 public:
-    explicit TestEnv(const std::string& config_);
+    explicit TestEnv(std::initializer_list<std::pair<std::string,std::string>>);
     void operator << (const std::string& value_);
+
     void operator >> (const std::string& value_);
 };
 

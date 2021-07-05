@@ -6,6 +6,7 @@
 
 #define __FILENAME__ (__builtin_strrchr(__FILE__, '/') ? __builtin_strrchr(__FILE__, '/') + 1 : __FILE__)
 #define INFO(msg_)  std::cout << " INFO    " << msg_ << " |" << __FILENAME__ << ":" << __LINE__ << '\n'
+#define DEBUG(msg_)  std::cout << " DEBUG    " << msg_ << " |" << __FILENAME__ << ":" << __LINE__ << '\n'
 #define WARN(msg_)  std::cout << " WARN    " << msg_ << " |" << __FILENAME__ << ":" << __LINE__ << '\n'
 #define ERROR(msg_) std::cout << " ERROR   " << msg_ << " |" << __FILENAME__ << ":" << __LINE__ << '\n'
 

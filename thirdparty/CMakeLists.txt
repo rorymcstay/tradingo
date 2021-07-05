@@ -19,6 +19,10 @@ set(BITMEX_INCLUDE ${CMAKE_CURRENT_SOURCE_DIR}/api-connectors/auto-generated/cpp
 add_subdirectory(abseil-cpp)
 set(ABSL_INCLUDE ${CMAKE_CURRENT_SOURCE_DIR}/abseil-cpp/absl/ PARENT_SCOPE)
 
+### CPPLogger ###
+set(CPPLOGGER_INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}/CPPLogger/ PARENT_SCOPE)
+set(CPPLOGGER_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/CPPLogger/CPPLogger.hpp PARENT_SCOPE)
+
 install(TARGETS
             CppRestSwaggerClient
         RUNTIME DESTINATION bin

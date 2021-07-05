@@ -34,6 +34,7 @@ web::json::value Params::asJson() const {
         if (pair.first.find("Size") != std::string::npos
             or pair.first.find("Qty") != std::string::npos
             or pair.first.find("Price") != std::string::npos
+            or pair.first.find("price") != std::string::npos
             or pair.first.find("Px") != std::string::npos) {
             // cast to double
             retVal[pair.first] = web::json::value(std::atof(pair.second.c_str()));

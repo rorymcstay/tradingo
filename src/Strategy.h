@@ -37,17 +37,20 @@ class Strategy {
     std::shared_ptr<model::Order> _buyOrder;
     int _attempted;
 
-    std::string _symbol = "XBTUSD";
-    std::string _clOrdIdPrefix = "MCST1";
+    std::string _symbol;
+    std::string _clOrdIdPrefix;
     int _oidSeed;
+    std::shared_ptr<Config> _config;
+
+    void onExecution(const std::shared_ptr<Event>& event_);
 public:
     Strategy(std::shared_ptr<MarketDataInterface> mdPtr_,  std::shared_ptr<TOrdApi> od_);
     void evaluate();
+
     void init(const std::string& config_);
+    void init(std::shared_ptr<Config> config_);
 
-    void init(const std::shared_ptr<Config> &config_);
     bool shouldEval();
-
     bool createOrders(price_t bid, price_t ask);;
 };
 
@@ -56,6 +59,12 @@ Strategy<TOrdApi>::Strategy(std::shared_ptr<MarketDataInterface> md_, std::share
 :   _marketData(std::move(md_))
 ,   _orderEngine (std::move(od_)) {
 
+}
+
+template<typename TOrdApi>
+void Strategy<TOrdApi>::onExecution(const std::shared_ptr<Event>& event_) {
+    INFO("Execution: " << event_->getExec());
+    _attempted = false;
 }
 
 template<typename TOrdApi>
@@ -86,10 +95,14 @@ void Strategy<TOrdApi>::init(const std::string& config_) {
     INFO("Initializing strategy");
 }
 
-
 template<typename TOrdApi>
-void Strategy<TOrdApi>::init(const std::shared_ptr<Config>& config_) {
+void Strategy<TOrdApi>::init(std::shared_ptr<Config> config_) {
+    _config = std::move(config_);
+    _symbol = _config->get("symbol");
+    _clOrdIdPrefix = _config->get("clOrdPrefix");
     INFO("Initializing strategy");
+    for (auto& order : _marketData->getOrders())
+        INFO("Open Order: " LOG_NVP("OID", order.first) << order.second->toJson().serialize());
 }
 
 template<typename TOrdApi>
@@ -130,10 +143,10 @@ bool Strategy<TOrdApi>::createOrders(price_t bid, price_t ask) {
             }());
         tsk.then(
                 [=, this] (const pplx::task<std::vector<std::shared_ptr<model::Order>>>& task_) {
+                    DEBUG("Send order callback");
                     try {
-                        INFO("send order callback.");
-                        INFO(task_.get()[0]->toJson().serialize());
-
+                        INFO("Succesfully sent order: " << task_.get()[0]->toJson().serialize());
+                        _attempted = true;
                     } catch (api::ApiException& apiException) {
                         auto reason = apiException.getContent();
                         INFO("APIException caught failed to send order: " << LOG_VAR(apiException.what())
@@ -150,7 +163,6 @@ bool Strategy<TOrdApi>::createOrders(price_t bid, price_t ask) {
                 });
 
 
-    _attempted = true;
     return true;
 }
 

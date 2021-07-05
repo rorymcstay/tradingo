@@ -5,11 +5,9 @@
 #include "Config.h"
 #include "MarketData.h"
 #include <openssl/hmac.h>
-
+//#include "CPPLogger.hpp"
 
 #include <cpprest/oauth2.h>
-
-
 
 using namespace io::swagger::client;
 namespace ws = web::websockets;

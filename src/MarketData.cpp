@@ -81,13 +81,13 @@ void MarketData::init() {
                 } else if (table == "trade") {
                     auto trades = getData<model::Trade, decltype(_tradePool)>(data, _tradePool);
                     handleTrades(trades, action);
-                } else if (table == "executions") {
+                } else if (table == "execution") {
                     auto exec = getData<model::Execution, decltype(_execPool)>(data, _execPool);
                     handleExecutions(exec, action);
-                } else if (table == "positions") {
+                } else if (table == "position") {
                     auto positions = getData<model::Position, decltype(_positionPool)>(data, _positionPool);
                     handlePositions(positions, action);
-                } else if (table == "orders") {
+                } else if (table == "order") {
                     auto orders = getData<model::Order, decltype(_orderPool)>(data,_orderPool);
                     handleOrders(orders, action);
                 }
@@ -161,8 +161,7 @@ void MarketDataInterface::updatePositions(const std::vector<std::shared_ptr<mode
 
 void MarketDataInterface::insertPositions(const std::vector<std::shared_ptr<model::Position>>& positions_) {
 
-    for (auto& pos : positions_)
-    {
+    for (auto& pos : positions_) {
         _positions[getPositionKey(pos)] = pos;
     }
 }
@@ -206,6 +205,7 @@ void MarketDataInterface::handleExecutions(std::vector<std::shared_ptr<model::Ex
         for (auto& ex : execs_)
             _executions.push(ex);
     }
+    update(execs_);
 }
 
 void MarketDataInterface::handleOrders(std::vector<std::shared_ptr<model::Order>>& orders_, const  std::string &action_) {
@@ -234,6 +234,14 @@ void MarketDataInterface::insertOrders(const std::vector<std::shared_ptr<model::
 void MarketDataInterface::updateOrders(const std::vector<std::shared_ptr<model::Order>> &orders_) {
     for (auto& ord : orders_)
         _orders[getOrderKey(ord)] = ord;
+}
+
+const std::unordered_map<std::string, MarketDataInterface::OrderPtr> &MarketDataInterface::getOrders() const {
+    return _orders;
+}
+
+const std::queue<MarketDataInterface::ExecPtr> &MarketDataInterface::getExecutions() const {
+    return _executions;
 }
 
 std::string getPositionKey(const std::shared_ptr<model::Position> &pos_) {

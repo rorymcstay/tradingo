@@ -125,6 +125,15 @@ namespace ws = web::websockets;
 using namespace io::swagger::client;
 
 class MarketDataInterface {
+
+public:
+    using OrderPtr = std::shared_ptr<model::Order>;
+    using PositionPtr = std::shared_ptr<model::Position>;
+    using TradePtr = std::shared_ptr<model::Trade>;
+    using QuotePtr = std::shared_ptr<model::Quote>;
+    using ExecPtr = std::shared_ptr<model::Execution>;
+
+private:
     std::priority_queue<std::shared_ptr<Event>, std::vector<std::shared_ptr<Event>>, QueueArrange> _eventBuffer;
 
 protected:
@@ -140,8 +149,6 @@ protected:
     std::queue<std::shared_ptr<model::Execution>> _executions;
     std::unordered_map<std::string, std::shared_ptr<model::Position>> _positions;
     std::unordered_map<std::string, std::shared_ptr<model::Order>> _orders;
-
-
 
     void handleQuotes(const std::vector<std::shared_ptr<model::Quote>>& quotes_, const std::string& action_);
     void handleTrades(std::vector<std::shared_ptr<model::Trade>>& trades_, const std::string& action_);
@@ -165,9 +172,9 @@ protected:
 public:
     ~MarketDataInterface() {};
     std::shared_ptr<Event> read();
-
-
-
+    const std::unordered_map<std::string, OrderPtr>& getOrders() const;
+    const std::queue<ExecPtr>& getExecutions() const;
+    const std::vector<PositionPtr>& getPositions() const;
 };
 
 class MarketData
