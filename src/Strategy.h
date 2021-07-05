@@ -26,7 +26,7 @@ class Strategy {
     std::vector<OrderPtr> _buyOrders;
     std::vector<OrderPtr> _sellOrders;
 
-    size_t _inventory = 100;
+    size_t _inventory = 1000;
     size_t _allocatedAsk = 0;
     size_t _allocatedBid = 0;
 
@@ -38,7 +38,7 @@ class Strategy {
     int _attempted;
 
     std::string _symbol = "XBTUSD";
-    std::string _clOrdIdPrefix = "MCST";
+    std::string _clOrdIdPrefix = "MCST1";
     int _oidSeed;
 public:
     Strategy(std::shared_ptr<MarketDataInterface> mdPtr_,  std::shared_ptr<TOrdApi> od_);
@@ -106,7 +106,7 @@ bool Strategy<TOrdApi>::createOrders(price_t bid, price_t ask) {
     auto buy = std::make_shared<model::Order>();
     buy->setPrice(bid);
     buy->setSide("Buy");
-    buy->setOrderQty(size - _allocatedBid);
+    buy->setOrderQty(std::round(size - _allocatedBid));
     buy->setSymbol(_symbol);
     buy->setClOrdID(_clOrdIdPrefix + std::to_string(_oidSeed++));
     buy->setSymbol(_symbol);
@@ -114,7 +114,7 @@ bool Strategy<TOrdApi>::createOrders(price_t bid, price_t ask) {
     auto sell = std::make_shared<model::Order>();
     sell->setPrice(ask);
     sell->setSide("Sell");
-    sell->setOrderQty(size - _allocatedAsk);
+    sell->setOrderQty(std::round(size - _allocatedAsk));
     sell->setSymbol(_symbol);
     sell->setClOrdID(_clOrdIdPrefix + std::to_string(_oidSeed++));
     sell->setSymbol(_symbol);
