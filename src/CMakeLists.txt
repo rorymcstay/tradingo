@@ -32,8 +32,7 @@ target_link_libraries(trading_funcs
         boost_system
         pthread
         dl
-        ${OPENSSL_CRYPTO_LIBRARY}
-        absl::strings)
+        ${OPENSSL_CRYPTO_LIBRARY})
 
 add_subdirectory(strategy)
 

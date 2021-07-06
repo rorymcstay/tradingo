@@ -25,7 +25,7 @@ std::shared_ptr<Event> MarketDataInterface::read() {
     std::lock_guard<decltype(_mutex)> lock(_mutex);
     auto event= _eventBuffer.empty() ? nullptr : _eventBuffer.top();
     if (event) {
-        INFO(LOG_NVP("Queue Size", _eventBuffer.size()));
+        //INFO(LOG_NVP("Queue Size", _eventBuffer.size()));
         _eventBuffer.pop();
     }
     return event;
@@ -40,8 +40,8 @@ MarketData::~MarketData() {
 MarketData::MarketData(const std::shared_ptr<Config>& config_)
 :   MarketDataInterface()
 ,   _connectionString(config_->get("connectionString"))
-,   _apiKey(config_->get("apiKey"))
-,   _apiSecret(config_->get("apiSecret"))
+,   _apiKey(config_->get("apiKey", "NO_AUTH"))
+,   _apiSecret(config_->get("apiSecret", "NO_AUTH"))
 ,   _symbol(config_->get("symbol"))
 ,   _wsClient(std::make_shared<ws::client::websocket_callback_client>())
 ,   _initialised(false)

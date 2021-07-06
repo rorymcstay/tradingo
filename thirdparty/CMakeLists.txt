@@ -16,8 +16,10 @@ add_subdirectory(api-connectors/auto-generated/cpprest)
 set(BITMEX_INCLUDE ${CMAKE_CURRENT_SOURCE_DIR}/api-connectors/auto-generated/cpprest PARENT_SCOPE)
 
 ### ABSL Libs ###
-add_subdirectory(abseil-cpp)
-set(ABSL_INCLUDE ${CMAKE_CURRENT_SOURCE_DIR}/abseil-cpp/absl/ PARENT_SCOPE)
+if(WITH_ABSL)
+    add_subdirectory(abseil-cpp)
+    set(ABSL_INCLUDE ${CMAKE_CURRENT_SOURCE_DIR}/abseil-cpp/absl/ PARENT_SCOPE)
+endif(WITH_ABSL)
 
 ### CPPLogger ###
 set(CPPLOGGER_INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}/CPPLogger/ PARENT_SCOPE)
