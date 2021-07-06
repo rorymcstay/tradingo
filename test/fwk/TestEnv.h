@@ -15,6 +15,7 @@
 #include "Strategy.h"
 #include "OrderInterface.h"
 #include "Utils.h"
+#include "Context.h"
 
 #define STRINGIFY(x) #x
 #define TO_STRING(x) STRINGIFY(x)
@@ -22,6 +23,8 @@
 #define LN  " | " __FILE__ ":" TO_STRING(__LINE__)
 
 using namespace io::swagger::client;
+
+
 
 class TestEnv
 {
@@ -33,8 +36,10 @@ class TestEnv
     std::shared_ptr<TStrategy> _strategy;
 
     std::shared_ptr<Config> _config;
+    std::shared_ptr<Context<TestMarketData, OrderApi>> _context;
 public:
     explicit TestEnv(std::initializer_list<std::pair<std::string,std::string>>);
+
     void operator << (const std::string& value_);
 
     void operator >> (const std::string& value_);

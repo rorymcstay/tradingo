@@ -42,9 +42,9 @@ class Strategy {
     int _oidSeed;
     std::shared_ptr<Config> _config;
 
-    void onExecution(const std::shared_ptr<Event>& event_) = 0;
-    void onTrade(const std::shared_ptr<Event>& event_) = 0;
-    void onBBO(const std::shared_ptr<Event>& event_) = 0;
+    virtual void onExecution(const std::shared_ptr<Event>& event_) = 0;
+    virtual void onTrade(const std::shared_ptr<Event>& event_) = 0;
+    virtual void onBBO(const std::shared_ptr<Event>& event_) = 0;
 
 public:
     Strategy(std::shared_ptr<MarketDataInterface> mdPtr_,  std::shared_ptr<TOrdApi> od_);
@@ -60,7 +60,7 @@ public:
 template<typename TOrdApi>
 Strategy<TOrdApi>::Strategy(std::shared_ptr<MarketDataInterface> md_, std::shared_ptr<TOrdApi> od_)
 :   _marketData(std::move(md_))
-,   _orderEngine (std::move(od_)) {
+,   _orderEngine(std::move(od_)) {
 
 }
 

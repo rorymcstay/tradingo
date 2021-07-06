@@ -6,7 +6,7 @@
 #include <Object.h>
 #include "TestOrdersApi.h"
 
-TestOrdersApi::TestOrdersApi()
+TestOrdersApi::TestOrdersApi(std::shared_ptr<io::swagger::client::api::ApiClient> ptr)
 :   _orders()
 ,   _newOrders()
 ,   _orderAmends()

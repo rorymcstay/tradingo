@@ -7,3 +7,5 @@ add_subdirectory(thirdparty)
 add_subdirectory(src)
 add_subdirectory(app)
 add_subdirectory(test)
+
+message(STATUS "CMAKE_INSTALL_PREFIX = ${CMAKE_INSTALL_PREFIX}" )

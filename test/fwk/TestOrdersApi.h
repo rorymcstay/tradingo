@@ -10,6 +10,7 @@
 #define _TURN_OFF_PLATFORM_STRING
 #include <model/Order.h>
 #include <Object.h>
+#include <ApiClient.h>
 
 // src
 #include "Utils.h"
@@ -33,7 +34,7 @@ private:
 
     // API
 public:
-    TestOrdersApi();
+    TestOrdersApi(std::shared_ptr<io::swagger::client::api::ApiClient> ptr);
 
     pplx::task<std::shared_ptr<model::Order>> order_amend(
             std::optional<utility::string_t> orderID,

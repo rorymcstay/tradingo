@@ -9,6 +9,7 @@
 #include <memory>
 
 #include "Config.h"
+#include "Event.h"
 
 
 class MarketData;
@@ -29,7 +30,7 @@ public:
 
     virtual void init();
     virtual double evaluate() = 0;
-    virtual double update(MarketData* md_) = 0;
+    virtual double update(std::shared_ptr<Event> md_) = 0;
     virtual Signal::Ptr factory(const std::string& file_) = 0;
 
 };

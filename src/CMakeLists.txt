@@ -19,10 +19,10 @@ add_library(trading_funcs
         ObjectPool.h
         ObjectPool.hpp
         Strategy.h # templated
-        Context.cpp
+        Context.h # templated
         Config.cpp
 
-        Signal.cpp
+        # Signal.cpp
         #${CPPLOGGER_HEADER}
         )
 
@@ -30,8 +30,11 @@ target_link_libraries(trading_funcs
         CppRestSwaggerClient
         boost_system
         pthread
+        dl
         ${OPENSSL_CRYPTO_LIBRARY}
         absl::strings)
+
+add_subdirectory(strategy)
 
 install(TARGETS
             trading_funcs

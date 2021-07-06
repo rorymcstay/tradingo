@@ -7,8 +7,7 @@ link_directories(${CPPREST_ROOT}/lib)
 
 FILE(GLOB SourcesToTest ../src/*.cpp)
 
-
-add_executable(test_trading_funcs
+add_library(test_trading_funcs
         ${SourcesToTest}
 
         # test framework
@@ -17,6 +16,9 @@ add_executable(test_trading_funcs
         fwk/TestUtils.cpp
         fwk/TestEnv.cpp
         fwk/Params.cpp
+        )
+
+add_executable(testTradingo
 
         # test files
         TestBitMexAPI.cpp
@@ -33,17 +35,26 @@ include_directories(${OPENSSL_INCLUDE_DIR})
 #set (CMAKE_CXX_FLAGS "-std=c++11")
 
 target_link_libraries(test_trading_funcs
-        ${GTEST_LIBRARY}
         #${CPPREST_LIBRARY}
         pthread
         #trading_funcs
-        CppRestSwaggerClient
-        boost_system
+        dl
         ${OPENSSL_CRYPTO_LIBRARY}
         )
+target_link_libraries(testTradingo
+        test_trading_funcs
+        ${GTEST_LIBRARY}
+        ${OPENSSL_CRYPTO_LIBRARY}
+        CppRestSwaggerClient
+        boost_system
+        pthread
+        )
+
+add_subdirectory(strategy)
 
 
 install(TARGETS
+            testTradingo
             test_trading_funcs
         RUNTIME DESTINATION bin
         LIBRARY DESTINATION lib

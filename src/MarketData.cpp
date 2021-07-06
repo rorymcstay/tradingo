@@ -248,14 +248,15 @@ const std::unordered_map<std::string, MarketDataInterface::PositionPtr> &MarketD
     return _positions;
 }
 
-void MarketDataInterface::updateSignals() {
+void MarketDataInterface::updateSignals(const std::shared_ptr<Event>& event_) {
+    /*
     for (auto& signal : _signals) {
-        signal.second->update(this);
-    }
+        signal.second->update(event_);
+    }*/
 }
 
 void MarketDataInterface::initSignals(const std::string& config) {
-    auto conf = std::shared_ptr<Config>(config);
+    auto conf = std::make_shared<Config>(config);
 }
 
 std::string getPositionKey(const std::shared_ptr<model::Position> &pos_) {

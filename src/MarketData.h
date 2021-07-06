@@ -23,6 +23,7 @@
 #include "Event.h"
 #include "ObjectPool.h"
 #include "Config.h"
+//#include "Signal.h"
 
 
 using namespace io::swagger::client;
@@ -136,11 +137,11 @@ public:
 
 private:
     std::priority_queue<std::shared_ptr<Event>, std::vector<std::shared_ptr<Event>>, QueueArrange> _eventBuffer;
-    std::unordered_map<std::string, std::shared_ptr<Signal>> _signals;
+    //std::unordered_map<std::string, std::shared_ptr<Signal>> _signals;
 private:
-    void updateSignals();
+    void updateSignals(const std::shared_ptr<Event>& event_);
 public:
-    void initSignals(const std::string config& cfg_);
+    void initSignals(const std::string& cfg_);
 protected:
     std::mutex _mutex;
     std::vector<std::string> _positionKey;
