@@ -46,7 +46,9 @@ std::vector<std::shared_ptr<T>>  getData(web::json::array& data_, ObjPool& pool_
     std::vector<std::shared_ptr<T>> out_data_;
     out_data_.reserve(data_.size());
     for (auto &dataPiece : data_) {
-        std::shared_ptr<T> quote = pool_.get();
+        // uncomment to use allocator pool
+        //std::shared_ptr<T> quote = pool_.get();
+        auto quote = std::make_shared<T>();
         quote->fromJson(dataPiece);
         out_data_.push_back(quote);
     }
@@ -195,12 +197,14 @@ class MarketData
     std::string _apiKey;
     bool _initialised;
 
+    bool _shouldAuth;
 private:
     std::string getConnectionUri();
     std::string getBaseUrl();
-public:
 
+public:
     void subscribe();
+
     explicit MarketData(const std::shared_ptr<Config>& config_);
 
     ~MarketData();

@@ -39,6 +39,8 @@ int main(int argc, char **argv) {
     INFO("Starting tick recording with " << LOG_VAR(symbol) << LOG_VAR(storage));
 
     auto marketData = std::make_shared<MarketData>(config);
+    marketData->init();
+    marketData->subscribe();
 
     // table writers
     auto trades = std::make_shared<BatchWriter>("trades", symbol, storage);

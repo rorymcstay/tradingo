@@ -25,13 +25,14 @@ Config::Config(const std::string& file_)
             auto delimiterPos = line.find('=');
             auto name = line.substr(0, delimiterPos);
             auto value = line.substr(delimiterPos + 1);
-            INFO("Reading config: " << LOG_VAR(name) << LOG_VAR(value) << '\n');
+            INFO("Reading config: " << LOG_VAR(name) << LOG_VAR(value) );
             set(name, value);
         }
     }
     else {
         std::stringstream error;
-        error << "Couldn't open config " << LOG_NVP("file", file_) << " for reading.\n";
+        error << "Couldn't open config " << LOG_NVP("file", file_) << " for reading.";
+        INFO(error.str());
         throw std::runtime_error(error.str());
     }
 

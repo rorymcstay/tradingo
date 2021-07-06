@@ -44,7 +44,10 @@ MarketData::MarketData(const std::shared_ptr<Config>& config_)
 ,   _apiSecret(config_->get("apiSecret"))
 ,   _symbol(config_->get("symbol"))
 ,   _wsClient(std::make_shared<ws::client::websocket_callback_client>())
-,   _initialised(false) {
+,   _initialised(false)
+// TODO bool helpers + templating get
+,   _shouldAuth(config_->get("shouldAuth", "Yes") == "Yes")
+{
 
 }
 
@@ -115,13 +118,16 @@ void MarketData::init() {
     }
 
     // Authorise
-    std::string expires = std::to_string(getExpires());
-    std::string signature = hex_hmac_sha256( _apiSecret, "GET/realtime" + expires);
-    std::string payload = R"({"op": "authKeyExpires", "args": [")" + _apiKey + R"(", )" + expires + R"(, ")" + signature + R"("]})";
-    INFO("Authenticating on websocket " << LOG_VAR(payload));
-    web::websockets::client::websocket_outgoing_message message;
-    message.set_utf8_message(payload);
-    _wsClient->send(message);
+    if (_shouldAuth) {
+        std::string expires = std::to_string(getExpires());
+        std::string signature = hex_hmac_sha256(_apiSecret, "GET/realtime" + expires);
+        std::string payload =
+                R"({"op": "authKeyExpires", "args": [")" + _apiKey + R"(", )" + expires + R"(, ")" + signature + R"("]})";
+        INFO("Authenticating on websocket " << LOG_VAR(payload));
+        web::websockets::client::websocket_outgoing_message message;
+        message.set_utf8_message(payload);
+        _wsClient->send(message);
+    }
 
 }
 
@@ -131,14 +137,21 @@ void MarketData::subscribe() {
     std::vector<std::string> topics = {
             "position",
             "order",
-            "execution:"+_symbol,
+            "execution:" + _symbol
+    };
+    std::vector<std::string> noAuthTopics = {
             "quote:"+_symbol,
             "trade:"+_symbol
     };
     auto payload = web::json::value::parse(R"({"op": "subscribe", "args": []})");
     int num = 0;
-    for (auto& topic : topics) {
+    for (auto& topic : noAuthTopics) {
         payload.at("args").as_array()[num++] = web::json::value(topic);
+    }
+    if (_shouldAuth) {
+        for (auto &topic : topics) {
+            payload.at("args").as_array()[num++] = web::json::value(topic);
+        }
     }
     web::websockets::client::websocket_outgoing_message subMessage;
     subMessage.set_utf8_message(payload.serialize());
