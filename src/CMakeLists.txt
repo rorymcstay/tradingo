@@ -11,7 +11,7 @@ include_directories(${Boost_INCLUDE_DIR})
 include_directories(${OPENSSL_INCLUDE_DIR})
 include_directories(${CPPLOGGER_INCLUDES})
 
-add_library(trading_funcs
+add_library(trading_funcs SHARED
         Event.cpp
         MarketData.cpp
         BatchWriter.cpp

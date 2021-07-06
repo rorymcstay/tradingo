@@ -20,7 +20,7 @@ void TestEnv::operator<<(const std::string &value_) {
     try {
         *_context->marketData() << value_;
         _context->strategy()->evaluate();
-    } catch (std::runtime_error& ex) {
+    } catch (std::exception& ex) {
         FAIL() << "TEST Exception: " << ex.what() << " during event <<\n\n      " << value_;
     }
 }

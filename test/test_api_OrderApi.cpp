@@ -8,7 +8,7 @@
 
 using namespace io::swagger::client;
 
-TEST(OrderApi, order_newBulk) {
+TEST(OrderApi, DISABLED_order_newBulk) {
 
     auto config = std::make_shared<Config>();
     config->set("apiKey", "-rqipjFxM43WSRKdC8keq83K");

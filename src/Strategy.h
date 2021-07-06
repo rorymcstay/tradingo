@@ -51,7 +51,7 @@ public:
     void evaluate();
 
     void init(const std::string& config_);
-    void init(std::shared_ptr<Config> config_);
+    virtual void init(const std::shared_ptr<Config>& config_);
 
     bool shouldEval();
     bool createOrders(price_t bid, price_t ask);;
@@ -101,8 +101,8 @@ void Strategy<TOrdApi>::init(const std::string& config_) {
 }
 
 template<typename TOrdApi>
-void Strategy<TOrdApi>::init(std::shared_ptr<Config> config_) {
-    _config = std::move(config_);
+void Strategy<TOrdApi>::init(const std::shared_ptr<Config>& config_) {
+    _config = config_;
     _symbol = _config->get("symbol");
     _clOrdIdPrefix = _config->get("clOrdPrefix");
     INFO("Initializing strategy");
@@ -147,6 +147,7 @@ bool Strategy<TOrdApi>::createOrders(price_t bid, price_t ask) {
                 return ordString;
             }());
         tsk.then(
+                //
                 [=, this] (const pplx::task<std::vector<std::shared_ptr<model::Order>>>& task_) {
                     DEBUG("Send order callback");
                     try {

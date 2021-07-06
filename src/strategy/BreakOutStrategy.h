@@ -11,19 +11,33 @@
 
 template<typename TORDApi>
 class BreakOutStrategy final : public Strategy<TORDApi> {
-public:
+
     SimpleMovingAverage<10> _smaLow;
     SimpleMovingAverage<100> _smaHigh;
     int _highVal;
     int _lowVal;
+
+    double _startingAmount;
+
+public:
     ~BreakOutStrategy();
     BreakOutStrategy(std::shared_ptr<MarketDataInterface> mdPtr_,  std::shared_ptr<TORDApi> od_);
 private:
     void onExecution(const std::shared_ptr<Event>& event_) override;
     void onTrade(const std::shared_ptr<Event>& event_) override;
     void onBBO(const std::shared_ptr<Event>& event_) override;
+public:
+    void init(const std::shared_ptr<Config>& config_) override;
 
 };
+
+
+template<typename TORDApi>
+void BreakOutStrategy<TORDApi>::init(const std::shared_ptr<Config>& config_) {
+    Strategy<TORDApi>::init(config_);
+    config_->get("startingAmount");
+
+}
 
 template<typename TORDApi>
 void BreakOutStrategy<TORDApi>::onExecution(const std::shared_ptr<Event> &event_) {
@@ -35,6 +49,7 @@ void BreakOutStrategy<TORDApi>::onTrade(const std::shared_ptr<Event> &event_) {
     _highVal = _smaHigh(event_->getTrade()->getPrice());
     _lowVal = _smaLow(event_->getTrade()->getPrice());
     INFO(LOG_VAR(_highVal) << LOG_VAR(_lowVal));
+
 }
 
 template<typename TORDApi>
@@ -53,7 +68,9 @@ BreakOutStrategy<TORDApi>::BreakOutStrategy(std::shared_ptr<MarketDataInterface>
 ,   _lowVal(0)
 ,   _highVal(0)
 ,   _smaHigh()
-,    _smaLow(){
+,   _smaLow() {
+
+    INFO("BreakOutStrategy is initialised");
 }
 
 
