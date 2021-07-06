@@ -5,18 +5,21 @@
 
 TestEnv::TestEnv(std::initializer_list<std::pair<std::string,std::string>> config_)
 :   _config(std::make_shared<Config>(config_))
-//,   _strategy(std::make_shared<TStrategy>(_marketDataProvider, _orderApi))
 {
-    _config->set("libraryLocation", "/home/user/install/lib/libtest_trading_strategies.a");
+    _config->set("libraryLocation", "/home/user/install/lib/libtest_trading_strategies.so");
+    _config->set("baseUrl", "https://localhost:8888/api/v1");
+    _config->set("apiKey", "dummy");
+    _config->set("apiSecret", "dummy");
+    _config->set("connectionString", "https://localhost:8888/realtime");
+    _config->set("clOrdPrefix", "MCST");
     _context = std::make_shared<Context<TestMarketData, OrderApi>>(_config);
-    auto method = _context->loadFactoryMethod();
-    method(_marketDataProvider, _orderApi);
+    _context->init();
 }
 
 void TestEnv::operator<<(const std::string &value_) {
     try {
-        *(_context->marketData()) << value_;
-        _strategy->evaluate();
+        *_context->marketData() << value_;
+        _context->strategy()->evaluate();
     } catch (std::runtime_error& ex) {
         FAIL() << "TEST Exception: " << ex.what() << " during event <<\n\n      " << value_;
     }
@@ -24,7 +27,7 @@ void TestEnv::operator<<(const std::string &value_) {
 
 void TestEnv::operator>>(const std::string &value_) {
     try {
-        *_orderApi >> value_;
+        *_context->orderApi() >> value_;
     } catch (std::runtime_error& ex) {
         FAIL() << "TEST Exception: " << ex.what() << " during event >>\n\n      " << value_;
     }

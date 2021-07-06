@@ -23,7 +23,7 @@ class Context {
     std::shared_ptr<api::ApiClient> _apiClient;
     web::http::client::http_client_config _httpConfig;
     std::shared_ptr<TOrderApi> _orderManager;
-    std::shared_ptr<Strategy<api::OrderApi>> _strategy;
+    std::shared_ptr<Strategy<TOrderApi>> _strategy;
     void* _handle;
 
 private:
@@ -35,13 +35,14 @@ public:
     Context(std::shared_ptr<TMarketData> md_, std::shared_ptr<api::ApiConfiguration> apiConfig_);
 
     ~Context();
-    explicit Context(std::shared_ptr<Config> config_);
+    explicit Context(const std::shared_ptr<Config>& config_);
 
     factoryMethod_t loadFactoryMethod();
 
     void init();
 
     const std::shared_ptr<TMarketData>& marketData() const { return _marketData; }
+    const std::shared_ptr<TOrderApi>& orderApi() const { return _orderManager; }
     const std::shared_ptr<api::ApiConfiguration>& apiConfig() const { return _apiConfig; }
     const std::shared_ptr<api::ApiClient>& apiClient() const { return _apiClient; }
     const std::shared_ptr<Strategy<TOrderApi>>& strategy() const { return _strategy; }
@@ -59,11 +60,12 @@ Context<TMd, TOrdApi>::Context(std::shared_ptr<TMd> md_, std::shared_ptr<api::Ap
 
 template<typename TMarketData, typename TOrderApi>
 void Context<TMarketData, TOrderApi>::init() {
-    auto factoryMethod = loadFactoryMethod();
-
-    _strategy = factoryMethod(_marketData,_orderManager);
+    Context<TMarketData,TOrderApi>::factoryMethod_t factoryMethod = loadFactoryMethod();
+    std::shared_ptr<Strategy<TOrderApi>> strategy = factoryMethod(_marketData,_orderManager);
+    _strategy = strategy;
     _marketData->init();
     _marketData->subscribe();
+    _strategy->init(_config);
     //_marketData->initSignals(_config);
 
 }
@@ -90,7 +92,7 @@ Context<TMarketData, TOrderApi>::loadFactoryMethod() {
 }
 
 template<typename TMarketData, typename TOrderApi>
-Context<TMarketData, TOrderApi>::Context(std::shared_ptr<Config> config_) {
+Context<TMarketData, TOrderApi>::Context(const std::shared_ptr<Config>& config_) {
 
     _config = std::move(config_);
     std::string lib = _config->get("libraryLocation");
@@ -105,12 +107,12 @@ Context<TMarketData, TOrderApi>::Context(std::shared_ptr<Config> config_) {
     _marketData = std::make_shared<TMarketData>(config_);
     _apiConfig = std::make_shared<api::ApiConfiguration>();
     _httpConfig = web::http::client::http_client_config();
-    _config = std::move(config_);
 
     _apiConfig->setBaseUrl(config_->get("baseUrl"));
     _apiConfig->setApiKey("api-key", config_->get("apiKey"));
     _apiConfig->setApiKey("api-secret", config_->get("apiSecret"));
     _apiConfig->setHttpConfig(_httpConfig);
+    _config = config_;
 
     _apiClient = std::make_shared<api::ApiClient>(_apiConfig);
     _orderManager = std::make_shared<TOrderApi>(_apiClient);

@@ -31,10 +31,6 @@ class TestEnv
     using OrderApi = TestOrdersApi;
     using TStrategy = Strategy<OrderApi>;
 
-    std::shared_ptr<TestMarketData> _marketDataProvider;
-    std::shared_ptr<OrderApi> _orderApi;
-    std::shared_ptr<TStrategy> _strategy;
-
     std::shared_ptr<Config> _config;
     std::shared_ptr<Context<TestMarketData, OrderApi>> _context;
 public:

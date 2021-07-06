@@ -40,15 +40,12 @@ int main(int argc, char **argv) {
     // strategy->init(config);
 
     auto context = std::make_shared<Context<MarketData, api::OrderApi>>(config);
-    context->marketData()->init();
-    context->marketData()->subscribe();
-    context->strategy()->init(config);
+    context->init();
 
-    /*
-     while (strategy->shouldEval()) {
-        strategy->evaluate();
+     while (context->strategy()->shouldEval()) {
+        context->strategy()->evaluate();
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
-    }*/
+    }
     INFO("exiting");
     return 0;
 }

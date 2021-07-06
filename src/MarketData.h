@@ -181,6 +181,7 @@ public:
     const std::unordered_map<std::string, OrderPtr>& getOrders() const;
     const std::queue<ExecPtr>& getExecutions() const;
     const std::unordered_map<std::string, PositionPtr>& getPositions() const;
+
 };
 
 class MarketData

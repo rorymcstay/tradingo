@@ -47,7 +47,7 @@ class Strategy {
     virtual void onBBO(const std::shared_ptr<Event>& event_) = 0;
 
 public:
-    Strategy(std::shared_ptr<MarketDataInterface> mdPtr_,  std::shared_ptr<TOrdApi> od_);
+    Strategy(std::shared_ptr<MarketDataInterface> md_,  std::shared_ptr<TOrdApi> od_);
     void evaluate();
 
     void init(const std::string& config_);

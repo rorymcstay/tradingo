@@ -13,6 +13,8 @@
 class TestMarketData : public MarketDataInterface {
 public:
     explicit TestMarketData(const std::shared_ptr<Config>& ptr);
+    void init() {}
+    void subscribe() {}
     void operator << (const std::string& marketDataString);
 };
 

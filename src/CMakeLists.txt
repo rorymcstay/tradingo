@@ -21,6 +21,7 @@ add_library(trading_funcs
         Strategy.h # templated
         Context.h # templated
         Config.cpp
+        SimpleMovingAverage.cpp
 
         # Signal.cpp
         #${CPPLOGGER_HEADER}
