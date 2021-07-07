@@ -120,6 +120,6 @@ void TestEnv::playback(const std::string& tradeFile_, const std::string& quoteFi
 
     }
     for (auto& event : outBuffer) {
-        INFO("Out Event" << event->toJson().serialize());
+        LOGINFO("Out Event" << event->toJson().serialize());
     }
 }

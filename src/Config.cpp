@@ -16,7 +16,7 @@ Config::Config(const std::string& file_)
     std::ifstream cFile (file_);
     if (cFile.is_open()) {
         std::string line;
-        INFO(LOG_VAR(file_));
+        LOGINFO(LOG_VAR(file_));
         while(getline(cFile, line)){
             line.erase(std::remove_if(line.begin(), line.end(), isspace),
                        line.end());
@@ -25,14 +25,14 @@ Config::Config(const std::string& file_)
             auto delimiterPos = line.find('=');
             auto name = line.substr(0, delimiterPos);
             auto value = line.substr(delimiterPos + 1);
-            INFO("Reading config: " << LOG_VAR(name) << LOG_VAR(value) );
+            LOGINFO("Reading config: " << LOG_VAR(name) << LOG_VAR(value) );
             set(name, value);
         }
     }
     else {
         std::stringstream error;
         error << "Couldn't open config " << LOG_NVP("file", file_) << " for reading.";
-        INFO(error.str());
+        LOGINFO(error.str());
         throw std::runtime_error(error.str());
     }
 
@@ -44,7 +44,7 @@ std::string Config::get(const std::string &name_) {
     } catch (const std::exception& ex_) {
         std::stringstream message;
         message << "Missing Configuiration value "<< LOG_NVP("name", name_);
-        INFO(message.str());
+        LOGINFO(message.str());
         throw std::runtime_error( message.str() );
     }
 }

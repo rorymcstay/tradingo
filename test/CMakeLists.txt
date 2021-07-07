@@ -30,6 +30,7 @@ include_directories(${PROJECT_SOURCE_DIR}/src/)
 include_directories(${BITMEX_INCLUDE})
 include_directories(${GTEST_INCLUDE_DIRS})
 include_directories(${OPENSSL_INCLUDE_DIR})
+include_directories(${CPPLOGGER_INCLUDES})
 
 #set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 #set (CMAKE_CXX_FLAGS "-std=c++11")

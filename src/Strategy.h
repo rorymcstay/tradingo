@@ -77,13 +77,13 @@ void Strategy<TOrdApi>::evaluate() {
         _bid = quote->getBidPrice();
         _ask = quote->getAskPrice();
         onBBO(event);
-        DEBUG("BBO Update Bid=" << quote->getBidSize() << '@' << quote->getBidPrice()
+        LOGDEBUG("BBO Update Bid=" << quote->getBidSize() << '@' << quote->getBidPrice()
                     << " Ask=" << quote->getAskSize() << '@' << quote->getAskPrice());
     } else if (event->eventType() == EventType::TradeUpdate) {
-        DEBUG( "Trade: " << event->getTrade()->toJson().serialize());
+        LOGDEBUG( "Trade: " << event->getTrade()->toJson().serialize());
         onTrade(event);
     } else if (event->eventType() == EventType::Exec) {
-        DEBUG("Execution: " << event->getExec()->toJson().serialize());
+        LOGDEBUG("Execution: " << event->getExec()->toJson().serialize());
         onExecution(event);
     }
     if (_allocatedAsk > 0 || _allocatedBid > 0) {
@@ -97,7 +97,7 @@ template<typename TOrdApi>
 void Strategy<TOrdApi>::init(const std::string& config_) {
     auto _config = std::make_shared<Config>(config_);
     init(_config);
-    INFO("Initializing strategy");
+    LOGINFO("Initializing strategy");
 }
 
 template<typename TOrdApi>
@@ -105,9 +105,9 @@ void Strategy<TOrdApi>::init(const std::shared_ptr<Config>& config_) {
     _config = config_;
     _symbol = _config->get("symbol");
     _clOrdIdPrefix = _config->get("clOrdPrefix");
-    INFO("Initializing strategy");
+    LOGINFO("Initializing strategy");
     for (auto& order : _marketData->getOrders())
-        INFO("Open Order: " LOG_NVP("OID", order.first) << order.second->toJson().serialize());
+        LOGINFO("Open Order: " LOG_NVP("OID", order.first) << order.second->toJson().serialize());
 }
 
 template<typename TOrdApi>
@@ -149,17 +149,17 @@ bool Strategy<TOrdApi>::createOrders(price_t bid, price_t ask) {
         tsk.then(
                 //
                 [=, this] (const pplx::task<std::vector<std::shared_ptr<model::Order>>>& task_) {
-                    DEBUG("Send order callback");
+                    LOGDEBUG("Send order callback");
                     try {
-                        INFO("Succesfully sent order: " << task_.get()[0]->toJson().serialize());
+                        LOGINFO("Succesfully sent order: " << task_.get()[0]->toJson().serialize());
                         _attempted = true;
                     } catch (api::ApiException& apiException) {
                         auto reason = apiException.getContent();
-                        INFO("APIException caught failed to send order: " << LOG_VAR(apiException.what())
+                        LOGINFO("APIException caught failed to send order: " << LOG_VAR(apiException.what())
                                                                           << " ExceptionContent=" << reason->rdbuf());
                         return;
                     } catch (web::http::http_exception& httpException) {
-                        INFO("Failed to send order! " << LOG_VAR(httpException.what()) << LOG_VAR(httpException.error_code()));
+                        LOGINFO("Failed to send order! " << LOG_VAR(httpException.what()) << LOG_VAR(httpException.error_code()));
                         return;
                     }
                     _allocatedBid += size;

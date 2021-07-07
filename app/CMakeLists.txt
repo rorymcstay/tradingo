@@ -25,6 +25,7 @@ include_directories(${PROJECT_SOURCE_DIR}/src)
 include_directories(${BITMEX_INCLUDE})
 include_directories(${Boost_INCLUDE_DIR})
 include_directories(${OPENSSL_INCLUDE_DIR})
+include_directories(${CPPLOGGER_INCLUDES})
 
 install(TARGETS
            tickRecorder

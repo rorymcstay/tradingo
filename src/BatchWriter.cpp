@@ -6,19 +6,12 @@
 #include "BatchWriter.h"
 #include "Utils.h"
 
-using timestamp_t = std::chrono::time_point<std::chrono::system_clock>;
 
 std::ostream& operator << (std::ostream& ss_, const model::ModelBase& modelBase) {
     ss_ << modelBase.toJson().serialize();
     return ss_;
 }
 
-std::string formatTime(timestamp_t time_) {
-    auto outTime = std::chrono::system_clock::to_time_t(time_);
-    std::stringstream ss;
-    ss << std::put_time(localtime(&outTime), "%Y-%m-%d");
-    return ss.str();
-}
 
 void BatchWriter::update_file_location() {
     _dateString = formatTime(std::chrono::system_clock::now());
@@ -26,7 +19,7 @@ void BatchWriter::update_file_location() {
     auto directoryLocation = std::filesystem::path(location);
     if (not std::filesystem::exists(directoryLocation))
     {
-        INFO("Creating new directory " << LOG_VAR(directoryLocation));
+        LOGINFO("Creating new directory " << LOG_VAR(directoryLocation));
         std::filesystem::create_directories(directoryLocation);
     }
     _fileLocation = location + "/" + _tableName + "_" + _symbol + ".json";
@@ -52,7 +45,7 @@ void BatchWriter::write(std::shared_ptr<model::ModelBase> item_) {
 }
 
 void BatchWriter::write_batch() {
-    INFO("Writing batch " << LOG_VAR(_tableName) << " to " << LOG_VAR(_fileLocation));
+    LOGINFO("Writing batch " << LOG_VAR(_tableName) << " to " << LOG_VAR(_fileLocation));
     _filehandle.open(_fileLocation, std::ios::app);
     for (auto& message : _batch)
     {

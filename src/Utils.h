@@ -3,12 +3,16 @@
 #include <iostream>
 #include <ctime>
 #include <iomanip>
+#include <chrono>
+
+#include "aixlog.hpp"
+
 
 #define __FILENAME__ (__builtin_strrchr(__FILE__, '/') ? __builtin_strrchr(__FILE__, '/') + 1 : __FILE__)
-#define INFO(msg_)  std::cout << " INFO    " << msg_ << " |" << __FILENAME__ << ":" << __LINE__ << '\n'
-#define DEBUG(msg_)  std::cout << " DEBUG    " << msg_ << " |" << __FILENAME__ << ":" << __LINE__ << '\n'
-#define WARN(msg_)  std::cout << " WARN    " << msg_ << " |" << __FILENAME__ << ":" << __LINE__ << '\n'
-#define ERROR(msg_) std::cout << " ERROR   " << msg_ << " |" << __FILENAME__ << ":" << __LINE__ << '\n'
+#define LOGINFO(msg_)  LOG(INFO) << "\t" << msg_ << " |" <<  __FILENAME__ << '\n'
+#define LOGDEBUG(msg_) LOG(DEBUG) << "\t" << msg_ << " |" <<  __FILENAME__ << '\n'
+#define LOGWARN(msg_)  LOG(INFO) << "\t" << msg_ << " |" <<  __FILENAME__ << '\n'
+#define LOGERROR(msg_) LOG(INFO) << "\t" << msg_ << " |" <<  __FILENAME__ << '\n'
 
 #define LOG_VAR(var_) #var_ << "='" << var_ << "', "
 #define LOG_NVP(name_, var_) name_ << "=" << var_ << " "
@@ -75,8 +79,12 @@
                                                       (enum2str(name::v6) == value) ? name::v6 :                                                               \
                                                       (enum2str(name::v7) == value) ? name::v7 : name::Unknown; }
 template<typename T> inline const char* enum2str(T) {return "";}
-template<typename T> inline T str2enum(const char* value) {return enum2str<T>(value);} 
+template<typename T> inline T str2enum(const char* value) {return enum2str<T>(value);}
 
+
+using timestamp_t = std::chrono::time_point<std::chrono::system_clock>;
+
+std::string formatTime(timestamp_t time_);
 
 template<typename T>
 bool almost_equal(T num1, T num2)

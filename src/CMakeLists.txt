@@ -22,6 +22,7 @@ add_library(trading_funcs SHARED
         Context.h # templated
         Config.cpp
         SimpleMovingAverage.cpp
+        Utils.cpp
 
         # Signal.cpp
         #${CPPLOGGER_HEADER}

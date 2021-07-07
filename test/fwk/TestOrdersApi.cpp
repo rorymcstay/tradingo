@@ -13,7 +13,7 @@ TestOrdersApi::TestOrdersApi(std::shared_ptr<io::swagger::client::api::ApiClient
 ,   _orderCancels()
 ,   _oidSeed(0) {
 
-    INFO("TestOrdersApi initialised!");
+    LOGINFO("TestOrdersApi initialised!");
 
 }
 
@@ -40,6 +40,9 @@ TestOrdersApi::order_amend(std::optional<utility::string_t> orderID, std::option
 pplx::task<std::vector<std::shared_ptr<model::Order>>>
 TestOrdersApi::order_amendBulk(std::optional<utility::string_t> orders) {
 
+    assert(false && "Not implemented");
+    std::vector<std::shared_ptr<model::Order>> ret = {nullptr};
+    return pplx::task_from_result(ret);
 }
 
 pplx::task<std::vector<std::shared_ptr<model::Order>>>
@@ -48,7 +51,7 @@ TestOrdersApi::order_cancel(std::optional<utility::string_t> orderID,
                             std::optional<utility::string_t> text) {
     std::vector<std::shared_ptr<model::Order>> ordersRet;
     if (_orders.find(orderID.value()) == _orders.end()) {
-        WARN(LOG_NVP("OrderID",orderID.value()) << " not found to cancel.");
+        LOGWARN(LOG_NVP("OrderID",orderID.value()) << " not found to cancel.");
         _orderCancels.push(nullptr);
     } else {
         _orders[orderID.value()]->setOrdStatus("PendingCancel");
