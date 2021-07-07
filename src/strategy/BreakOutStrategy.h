@@ -54,6 +54,16 @@ void BreakOutStrategy<TORDApi>::onTrade(const std::shared_ptr<Event> &event_) {
 
 template<typename TORDApi>
 void BreakOutStrategy<TORDApi>::onBBO(const std::shared_ptr<Event> &event_) {
+    auto quote = event_->getQuote();
+    auto askPrice = quote->getAskPrice();
+    auto bidPrice = quote->getBidPrice();
+    auto midPoint = (askPrice+bidPrice)/2;
+    _lowVal = _smaLow(midPoint);
+    _highVal = _smaHigh(midPoint);
+    if (_lowVal > _highVal) {
+        // short term average is higher than longterm, trade
+        //Strategy<TORDApi>::
+    }
 
 }
 
