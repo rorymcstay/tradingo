@@ -36,7 +36,7 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    INFO("Starting tick recording with " << LOG_VAR(symbol) << LOG_VAR(storage));
+    LOGINFO("Starting tick recording with " << LOG_VAR(symbol) << LOG_VAR(storage));
 
     auto marketData = std::make_shared<MarketData>(config);
     marketData->init();

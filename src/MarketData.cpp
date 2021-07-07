@@ -60,17 +60,17 @@ void MarketData::init() {
                 //std::cout << stringVal << std::endl;
                 web::json::value msgJson = web::json::value::parse(stringVal);
                 if (msgJson.has_field("info")) {
-                    INFO("info: " << msgJson["info"].as_string());
-                    INFO("response" << msgJson.serialize());
+                    LOGINFO("info: " << msgJson["info"].as_string());
+                    LOGINFO("response" << msgJson.serialize());
                     _initialised = true;
                     return;
                 }
                 if (msgJson.has_field("success") && msgJson.at("success").as_bool()) {
-                    INFO("Operation success: " << msgJson.serialize());
+                    LOGINFO("Operation success: " << msgJson.serialize());
                     return;
                 }
                 if (msgJson.has_field("error")) {
-                    ERROR("Websocket Error :" << stringVal);
+                    LOGWARN("Websocket Error :" << stringVal);
                     return;
                 }
 
@@ -102,7 +102,7 @@ void MarketData::init() {
             });
 
     std::string conString = getBaseUrl() + getConnectionUri();
-    INFO("Connecting to " << LOG_VAR(conString));
+    LOGINFO("Connecting to " << LOG_VAR(conString));
     _wsClient->connect(conString);
 
     // sleep until connected.
@@ -112,7 +112,7 @@ void MarketData::init() {
         count++;
         std::this_thread::sleep_for(std::chrono::seconds(1));
         if (count > 30) {
-            ERROR("Timed out after 30 seconds waiting for log on message.");
+            LOGWARN("Timed out after 30 seconds waiting for log on message.");
             throw std::runtime_error("timed out after 30 seconds connecting to "+ conString);
         }
     }
@@ -123,7 +123,7 @@ void MarketData::init() {
         std::string signature = hex_hmac_sha256(_apiSecret, "GET/realtime" + expires);
         std::string payload =
                 R"({"op": "authKeyExpires", "args": [")" + _apiKey + R"(", )" + expires + R"(, ")" + signature + R"("]})";
-        INFO("Authenticating on websocket " << LOG_VAR(payload));
+        LOGINFO("Authenticating on websocket " << LOG_VAR(payload));
         web::websockets::client::websocket_outgoing_message message;
         message.set_utf8_message(payload);
         _wsClient->send(message);
@@ -155,7 +155,7 @@ void MarketData::subscribe() {
     }
     web::websockets::client::websocket_outgoing_message subMessage;
     subMessage.set_utf8_message(payload.serialize());
-    INFO("Doing subscribe " << payload.serialize());
+    LOGINFO("Doing subscribe " << payload.serialize());
     _wsClient->send(subMessage);
 }
 

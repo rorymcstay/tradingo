@@ -1,9 +1,9 @@
 [submodule "thirdparty/api-connectors"]
 	path = thirdparty/api-connectors
 	url = git@github.com:rorymcstay/api-connectors.git
-[submodule "thirdparty/CPPLogger"]
-	path = thirdparty/CPPLogger
-	url = https://github.com/carun/CPPLogger.git 
+[submodule "thirdparty/aixlog"]
+	path = thirdparty/aixlog
+	url = https://github.com/badaix/aixlog 
 [submodle "thirdparty/abseil-cpp"]
 	path = thirdparty/abseil-cpp
 	url = https://github.com/abseil/abseil-cpp

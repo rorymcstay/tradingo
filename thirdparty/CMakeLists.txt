@@ -22,8 +22,11 @@ if(WITH_ABSL)
 endif(WITH_ABSL)
 
 ### CPPLogger ###
-set(CPPLOGGER_INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}/CPPLogger/ PARENT_SCOPE)
-set(CPPLOGGER_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/CPPLogger/CPPLogger.hpp PARENT_SCOPE)
+message(STATUS "Setting up aixlog headerfile")
+set(CPPLOGGER_INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}/aixlog/include PARENT_SCOPE)
+set(CPPLOGGER_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/aixlog/include/aixlog.hpp PARENT_SCOPE)
+include_directories(${CPPLOGGER_INCLUES})
+message(STATUS "CPPLOGGER_INLCLUDES=${CPPLOGGER_INCLUDES}")
 
 install(TARGETS
             CppRestSwaggerClient

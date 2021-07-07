@@ -41,14 +41,14 @@ void BreakOutStrategy<TORDApi>::init(const std::shared_ptr<Config>& config_) {
 
 template<typename TORDApi>
 void BreakOutStrategy<TORDApi>::onExecution(const std::shared_ptr<Event> &event_) {
-    INFO("BreakOutStrategy::onExecution(): " << event_->getExec()->toJson().serialize());
+    LOGINFO("BreakOutStrategy::onExecution(): " << event_->getExec()->toJson().serialize());
 }
 
 template<typename TORDApi>
 void BreakOutStrategy<TORDApi>::onTrade(const std::shared_ptr<Event> &event_) {
     _highVal = _smaHigh(event_->getTrade()->getPrice());
     _lowVal = _smaLow(event_->getTrade()->getPrice());
-    INFO(LOG_VAR(_highVal) << LOG_VAR(_lowVal));
+    LOGINFO(LOG_VAR(_highVal) << LOG_VAR(_lowVal));
 
 }
 
@@ -80,7 +80,7 @@ BreakOutStrategy<TORDApi>::BreakOutStrategy(std::shared_ptr<MarketDataInterface>
 ,   _smaHigh()
 ,   _smaLow() {
 
-    INFO("BreakOutStrategy is initialised");
+    LOGINFO("BreakOutStrategy is initialised");
 }
 
 

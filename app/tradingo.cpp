@@ -28,7 +28,7 @@ int main(int argc, char **argv) {
 
 
     if (!vm.contains("config")) {
-        INFO("Config file not provided.");
+        LOGINFO("Config file not provided.");
         return 1;
     }
     auto configfile = vm.at("config").as<std::string>();
@@ -46,6 +46,6 @@ int main(int argc, char **argv) {
         context->strategy()->evaluate();
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
-    INFO("exiting");
+    LOGINFO("exiting");
     return 0;
 }

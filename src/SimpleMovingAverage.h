@@ -10,14 +10,7 @@
 template <uint8_t N, class input_t = uint16_t, class sum_t = uint32_t>
 class SimpleMovingAverage {
 public:
-    input_t operator()(input_t input) {
-        sum -= previousInputs[index];
-        sum += input;
-        previousInputs[index] = input;
-        if (++index == N)
-            index = 0;
-        return (sum + (N / 2)) / N;
-    }
+    input_t operator()(input_t input);
 
     static_assert(
             sum_t(0) < sum_t(-1),  // Check that `sum_t` is an unsigned type
@@ -30,6 +23,15 @@ private:
     sum_t sum                 = 0;
 };
 
+template<uint8_t N, class input_t, class sum_t>
+input_t SimpleMovingAverage<N, input_t, sum_t>::operator()(input_t input) {
+    sum -= previousInputs[index];
+    sum += input;
+    previousInputs[index] = input;
+    if (++index == N)
+        index = 0;
+    return (sum + (N / 2)) / N;
+}
 
 
 #endif //TRADINGO_SIMPLEMOVINGAVERAGE_H
