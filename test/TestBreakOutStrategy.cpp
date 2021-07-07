@@ -38,5 +38,15 @@ TEST(BreakOutStrategy, smoke_test)
     env << "TRADE foreignNotional=500 grossValue=1304800 homeNotional=0.013048000000000001 price=38324 side=Sell size=500 symbol=XBTUSD tickDirection=ZeroMinusTick trdMatchID=dac0793c-0ff4-74f5-a793-b00e3811a690" LN;
     env << "TRADE foreignNotional=500 grossValue=1304800 homeNotional=0.013048000000000001 price=38324 side=Sell size=500 symbol=XBTUSD tickDirection=ZeroMinusTick trdMatchID=dac0793c-0ff4-74f5-a793-b00e3811a690" LN;
 
+}
 
+TEST(BreakOutStrategy, test_playback) {
+
+    TestEnv env({
+        {"symbol", "XBTUSD"},
+        {"clOrdPrefix", "MCST"},
+        {"factoryMethod", "RegisterBreakOutStrategy"},
+        {"startingAmount", "1000"}
+    });
+    env.playback("trades_XBTUSD.json", "quotes_XBTUSD.json");
 }

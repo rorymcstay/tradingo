@@ -33,6 +33,7 @@ TestOrdersApi::order_amend(std::optional<utility::string_t> orderID, std::option
     _orderAmends.emplace(order);
     auto task = pplx::task_from_result(order);
     //auto task = pplx::task<decltype(order)>(order);
+    _allEvents.push(order);
     return task;
 }
 
@@ -53,6 +54,7 @@ TestOrdersApi::order_cancel(std::optional<utility::string_t> orderID,
         _orders[orderID.value()]->setOrdStatus("PendingCancel");
         ordersRet.push_back(_orders[orderID.value()]);
         _orderCancels.push(_orders[orderID.value()]);
+        _allEvents.push(_orders[orderID.value()]);
     }
     return pplx::task_from_result(ordersRet);
 }
@@ -65,6 +67,7 @@ TestOrdersApi::order_cancelAll(std::optional<utility::string_t> symbol, std::opt
         orders.second->setOrdStatus("PendingCancel");
         _orderCancels.push(orders.second);
         out.push_back(orders.second);
+        _allEvents.push(orders.second);
     }
     return pplx::task_from_result(out);
 }
@@ -186,6 +189,23 @@ void TestOrdersApi::add_order(const std::shared_ptr<model::Order> &order_) {
     order_->setOrderID(std::to_string(_oidSeed));
     order_->setOrdStatus("New");
     _newOrders.push(order_);
+    _allEvents.push(order_);
+}
+
+void TestOrdersApi::operator>>(std::vector<std::shared_ptr<model::ModelBase>>& outVec) {
+    while (!_allEvents.empty()){
+        auto top = _allEvents.front();
+        auto val = top->toJson();
+        val.as_object()["timestamp"] = web::json::value(_time.to_string());
+        top->fromJson(val);
+        outVec.push_back(top);
+        _allEvents.pop();
+    }
+
+}
+
+void TestOrdersApi::operator<<(utility::datetime time_) {
+    _time = time_;
 }
 
 

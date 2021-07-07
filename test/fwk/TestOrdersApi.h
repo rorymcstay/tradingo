@@ -27,7 +27,9 @@ private:
     std::queue<std::shared_ptr<model::Order>> _orderAmends;
     std::queue<std::shared_ptr<model::Order>> _newOrders;
     std::queue<std::shared_ptr<model::Order>> _orderCancels;
+    std::queue<std::shared_ptr<model::ModelBase>> _allEvents;
     long _oidSeed;
+    utility::datetime _time;
 
     // functional helpers
     void add_order(const std::shared_ptr<model::Order>& order_);
@@ -114,6 +116,10 @@ private:
 
 public:
     void operator >> (const std::string& outEvent_);
+    void operator >> (std::vector<std::shared_ptr<model::ModelBase>>& outBuffer_);
+    void operator << (utility::datetime time_);
+
+    std::map<std::string, std::shared_ptr<model::Order>>& orders() { return _orders; }
 };
 
 

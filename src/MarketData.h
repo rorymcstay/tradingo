@@ -157,7 +157,6 @@ protected:
     std::queue<std::shared_ptr<model::Execution>> _executions;
     std::unordered_map<std::string, std::shared_ptr<model::Position>> _positions;
     std::unordered_map<std::string, std::shared_ptr<model::Order>> _orders;
-
     void handleQuotes(const std::vector<std::shared_ptr<model::Quote>>& quotes_, const std::string& action_);
     void handleTrades(std::vector<std::shared_ptr<model::Trade>>& trades_, const std::string& action_);
     void handlePositions(std::vector<std::shared_ptr<model::Position>>& trades_, const std::string& action_);

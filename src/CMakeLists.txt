@@ -39,5 +39,4 @@ add_subdirectory(strategy)
 install(TARGETS
             trading_funcs
         RUNTIME DESTINATION bin
-        LIBRARY DESTINATION lib
-        )
+        LIBRARY DESTINATION lib)

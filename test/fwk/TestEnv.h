@@ -36,8 +36,9 @@ class TestEnv
 public:
     explicit TestEnv(std::initializer_list<std::pair<std::string,std::string>>);
 
-    void operator << (const std::string& value_);
+    void playback(const std::string& tradeFile_, const std::string& quoteFile_);
 
+    void operator << (const std::string& value_);
     void operator >> (const std::string& value_);
 };
 
