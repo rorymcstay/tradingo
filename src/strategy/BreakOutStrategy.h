@@ -13,9 +13,13 @@ using SMA_T = SimpleMovingAverage<uint64_t, uint64_t>;
 template<typename TORDApi>
 class BreakOutStrategy final : public Strategy<TORDApi> {
 
-    int _longTermAvg;
-    int _shortTermAvg;
-    price_t _startingAmount;
+    using StrategyApi = Strategy<TORDApi>;
+
+    price_t _longTermAvg;
+    price_t _shortTermAvg;
+    qty_t _shortExpose;
+    qty_t _longExpose;
+
     price_t _buyThreshold;
 
     SMA_T _smaLow;
@@ -38,9 +42,14 @@ public:
 
 template<typename TORDApi>
 void BreakOutStrategy<TORDApi>::init(const std::shared_ptr<Config>& config_) {
-    Strategy<TORDApi>::init(config_);
+    // initialise base class
+    StrategyApi::init(config_);
+
     _buyThreshold = std::atof(config_->get("buyThreshold", "0.0").c_str());
-    auto primePercent = std::atof(config_->get("primePercent", "0.5").c_str());
+    _shortExpose = std::atof(config_->get("shortExpose", "0.0").c_str());
+    _longExpose = std::atof(config_->get("longExpose", "100.0").c_str());
+
+    auto primePercent = std::atof(config_->get("primePercent", "1.0").c_str());
     auto shortTermWindow = std::stoi(config_->get("shortTermWindow"));
     auto longTermWindow = std::stoi(config_->get("longTermWindow"));
     _smaLow = SMA_T(shortTermWindow,shortTermWindow*primePercent);
@@ -70,10 +79,11 @@ void BreakOutStrategy<TORDApi>::onBBO(const std::shared_ptr<Event> &event_) {
     _longTermAvg = _smaHigh(midPoint);
     if ((_smaLow.is_ready() && _smaHigh.is_ready()) && _shortTermAvg - _longTermAvg >= _buyThreshold) {
         // short term average is higher than longterm, buy
-        Strategy<TORDApi>::addAllocation(bidPrice, getQtyToTrade("Buy"), "Buy");
+        auto qtyToTrade = getQtyToTrade("Buy");
+        StrategyApi::allocations()->addAllocation(bidPrice, qtyToTrade, "Buy");
     } else {
-        //
-        Strategy<TORDApi>::addAllocation(askPrice, getQtyToTrade("Sell"), "Sell");
+        auto qtyToTrade = getQtyToTrade("Sell");
+        StrategyApi::allocations()->addAllocation(askPrice, qtyToTrade, "Sell");
     }
 
 }
@@ -85,29 +95,21 @@ BreakOutStrategy<TORDApi>::~BreakOutStrategy() {
 
 template<typename TORDApi>
 BreakOutStrategy<TORDApi>::BreakOutStrategy(std::shared_ptr<MarketDataInterface> mdPtr_,  std::shared_ptr<TORDApi> od_)
-:   Strategy<TORDApi>(mdPtr_, od_)
-, _shortTermAvg()
-, _longTermAvg()
-, _startingAmount() {
+:   StrategyApi(mdPtr_, od_)
+,   _shortTermAvg()
+,   _longTermAvg()
+,   _longExpose()
+,   _shortExpose() {
 }
 
 template<typename TORDApi>
 qty_t BreakOutStrategy<TORDApi>::getQtyToTrade(const std::string& side_) {
-    qty_t buyExposure = 0.0;
-    qty_t sellExposure = 0.0;
-    for (auto& allocation : Strategy<TORDApi>::allocations()) {
-        if (!allocation)
-            continue;
-        if (allocation->getSide() == "Buy") {
-            buyExposure += allocation->getSize();
-        } else {
-            sellExposure += allocation->getSize();
-        }
-    }
+    auto allocated = StrategyApi::allocations()->totalAllocated();
     if (side_ == "Buy") {
-        return sellExposure;
+        // if we are buying
+        return std::max(_longExpose - allocated, 0.0);
     } else {
-        return buyExposure;
+        return std::max(-_shortExpose - allocated, -_shortExpose);
     }
 }
 

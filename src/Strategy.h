@@ -13,6 +13,7 @@
 #include "Utils.h"
 #include "Allocation.h"
 #include "model/Instrument.h"
+#include "Allocations.h"
 
 
 template<typename TOrdApi>
@@ -24,17 +25,12 @@ class Strategy {
     std::shared_ptr<TOrdApi>  _orderEngine;
     std::shared_ptr<model::Instrument> _instrument;
 
-
-    // TODO Remove
-    size_t _allocatedAsk = 0;
-    size_t _allocatedBid = 0;
-
     std::string _symbol;
     std::string _clOrdIdPrefix;
     int _oidSeed;
     std::shared_ptr<Config> _config;
 
-    std::vector<std::shared_ptr<Allocation>> _allocations;
+    std::shared_ptr<Allocations>           _allocations;
     std::vector<OrderPtr> _buyOrders;
     std::vector<OrderPtr> _sellOrders;
 
@@ -47,30 +43,28 @@ class Strategy {
     void updateFromTask(const pplx::task<std::vector<std::shared_ptr<model::Order>>>& task_);
 
 public:
-    std::vector<std::shared_ptr<Allocation>> allocations() { return _allocations; }
     Strategy(std::shared_ptr<MarketDataInterface> md_,  std::shared_ptr<TOrdApi> od_);
     void evaluate();
-
     void init(const std::string& config_);
     virtual void init(const std::shared_ptr<Config>& config_);
-
     virtual bool shouldEval();
+    const std::shared_ptr<Allocations>& allocations() { return _allocations; }
+
 protected:
     // allocation api
-    void addAllocation(price_t price_, size_t qty_, const std::string& side_);
-    size_t getAllocationIndex(price_t price_);
-    void placeAllocations();
 
 public:
     const std::shared_ptr<model::Instrument>& instrument() const { return _instrument; }
     void setInstrument(const std::shared_ptr<model::Instrument>& instr_) { _instrument = instr_; }
-    price_t getNearestTickPrice(price_t price_);
+
+    void placeAllocations();
 };
 
 template<typename TOrdApi>
 Strategy<TOrdApi>::Strategy(std::shared_ptr<MarketDataInterface> md_, std::shared_ptr<TOrdApi> od_)
 :   _marketData(std::move(md_))
-,   _orderEngine(std::move(od_)) {
+,   _orderEngine(std::move(od_))
+,   _allocations(nullptr) {
 
 }
 
@@ -94,30 +88,28 @@ void Strategy<TOrdApi>::evaluate() {
         LOGDEBUG("Execution: " << event->getExec()->toJson().serialize());
         onExecution(event);
     }
-    if (_allocatedAsk > 0 || _allocatedBid > 0) {
-        //
-    } else {
-        //createOrders(_bid, _ask);
-
-    }
 }
 
 template<typename TOrdApi>
 void Strategy<TOrdApi>::init(const std::string& config_) {
-    auto _config = std::make_shared<Config>(config_);
-    init(_config);
-    LOGINFO("Initializing strategy");
+    init(config_);
 }
 
 template<typename TOrdApi>
 void Strategy<TOrdApi>::init(const std::shared_ptr<Config>& config_) {
+    LOGINFO("Initializing strategy");
     _config = config_;
+
     _symbol = _config->get("symbol");
     _clOrdIdPrefix = _config->get("clOrdPrefix");
-    LOGINFO("Initializing strategy");
     for (auto& order : _marketData->getOrders())
         LOGINFO("Open Order: " << LOG_NVP("OID", order.first) << LOG_NVP("Order",order.second->toJson().serialize()));
-    _allocations = std::vector<std::shared_ptr<Allocation>>(instrument()->getBidPrice()*2/instrument()->getTickSize(), nullptr);
+
+    auto tickSize = _instrument->getTickSize();
+    auto referencePrice = _instrument->getPrevPrice24h();
+    LOGINFO("Initialising allocations with " << LOG_VAR(referencePrice) << LOG_VAR(tickSize));
+    _allocations = std::make_shared<Allocations>(referencePrice, tickSize);
+
 }
 
 template<typename TOrdApi>
@@ -131,14 +123,14 @@ void Strategy<TOrdApi>::placeAllocations() {
     std::vector<std::shared_ptr<model::Order>> _amends;
     std::vector<std::shared_ptr<model::Order>> _newOrders;
     std::vector<std::shared_ptr<model::Order>> _cancels;
-    for (auto& allocation : _allocations) {
+    for (auto& allocation : *_allocations) {
         if (!allocation) {
             continue;
         }
         std::shared_ptr<model::Order> order = createOrder(allocation);
-        size_t priceIndex = getAllocationIndex(order->getPrice());
+        size_t priceIndex = _allocations->allocIndex(order->getPrice());
         auto& orders = (order->getSide() == "Buy") ? _buyOrders : _sellOrders;
-        auto& currentOrder = orders[getAllocationIndex(order->getPrice())];
+        auto& currentOrder = orders[_allocations->allocIndex(order->getPrice())];
         if (currentOrder) {
             // we have an order at this price level
             if (currentOrder->getLeavesQty() > allocation->getSize()) {
@@ -179,22 +171,10 @@ void Strategy<TOrdApi>::placeAllocations() {
             jsList.as_array()[count++] = toSend->toJson();
         }
         _orderEngine->order_cancelBulk(jsList.serialize()).then(&this->updateFromTask);
-
     }
 }
 
 
-template<typename TOrdApi>
-void Strategy<TOrdApi>::addAllocation(price_t price_, size_t qty_, const std::string& side_) {
-    price_ = getNearestTickPrice(price_);
-    LOGINFO("Adding allocation: " << LOG_VAR(price_) << LOG_VAR(qty_) << LOG_VAR(side_));
-    auto& allocation = _allocations[getAllocationIndex(price_)];
-    if (!allocation) {
-        allocation = std::make_shared<Allocation>(price_, qty_, side_);
-    } else {
-        allocation->setSize(allocation->getSize() + qty_);
-    }
-}
 
 template<typename TOrdApi>
 std::shared_ptr<model::Order> Strategy<TOrdApi>::createOrder(const std::shared_ptr<Allocation> &allocation_) {
@@ -207,27 +187,12 @@ std::shared_ptr<model::Order> Strategy<TOrdApi>::createOrder(const std::shared_p
     return newOrder;
 }
 
-template<typename TOrdApi>
-size_t Strategy<TOrdApi>::getAllocationIndex(price_t price_) {
-    int index = price_/_instrument->getTickSize();
-    return index;
-}
-
-template<typename TOrdApi>
-price_t Strategy<TOrdApi>::getNearestTickPrice(price_t price_) {
-    /// TODO implement this correctly
-    auto tickSize = _instrument->getTickSize();
-    int ticksPerUnit = 10/tickSize;
-    price_ *= ticksPerUnit;
-    tickSize*10;
-    return price_;
-}
 
 template<typename TOrdApi>
 void Strategy<TOrdApi>::updateFromTask(const pplx::task<std::vector<std::shared_ptr<model::Order>>>& task_) {
     try {
         for (auto& order : task_.get()) {
-            auto index = getAllocationIndex(order->getPrice());
+            auto index = _allocations->allocIndex(order->getPrice());
             LOGINFO(order->toJson().serialize());
             auto& orders = (order->getSide() == "Buy") ? _buyOrders : _sellOrders;
             orders[index] = order;
@@ -235,8 +200,7 @@ void Strategy<TOrdApi>::updateFromTask(const pplx::task<std::vector<std::shared_
     } catch (api::ApiException &apiException) {
         auto reason = apiException.getContent();
         LOGINFO("APIException caught failed to action on order: " << LOG_VAR(apiException.what())
-                                                             << " ExceptionContent="
-                                                             << reason->rdbuf());
+                                                             << LOG_NVP("Reason", reason->rdbuf()));
         return;
     } catch (web::http::http_exception &httpException) {
         LOGINFO("Failed to send order! " << LOG_VAR(httpException.what())
@@ -244,5 +208,6 @@ void Strategy<TOrdApi>::updateFromTask(const pplx::task<std::vector<std::shared_
         return;
     }
 }
+
 
 #endif //TRADINGO_STRATEGY_H

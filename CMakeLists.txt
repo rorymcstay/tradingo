@@ -13,7 +13,6 @@ add_subdirectory(test)
 message(STATUS "CMAKE_INSTALL_PREFIX = ${CMAKE_INSTALL_PREFIX}" )
 
 project (my_project)
-cmake_minimum_required (VERSION 2.8)
 
 set(CPACK_PACKAGE_VERSION ${VERSION})
 set(CPACK_GENERATOR "RPM")

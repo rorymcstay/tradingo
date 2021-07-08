@@ -14,13 +14,11 @@ using qty_t = double;
 using namespace io::swagger::client;
 
 class Allocation {
-    std::string _side;
     std::shared_ptr<model::Order> _order;
     price_t _price;
     qty_t _size;
 public:
-    const std::string &getSide() const { return _side; }
-    void setSide(const std::string &side) { _side = side; }
+    std::string getSide() const { return (_size < 0) ? "Sell" : "Buy"; }
     const std::shared_ptr<model::Order> &getOrder() const { return _order; }
     void setOrder(const std::shared_ptr<model::Order> &order) { _order = order; }
     price_t getPrice() const { return _price; }
@@ -30,7 +28,7 @@ public:
 
 public:
     Allocation();
-    Allocation(price_t price_, size_t qty_, const std::string& side_);
+    Allocation(price_t price_, size_t qty_);
 
 };
 

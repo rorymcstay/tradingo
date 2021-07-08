@@ -18,6 +18,7 @@ namespace po = boost::program_options;
 
 int main(int argc, char **argv) {
 
+    // setup CLI parser
     po::options_description desc("Allowed options");
     desc.add_options()
             ("help", "produce help message")
@@ -26,22 +27,18 @@ int main(int argc, char **argv) {
     po::store(po::parse_command_line(argc, argv, desc), vm);
     po::notify(vm);
 
-
+    // check mandatory config file provided
     if (!vm.contains("config")) {
         LOGINFO("Config file not provided.");
         return 1;
     }
-    auto configfile = vm.at("config").as<std::string>();
-    auto config = std::make_shared<Config>(configfile);
 
-
-    // marketData->init();
-    // marketData->subscribe();
-    // strategy->init(config);
-
+    // parse config and create context.
+    auto config = std::make_shared<Config>(vm.at("config").as<std::string>());
     auto context = std::make_shared<Context<MarketData, api::OrderApi>>(config);
     context->init();
 
+    // running loop
      while (context->strategy()->shouldEval()) {
         context->strategy()->evaluate();
         std::this_thread::sleep_for(std::chrono::milliseconds(1));

@@ -24,6 +24,7 @@ add_library(trading_funcs SHARED
         SimpleMovingAverage.cpp
         Utils.cpp
         Allocation.cpp
+        Allocations.cpp
 
         # Signal.cpp
         #${CPPLOGGER_HEADER}

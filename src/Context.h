@@ -60,6 +60,7 @@ public:
 template<typename TMarketData, typename TOrderApi>
 void Context<TMarketData, TOrderApi>::init() {
 
+    // TODO: move out to seperate initialiser so tickRecorder can reuse the context.
     Context<TMarketData,TOrderApi>::factoryMethod_t factoryMethod = loadFactoryMethod();
     std::shared_ptr<Strategy<TOrderApi>> strategy = factoryMethod(_marketData,_orderManager);
     _strategy = strategy;
