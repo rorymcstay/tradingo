@@ -18,8 +18,8 @@ TEST(SimpleMovingAverageTest, smoke_test) {
     sma(5);
     sma(5);
     sma(5);
-    ASSERT_EQ(sma(5), 5);
     std::cout << sma(5) << "\n";
+    ASSERT_EQ(sma(5), 5);
 
 
 
