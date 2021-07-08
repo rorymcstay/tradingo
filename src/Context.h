@@ -18,6 +18,7 @@
 #include "Strategy.h"
 #include "aixlog.hpp"
 #include "Utils.h"
+#include "api/InstrumentApi.h"
 
 template<typename TMarketData, typename TOrderApi>
 class Context {
@@ -28,6 +29,7 @@ class Context {
     web::http::client::http_client_config _httpConfig;
     std::shared_ptr<TOrderApi> _orderManager;
     std::shared_ptr<Strategy<TOrderApi>> _strategy;
+    std::shared_ptr<api::InstrumentApi> _instrumentApi;
     void* _handle;
 
 private:
@@ -61,10 +63,20 @@ void Context<TMarketData, TOrderApi>::init() {
     Context<TMarketData,TOrderApi>::factoryMethod_t factoryMethod = loadFactoryMethod();
     std::shared_ptr<Strategy<TOrderApi>> strategy = factoryMethod(_marketData,_orderManager);
     _strategy = strategy;
+    _instrumentApi = std::make_shared<api::InstrumentApi>(_apiClient);
+
+#define SEVENNULL boost::none,boost::none,boost::none,boost::none,boost::none,boost::none,boost::none
+
+    _instrumentApi->instrument_get(_config->get("symbol"), SEVENNULL).then(
+        [this] (pplx::task<std::vector<std::shared_ptr<model::Instrument>>> instr_) {
+            LOGINFO("Instrument: " << instr_.get()[0]->toJson().serialize());
+            _strategy->setInstrument(instr_.get()[0]);
+        });
+    // do last
+
     _marketData->init();
     _marketData->subscribe();
     _strategy->init(_config);
-    //_marketData->initSignals(_config);
 
 }
 
@@ -92,10 +104,11 @@ Context<TMarketData, TOrderApi>::loadFactoryMethod() {
 template<typename TMarketData, typename TOrderApi>
 Context<TMarketData, TOrderApi>::Context(const std::shared_ptr<Config>& config_) {
 
+    _config = config_;
+    std::string lib = _config->get("libraryLocation");
+
     setupLogger();
 
-    _config = std::move(config_);
-    std::string lib = _config->get("libraryLocation");
     _handle = dlopen(lib.c_str(), RTLD_LAZY);
     if (!_handle) {
         LOGERROR( "Cannot open library: " << LOG_VAR(lib) << LOG_VAR(dlerror()));

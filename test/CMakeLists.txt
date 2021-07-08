@@ -23,6 +23,7 @@ add_executable(testTradingo
         # test files
         TestBreakOutStrategy.cpp
         test_api_OrderApi.cpp
+        TestSimpleMovingAverage.cpp
         test_main.cpp
         )
 

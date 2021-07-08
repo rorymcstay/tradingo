@@ -223,6 +223,7 @@ void MarketDataInterface::handleExecutions(std::vector<std::shared_ptr<model::Ex
 
 void MarketDataInterface::handleOrders(std::vector<std::shared_ptr<model::Order>>& orders_, const  std::string &action_) {
 
+
     if (action_ == "partial" or action_ == "insert") {
         insertOrders(orders_);
     } else if (action_ == "update") {
@@ -240,6 +241,7 @@ void MarketDataInterface::removeOrders(const std::vector<std::shared_ptr<model::
 
 void MarketDataInterface::insertOrders(const std::vector<std::shared_ptr<model::Order>> &orders_) {
     for (auto& ord : orders_) {
+        LOGINFO("Order Event " << ord->toJson().serialize());
         _orders.insert(std::pair(getOrderKey(ord), ord));
     }
 }

@@ -7,30 +7,41 @@
 
 #include <stdint.h>
 
-template <uint8_t N, class input_t = uint16_t, class sum_t = uint32_t>
+template <class input_t = uint16_t, class sum_t = uint32_t>
 class SimpleMovingAverage {
 public:
     input_t operator()(input_t input);
+    SimpleMovingAverage() = default;
 
-    static_assert(
-            sum_t(0) < sum_t(-1),  // Check that `sum_t` is an unsigned type
-            "Error: sum data type should be an unsigned integer, otherwise, "
-            "the rounding operation in the return statement is invalid.");
+    SimpleMovingAverage(uint8_t N_, uint8_t primedCount_)
+    :   N(N_)
+    ,   previousInputs(new input_t[N_]{})
+    ,   primed(false)
+    ,   primedCount(primedCount_){}
 
 private:
+    uint8_t N                 = 10;
+    uint8_t primedCount       = 10;
     uint8_t index             = 0;
-    input_t previousInputs[N] = {};
+    input_t * previousInputs;
     sum_t sum                 = 0;
+    bool primed;
+public:
+    bool is_ready() const { return primed; }
 };
 
-template<uint8_t N, class input_t, class sum_t>
-input_t SimpleMovingAverage<N, input_t, sum_t>::operator()(input_t input) {
+template<class input_t, class sum_t>
+input_t SimpleMovingAverage<input_t, sum_t>::operator()(input_t input) {
     sum -= previousInputs[index];
     sum += input;
     previousInputs[index] = input;
-    if (++index == N)
+    if (++index == N) {
         index = 0;
-    return (sum + (N / 2)) / N;
+    }
+    if (index >= primedCount) {
+        primed = true;
+    }
+    return (sum) / N;
 }
 
 
