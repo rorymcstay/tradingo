@@ -23,7 +23,6 @@ class Strategy {
 
     std::shared_ptr<MarketDataInterface> _marketData;
     std::shared_ptr<TOrdApi>  _orderEngine;
-    std::shared_ptr<model::Instrument> _instrument;
 
     std::string _symbol;
     std::string _clOrdIdPrefix;
@@ -55,8 +54,7 @@ protected:
     // allocation api
 
 public:
-    const std::shared_ptr<model::Instrument>& instrument() const { return _instrument; }
-    void setInstrument(const std::shared_ptr<model::Instrument>& instr_) { _instrument = instr_; }
+    const std::shared_ptr<model::Instrument>& instrument() const { return _marketData->instrument(); }
 
     void placeAllocations();
 };
@@ -114,12 +112,10 @@ void Strategy<TOrdApi>::init(const std::shared_ptr<Config>& config_) {
 
     double tickSize;
     double referencePrice;
-    if (_instrument) {
-        tickSize = _instrument->getTickSize();
-        referencePrice = _instrument->getPrevPrice24h();
+    if (instrument()) {
+        tickSize = instrument()->getTickSize();
+        referencePrice = instrument()->getPrevPrice24h();
     } else {
-        tickSize = std::atof(config_->get("tickSize", "0.5").c_str());
-        referencePrice = std::atof(config_->get("referencePrice").c_str());
     }
 
     LOGINFO("Initialising allocations with " << LOG_VAR(referencePrice) << LOG_VAR(tickSize));

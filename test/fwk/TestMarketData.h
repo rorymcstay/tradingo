@@ -11,10 +11,18 @@
 #include "MarketData.h"
 
 class TestMarketData : public MarketDataInterface {
+    std::shared_ptr<Config> _config;
 public:
     explicit TestMarketData(const std::shared_ptr<Config>& ptr);
-    void init() {}
+    void init() {
+        auto tickSize = std::atof(_config->get("tickSize", "0.5").c_str());
+        auto referencePrice = std::atof(_config->get("referencePrice").c_str());
+        _instrument = std::make_shared<model::Instrument>();
+        _instrument->setPrevPrice24h(referencePrice);
+        _instrument->setTickSize(tickSize);
+    }
     void subscribe() {}
+
     void operator << (const std::string& marketDataString);
     void operator << (const std::shared_ptr<model::Quote>& quote_) {
         std::vector<std::shared_ptr<model::Quote>> quotes = {quote_};

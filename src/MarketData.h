@@ -25,6 +25,7 @@
 #include "Config.h"
 #include "HeartBeat.h"
 #include "Allocation.h"
+#include "api/InstrumentApi.h"
 //#include "Signal.h"
 
 
@@ -146,6 +147,8 @@ private:
     void updateSignals(const std::shared_ptr<Event>& event_);
 public:
     void initSignals(const std::string& cfg_);
+    void setInstrumentApi(const std::shared_ptr<api::InstrumentApi> &instrumentApi);
+
 protected:
     std::mutex _mutex;
     std::vector<std::string> _positionKey;
@@ -161,6 +164,10 @@ protected:
     std::unordered_map<std::string, std::shared_ptr<model::Position>> _positions;
     std::unordered_map<std::string, std::shared_ptr<model::Order>> _orders;
     std::shared_ptr<model::Quote> _quote;
+    std::shared_ptr<model::Instrument> _instrument;
+    std::shared_ptr<api::InstrumentApi> _instrumentApi;
+
+
 
     void handleQuotes(const std::vector<std::shared_ptr<model::Quote>>& quotes_, const std::string& action_);
     void handleTrades(std::vector<std::shared_ptr<model::Trade>>& trades_, const std::string& action_);
@@ -183,13 +190,17 @@ protected:
 
 public:
     ~MarketDataInterface() {};
+    MarketDataInterface();
     std::shared_ptr<Event> read();
     const std::unordered_map<std::string, OrderPtr>& getOrders() const;
     const std::queue<ExecPtr>& getExecutions() const;
     const std::unordered_map<std::string, PositionPtr>& getPositions() const;
     const std::shared_ptr<model::Quote> quote() const;
+    const std::shared_ptr<model::Instrument>& instrument() const;
 
 };
+
+using namespace io::swagger::client;
 
 class MarketData
 :   public MarketDataInterface
@@ -202,6 +213,9 @@ class MarketData
     std::string _apiKey;
     bool _initialised;
     bool _shouldAuth;
+
+private:
+
 
     std::shared_ptr<HeartBeat> _heartBeat;
     long _cycle;

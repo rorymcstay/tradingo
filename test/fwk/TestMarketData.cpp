@@ -38,6 +38,7 @@ void TestMarketData::operator<<(const std::string &marketDataString) {
     }
 }
 
-TestMarketData::TestMarketData(const std::shared_ptr<Config> &ptr) {
+TestMarketData::TestMarketData(const std::shared_ptr<Config> &ptr)
+:   _config(ptr){
 
 }

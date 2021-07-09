@@ -55,6 +55,19 @@ MarketData::MarketData(const std::shared_ptr<Config>& config_)
 
 void MarketData::init() {
 
+    // get instrument
+#define SEVENNULL boost::none,boost::none,boost::none,boost::none,boost::none,boost::none,boost::none
+    auto instTask = _instrumentApi->instrument_get(_symbol, SEVENNULL).then(
+            [this](pplx::task<std::vector<std::shared_ptr<model::Instrument>>> instr_) {
+                try {
+                    LOGINFO("Instrument: " << instr_.get()[0]->toJson().serialize());
+                    _instrument = instr_.get()[0];
+                } catch (std::exception &ex) {
+                    LOGINFO("Http exception raised " << LOG_VAR(ex.what()));
+                }
+            });
+
+    // initialise callback
     _wsClient->set_message_handler(
             [&](const ws::client::websocket_incoming_message& in_msg) {
                 _heartBeat->startTimer(_cycle++);
@@ -165,6 +178,10 @@ void MarketData::subscribe() {
     subMessage.set_utf8_message(payload.serialize());
     LOGINFO("Doing subscribe " << payload.serialize());
     _wsClient->send(subMessage);
+}
+
+void MarketDataInterface::setInstrumentApi(const std::shared_ptr<api::InstrumentApi> &instrumentApi) {
+    _instrumentApi = instrumentApi;
 }
 
 template<typename T>
@@ -285,6 +302,15 @@ void MarketDataInterface::initSignals(const std::string& config) {
 
 const std::shared_ptr<model::Quote> MarketDataInterface::quote() const {
     return _quote;
+}
+
+const std::shared_ptr<model::Instrument>& MarketDataInterface::instrument() const {
+    return _instrument;
+}
+
+MarketDataInterface::MarketDataInterface()
+:   _instrumentApi(nullptr) {
+
 }
 
 std::string getPositionKey(const std::shared_ptr<model::Position> &pos_) {

@@ -65,6 +65,8 @@ public:
 
 template<typename TMarketData, typename TOrderApi>
 void Context<TMarketData, TOrderApi>::init() {
+    _instrumentApi = std::make_shared<api::InstrumentApi>(_apiClient);
+    _marketData->setInstrumentApi(_instrumentApi);
     _marketData->init();
     _marketData->subscribe();
 }
@@ -162,20 +164,9 @@ void Context<TMarketData, TOrderApi>::initStrategy() {
     Context<TMarketData,TOrderApi>::factoryMethod_t factoryMethod = loadFactoryMethod();
     std::shared_ptr<Strategy<TOrderApi>> strategy = factoryMethod(_marketData,_orderManager);
     _strategy = strategy;
-    _instrumentApi = std::make_shared<api::InstrumentApi>(_apiClient);
 
-#define SEVENNULL boost::none,boost::none,boost::none,boost::none,boost::none,boost::none,boost::none
 
     if (_config->get("httpEnabled", "True") == "True") {
-        auto instTask = _instrumentApi->instrument_get(_config->get("symbol"), SEVENNULL).then(
-                [this](pplx::task<std::vector<std::shared_ptr<model::Instrument>>> instr_) {
-                    try {
-                        LOGINFO("Instrument: " << instr_.get()[0]->toJson().serialize());
-                        _strategy->setInstrument(instr_.get()[0]);
-                    } catch (std::exception &ex) {
-                        LOGINFO("Http exception raised " << LOG_VAR(ex.what()));
-                    }
-                });
     }
     // block caller thread until above returns.
     // do last
