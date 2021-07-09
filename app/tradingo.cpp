@@ -15,7 +15,6 @@ namespace ws = web::websockets;
 namespace po = boost::program_options;
 
 
-
 int main(int argc, char **argv) {
 
     // setup CLI parser
@@ -37,6 +36,7 @@ int main(int argc, char **argv) {
     auto config = std::make_shared<Config>(vm.at("config").as<std::string>());
     auto context = std::make_shared<Context<MarketData, api::OrderApi>>(config);
     context->init();
+    context->initStrategy();
 
     // running loop
      while (context->strategy()->shouldEval()) {

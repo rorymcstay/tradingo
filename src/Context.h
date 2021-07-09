@@ -48,6 +48,8 @@ public:
 
     void init();
 
+    void initStrategy();
+
     const std::shared_ptr<TMarketData>& marketData() const { return _marketData; }
     const std::shared_ptr<TOrderApi>& orderApi() const { return _orderManager; }
     const std::shared_ptr<api::ApiConfiguration>& apiConfig() const { return _apiConfig; }
@@ -59,44 +61,35 @@ public:
 
 template<typename TMarketData, typename TOrderApi>
 void Context<TMarketData, TOrderApi>::init() {
-
-    // TODO: move out to seperate initialiser so tickRecorder can reuse the context.
-    Context<TMarketData,TOrderApi>::factoryMethod_t factoryMethod = loadFactoryMethod();
-    std::shared_ptr<Strategy<TOrderApi>> strategy = factoryMethod(_marketData,_orderManager);
-    _strategy = strategy;
-    _instrumentApi = std::make_shared<api::InstrumentApi>(_apiClient);
-
-#define SEVENNULL boost::none,boost::none,boost::none,boost::none,boost::none,boost::none,boost::none
-
-    _instrumentApi->instrument_get(_config->get("symbol"), SEVENNULL).then(
-        [this] (pplx::task<std::vector<std::shared_ptr<model::Instrument>>> instr_) {
-            LOGINFO("Instrument: " << instr_.get()[0]->toJson().serialize());
-            _strategy->setInstrument(instr_.get()[0]);
-        });
-    // do last
-
     _marketData->init();
     _marketData->subscribe();
-    _strategy->init(_config);
-
 }
 
 template<typename TMarketData, typename TOrderApi>
 typename Context<TMarketData, TOrderApi>::factoryMethod_t
 Context<TMarketData, TOrderApi>::loadFactoryMethod() {
     std::string factoryMethodName = _config->get("factoryMethod");
-    // load the symbols
+    std::string lib = _config->get("libraryLocation");
+    LOGINFO("Loading strategy ... " << LOG_VAR(lib) << LOG_VAR(factoryMethodName));
+    _handle = dlopen(lib.c_str(), RTLD_LAZY);
+    if (!_handle) {
+        LOGERROR( "Cannot open library: " << LOG_VAR(lib) << LOG_VAR(dlerror()));
+        std::stringstream message;
+        message << "Couldn't load " << LOG_VAR(lib) << LOG_VAR(dlerror());
+        throw std::runtime_error(message.str());
+    }
+
+    // load the symbol
     factoryMethod_t factoryFunc;
     factoryFunc = (factoryMethod_t)dlsym(_handle, factoryMethodName.c_str());
     const char* dlsym_error = dlerror();
     if (dlsym_error) {
-        LOGINFO("Cannot load symbol " << LOG_VAR(factoryMethodName) << dlsym_error);
+        LOGERROR("Cannot load symbol " << LOG_VAR(factoryMethodName) << LOG_VAR(dlsym_error));
         dlclose(_handle);
         std::stringstream msg;
-        msg << "Couln't load symbol " << LOG_VAR(factoryMethodName);
+        msg << "Couln't load symbol " << LOG_VAR(factoryMethodName) << LOG_VAR(dlsym_error);
         throw std::runtime_error(msg.str());
     }
-    // create an instance of the class
 
     return factoryFunc;
 
@@ -106,25 +99,15 @@ template<typename TMarketData, typename TOrderApi>
 Context<TMarketData, TOrderApi>::Context(const std::shared_ptr<Config>& config_) {
 
     _config = config_;
-    std::string lib = _config->get("libraryLocation");
-
     setupLogger();
-
-    _handle = dlopen(lib.c_str(), RTLD_LAZY);
-    if (!_handle) {
-        LOGERROR( "Cannot open library: " << LOG_VAR(lib) << LOG_VAR(dlerror()));
-        std::stringstream message;
-        message << "Couldn't load " << LOG_VAR(lib) << LOG_VAR(dlerror());
-        throw std::runtime_error(message.str());
-    }
 
     _marketData = std::make_shared<TMarketData>(config_);
     _apiConfig = std::make_shared<api::ApiConfiguration>();
     _httpConfig = web::http::client::http_client_config();
 
-    _apiConfig->setBaseUrl(config_->get("baseUrl"));
-    _apiConfig->setApiKey("api-key", config_->get("apiKey"));
-    _apiConfig->setApiKey("api-secret", config_->get("apiSecret"));
+    _apiConfig->setBaseUrl(config_->get("baseUrl", "NO HTTP"));
+    _apiConfig->setApiKey("api-key", config_->get("apiKey", "NO AUTH"));
+    _apiConfig->setApiKey("api-secret", config_->get("apiSecret", "NO AUTH"));
     _apiConfig->setHttpConfig(_httpConfig);
     _config = config_;
 
@@ -146,17 +129,6 @@ void Context<TMarketData, TOrderApi>::setupLogger() {
         std::make_shared<AixLog::SinkCout>(logLevel),
                 /// Log error and higher severity messages to cerr
                 std::make_shared<AixLog::SinkCerr>(AixLog::Severity::error),
-                /// Log special logs to native log (Syslog on Linux, Android Log on Android, EventLog on Windows, Unified logging on Apple)
-
-                /*make_shared<AixLog::SinkCallback>(AixLog::Severity::trace,
-                    [](const AixLog::Metadata& metadata, const std::string& message) {
-                      std::cout << "Callback:\n\tmsg:   " << message << "\n\ttag:   " << metadata.tag.text << "\n\tsever: " << AixLog::Log::to_string(metadata.severity) << " (" << (int)metadata.severity << ")\n\ttype:  " << (metadata.type == AixLog::Type::normal?"normal":"special") << "\n";
-                      if (metadata.timestamp)
-                          std::cout << "\ttime:  " << metadata.timestamp.to_string() << "\n";
-                      if (metadata.function)
-                          std::cout << "\tfunc:  " << metadata.function.name << "\n\tline:  " << metadata.function.line << "\n\tfile:  " << metadata.function.file << "\n";
-                    }
-                )*/
     };
     auto logDir =_config->get("logFileLocation", "");
     if (logDir.empty()) {
@@ -175,6 +147,28 @@ void Context<TMarketData, TOrderApi>::setupLogger() {
     }
 
     AixLog::Log::init(sinks);
+}
+
+template<typename TMarketData, typename TOrderApi>
+void Context<TMarketData, TOrderApi>::initStrategy() {
+
+    // TODO: move out to seperate initialiser so tickRecorder can reuse the context.
+    Context<TMarketData,TOrderApi>::factoryMethod_t factoryMethod = loadFactoryMethod();
+    std::shared_ptr<Strategy<TOrderApi>> strategy = factoryMethod(_marketData,_orderManager);
+    _strategy = strategy;
+    _instrumentApi = std::make_shared<api::InstrumentApi>(_apiClient);
+
+#define SEVENNULL boost::none,boost::none,boost::none,boost::none,boost::none,boost::none,boost::none
+
+    _instrumentApi->instrument_get(_config->get("symbol"), SEVENNULL).then(
+            [this] (pplx::task<std::vector<std::shared_ptr<model::Instrument>>> instr_) {
+                LOGINFO("Instrument: " << instr_.get()[0]->toJson().serialize());
+                _strategy->setInstrument(instr_.get()[0]);
+            });
+    // do last
+    _strategy->init(_config);
+
+
 }
 
 
