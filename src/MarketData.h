@@ -24,6 +24,7 @@
 #include "ObjectPool.h"
 #include "Config.h"
 #include "HeartBeat.h"
+#include "Allocation.h"
 //#include "Signal.h"
 
 
@@ -149,6 +150,7 @@ protected:
     std::mutex _mutex;
     std::vector<std::string> _positionKey;
     std::vector<std::string> _orderKey;
+
     cache::ObjectPool<model::Trade, 1000, TradeReleaser> _tradePool;
     cache::ObjectPool<model::Quote, 1000, QuoteReleaser> _quotePool;
     cache::ObjectPool<model::Position, 1000, PositionReleaser> _positionPool;
@@ -158,6 +160,8 @@ protected:
     std::queue<std::shared_ptr<model::Execution>> _executions;
     std::unordered_map<std::string, std::shared_ptr<model::Position>> _positions;
     std::unordered_map<std::string, std::shared_ptr<model::Order>> _orders;
+    std::shared_ptr<model::Quote> _quote;
+
     void handleQuotes(const std::vector<std::shared_ptr<model::Quote>>& quotes_, const std::string& action_);
     void handleTrades(std::vector<std::shared_ptr<model::Trade>>& trades_, const std::string& action_);
     void handlePositions(std::vector<std::shared_ptr<model::Position>>& trades_, const std::string& action_);
@@ -183,6 +187,7 @@ public:
     const std::unordered_map<std::string, OrderPtr>& getOrders() const;
     const std::queue<ExecPtr>& getExecutions() const;
     const std::unordered_map<std::string, PositionPtr>& getPositions() const;
+    const std::shared_ptr<model::Quote> quote() const;
 
 };
 
@@ -196,11 +201,11 @@ class MarketData
     std::string _apiSecret;
     std::string _apiKey;
     bool _initialised;
-
     bool _shouldAuth;
 
     std::shared_ptr<HeartBeat> _heartBeat;
     long _cycle;
+
 private:
     std::string getConnectionUri();
     std::string getBaseUrl();

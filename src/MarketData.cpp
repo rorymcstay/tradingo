@@ -114,8 +114,7 @@ void MarketData::init() {
 
     // sleep until connected.
     int count = 0;
-    while (not _initialised)
-    {
+    while (not _initialised) {
         count++;
         std::this_thread::sleep_for(std::chrono::seconds(1));
         if (count > 30) {
@@ -195,6 +194,7 @@ void MarketDataInterface::removePositions(const std::vector<std::shared_ptr<mode
 }
 
 void MarketDataInterface::handleQuotes(const std::vector<std::shared_ptr<model::Quote>>& quotes_, const std::string &action_) {
+    _quote = quotes_[0];
     update(quotes_);
 }
 
@@ -281,6 +281,10 @@ void MarketDataInterface::updateSignals(const std::shared_ptr<Event>& event_) {
 
 void MarketDataInterface::initSignals(const std::string& config) {
     auto conf = std::make_shared<Config>(config);
+}
+
+const std::shared_ptr<model::Quote> MarketDataInterface::quote() const {
+    return _quote;
 }
 
 std::string getPositionKey(const std::shared_ptr<model::Position> &pos_) {

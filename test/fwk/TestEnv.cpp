@@ -6,20 +6,24 @@
 TestEnv::TestEnv(std::initializer_list<std::pair<std::string,std::string>> config_)
 :   _config(std::make_shared<Config>(config_))
 {
-    _config->set("libraryLocation", "/home/user/install/lib/libtest_trading_strategies.so");
+    _config->set("libraryLocation", "/home/tradingo/install/lib/libtest_trading_strategies.so");
     _config->set("baseUrl", "https://localhost:8888/api/v1");
     _config->set("apiKey", "dummy");
     _config->set("apiSecret", "dummy");
     _config->set("connectionString", "https://localhost:8888/realtime");
     _config->set("clOrdPrefix", "MCST");
+    _config->set("httpEnabled", "False");
+    _config->set("tickSize", "0.5");
     _context = std::make_shared<Context<TestMarketData, OrderApi>>(_config);
     _context->init();
+    _context->initStrategy();
 }
 
 void TestEnv::operator<<(const std::string &value_) {
     try {
         *_context->marketData() << value_;
         _context->strategy()->evaluate();
+        // TODO make TestException class
     } catch (std::exception& ex) {
         FAIL() << "TEST Exception: " << ex.what() << " during event <<\n\n      " << value_;
     }

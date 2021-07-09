@@ -3,6 +3,7 @@
 //
 
 #include "Allocation.h"
+#include "Utils.h"
 
 Allocation::Allocation()
 :   _price(0.0)
@@ -13,7 +14,17 @@ Allocation::Allocation()
 
 Allocation::Allocation(price_t price_, size_t qty_)
 :   _price(price_)
-,   _size(qty_)
+,   _size(0)
+,   _targetDelta(qty_)
 ,   _order(nullptr) {
 
+}
+
+void Allocation::rest() {
+    _size += _targetDelta;
+    _targetDelta = 0;
+}
+
+void Allocation::cancelDelta() {
+    _targetDelta = 0;
 }

@@ -81,6 +81,7 @@ void BreakOutStrategy<TORDApi>::onBBO(const std::shared_ptr<Event> &event_) {
     if ((_smaLow.is_ready() && _smaHigh.is_ready()) && _shortTermAvg - _longTermAvg >= _buyThreshold) {
         // short term average is higher than longterm, buy
         auto qtyToTrade = getQtyToTrade("Buy");
+        LOGINFO("Signal is good " << LOG_VAR(_shortTermAvg) << LOG_VAR(_longTermAvg) << LOG_VAR(qtyToTrade));
         StrategyApi::allocations()->addAllocation(bidPrice, qtyToTrade, "Buy");
     } else if (_smaLow.is_ready() && _smaHigh.is_ready()) {
         auto qtyToTrade = getQtyToTrade("Sell");

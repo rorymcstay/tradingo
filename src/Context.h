@@ -40,14 +40,18 @@ private:
 public:
 
     ~Context();
+    /// set base variables, setupLogger, order manager
     explicit Context(const std::shared_ptr<Config>& config_);
 
     factoryMethod_t loadFactoryMethod();
 
+    /// set log level, log to file if configured.
     void setupLogger();
 
+    /// start market data
     void init();
 
+    /// load symbol from library file, download instrument from InstrumentApi, and call strategy::init
     void initStrategy();
 
     const std::shared_ptr<TMarketData>& marketData() const { return _marketData; }
@@ -95,6 +99,7 @@ Context<TMarketData, TOrderApi>::loadFactoryMethod() {
 
 }
 
+
 template<typename TMarketData, typename TOrderApi>
 Context<TMarketData, TOrderApi>::Context(const std::shared_ptr<Config>& config_) {
 
@@ -120,6 +125,7 @@ Context<TMarketData, TOrderApi>::~Context() {
     dlclose(_handle);
 }
 
+
 template<typename TMarketData, typename TOrderApi>
 void Context<TMarketData, TOrderApi>::setupLogger() {
     auto logLevel = AixLog::Filter(AixLog::to_severity(_config->get("logLevel", "info")));
@@ -131,16 +137,15 @@ void Context<TMarketData, TOrderApi>::setupLogger() {
                 std::make_shared<AixLog::SinkCerr>(AixLog::Severity::error),
     };
     auto logDir =_config->get("logFileLocation", "");
-    if (logDir.empty()) {
+    if (not logDir.empty()) {
         if (not std::filesystem::exists(logDir))
         {
             LOGINFO("Creating new directory " << LOG_VAR(logDir));
             std::filesystem::create_directories(logDir);
         }
 
-        auto logFile = _config->get(
-                _config->get("logFileLocation") + "/"
-                + _config->get("symbol") + "_" + formatTime(std::chrono::system_clock::now())+".log");
+        auto logFile = _config->get("logFileLocation") + "/"
+                + _config->get("symbol") + "_" + formatTime(std::chrono::system_clock::now())+".log";
         LOGINFO("Logging to " << LOG_VAR(logFile));
         auto sink = std::make_shared<AixLog::SinkFile>(logLevel, logFile);
         sinks.emplace_back(sink);
@@ -148,6 +153,7 @@ void Context<TMarketData, TOrderApi>::setupLogger() {
 
     AixLog::Log::init(sinks);
 }
+
 
 template<typename TMarketData, typename TOrderApi>
 void Context<TMarketData, TOrderApi>::initStrategy() {
@@ -160,11 +166,18 @@ void Context<TMarketData, TOrderApi>::initStrategy() {
 
 #define SEVENNULL boost::none,boost::none,boost::none,boost::none,boost::none,boost::none,boost::none
 
-    _instrumentApi->instrument_get(_config->get("symbol"), SEVENNULL).then(
-            [this] (pplx::task<std::vector<std::shared_ptr<model::Instrument>>> instr_) {
-                LOGINFO("Instrument: " << instr_.get()[0]->toJson().serialize());
-                _strategy->setInstrument(instr_.get()[0]);
-            });
+    if (_config->get("httpEnabled", "True") == "True") {
+        auto instTask = _instrumentApi->instrument_get(_config->get("symbol"), SEVENNULL).then(
+                [this](pplx::task<std::vector<std::shared_ptr<model::Instrument>>> instr_) {
+                    try {
+                        LOGINFO("Instrument: " << instr_.get()[0]->toJson().serialize());
+                        _strategy->setInstrument(instr_.get()[0]);
+                    } catch (std::exception &ex) {
+                        LOGINFO("Http exception raised " << LOG_VAR(ex.what()));
+                    }
+                });
+    }
+    // block caller thread until above returns.
     // do last
     _strategy->init(_config);
 

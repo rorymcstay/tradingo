@@ -7,7 +7,9 @@
 
 Allocations::Allocations(price_t midPoint_, price_t tickSize_)
 :   _data(2*(size_t)(midPoint_/tickSize_), std::make_shared<Allocation>())
-,   _tickSize(tickSize_) {
+,   _tickSize(tickSize_)
+,   _modified(false)
+{
 
 }
 
@@ -19,6 +21,7 @@ size_t Allocations::allocIndex(price_t price_) {
 
 /// allocate qty/price
 void Allocations::addAllocation(price_t price_, size_t qty_, const std::string& side_="") {
+    _modified = true;
     price_ = roundTickPassive(price_);
     if (qty_ > 0 && side_ == "Sell") {
         qty_ = - qty_;
@@ -29,7 +32,7 @@ void Allocations::addAllocation(price_t price_, size_t qty_, const std::string& 
         // shouldn't come in here.
         allocation = std::make_shared<Allocation>(price_, qty_);
     } else {
-        allocation->setSize(allocation->getSize() + qty_);
+        allocation->setTargetDelta(qty_);
     }
 }
 

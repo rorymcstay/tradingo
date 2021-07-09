@@ -17,6 +17,8 @@
 #define LOG_VAR(var_) #var_ << "='" << var_ << "', "
 #define LOG_NVP(name_, var_) name_ << "=" << var_ << " "
 
+
+
 #define ENUM_MACRO_5(name, v1, v2, v3, v4, v5)                                                                                                       \
     enum class name { v1, v2, v3, v4, v5, Unknown  };                                                                                                          \
     inline std::string enum2str(name value) { const char *name##Strings[] = { #v1, #v2, #v3, #v4, #v5, "Unknown" }; return std::string(name##Strings[(int)value]); } \
@@ -85,6 +87,10 @@ template<typename T> inline T str2enum(const char* value) {return enum2str<T>(va
 using timestamp_t = std::chrono::time_point<std::chrono::system_clock>;
 
 std::string formatTime(timestamp_t time_);
+
+template <typename T> int sgn(T val) {
+    return (T(0) < val) - (val < T(0));
+}
 
 template<typename T>
 bool almost_equal(T num1, T num2)
