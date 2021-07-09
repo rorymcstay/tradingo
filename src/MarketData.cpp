@@ -60,7 +60,8 @@ void MarketData::init() {
                 _heartBeat->startTimer(_cycle++);
                 auto msg = in_msg.extract_string();
                 auto stringVal = msg.get();
-                if (stringVal.find("pong") != std::string::npos) {
+                if (stringVal.find("ping") != std::string::npos
+                    || stringVal.find("pong") != std::string::npos) {
                     return;
                 }
                 //std::cout << stringVal << std::endl;
