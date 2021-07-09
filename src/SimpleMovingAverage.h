@@ -9,25 +9,27 @@
 
 template <class input_t = uint16_t, class sum_t = uint32_t>
 class SimpleMovingAverage {
+    long count;
 public:
     input_t operator()(input_t input);
     SimpleMovingAverage() = default;
 
-    SimpleMovingAverage(uint8_t N_, uint8_t primedCount_)
+    SimpleMovingAverage(uint8_t N_, long primedCount_)
     :   N(N_)
     ,   previousInputs(new input_t[N_]{})
     ,   primed(false)
-    ,   primedCount(primedCount_){}
+    ,   primedCount(primedCount_)
+    ,   count(0){}
 
 private:
     uint8_t N                 = 10;
-    uint8_t primedCount       = 10;
+    long primedCount       = 10;
     uint8_t index             = 0;
     input_t * previousInputs;
     sum_t sum                 = 0;
     bool primed;
 public:
-    bool is_ready() const { return primed; }
+    bool is_ready() const { return true; }
 };
 
 template<class input_t, class sum_t>
@@ -38,7 +40,7 @@ input_t SimpleMovingAverage<input_t, sum_t>::operator()(input_t input) {
     if (++index == N) {
         index = 0;
     }
-    if (index >= primedCount) {
+    if (count++ > primedCount) {
         primed = true;
     }
     return (sum) / N;

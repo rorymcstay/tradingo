@@ -117,8 +117,8 @@ void TestEnv::playback(const std::string& tradeFile_, const std::string& quoteFi
             _context->orderApi();
             trade = getEvent<model::Trade>(tradeFile);
             if (not trade) {
-                hasTrades = true;
                 // trades are finished now
+                hasTrades = false;
             }
         }
 

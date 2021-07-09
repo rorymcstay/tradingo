@@ -186,6 +186,7 @@ void Strategy<TOrdApi>::placeAllocations() {
     for (auto& toSend : _amends) {
         jsList.as_array()[count++] = toSend->toJson();
     }
+    // and then amends
     if (!_amends.empty())
         _orderEngine->order_amendBulk(jsList.serialize()).then(taskUpdateFunc);
 
@@ -197,11 +198,13 @@ void Strategy<TOrdApi>::placeAllocations() {
     if (!_newOrders.empty())
         _orderEngine->order_newBulk(jsList.serialize()).then(taskUpdateFunc);
 
-    LOGINFO("Allocations have been reflected. " << LOG_NVP("amend", _amends.size())
-        << LOG_NVP("new", _newOrders.size()) << LOG_NVP("cancel", _cancels.size()));
     for (auto& order : _buyOrders) {
         auto alloc = (*_allocations)[order.first];
     }
+    LOGINFO("Allocations have been reflected. " << LOG_NVP("amend", _amends.size())
+        << LOG_NVP("new", _newOrders.size()) << LOG_NVP("cancel", _cancels.size()));
+    _allocations->setUnmodified();
+
 }
 
 

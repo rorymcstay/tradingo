@@ -6,10 +6,15 @@
 #include "Utils.h"
 
 Allocations::Allocations(price_t midPoint_, price_t tickSize_)
-:   _data(2*(size_t)(midPoint_/tickSize_), std::make_shared<Allocation>())
+:   _data(2*(size_t)(midPoint_/tickSize_))
 ,   _tickSize(tickSize_)
 ,   _modified(false)
 {
+    for (int i=0; i < 2*(size_t)(midPoint_/tickSize_); i++) {
+        auto alloc = std::make_shared<Allocation>();
+        alloc->setPrice(i*tickSize_);
+        _data.push_back(alloc);
+    }
 
 }
 
@@ -46,7 +51,7 @@ qty_t Allocations::allocatedAtLevel(price_t price_) {
 
 qty_t Allocations::totalAllocated() {
     qty_t allocated = 0;
-    std::for_each(_data.begin(), _data.end(), [&allocated] (decltype(_data)::value_type alloc_) {
+    std::for_each(_data.begin(), _data.end(), [&allocated] (const decltype(_data)::value_type& alloc_) {
         allocated += alloc_->getSize();
     });
     return allocated;

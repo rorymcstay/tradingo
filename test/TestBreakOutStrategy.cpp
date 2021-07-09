@@ -13,8 +13,8 @@ TEST(BreakOutStrategy, smoke_test)
         {"factoryMethod", "RegisterBreakOutStrategy"},
         {"startingAmount", "1000"},
         {"referencePrice", "100"},
-        {"shortTermWindow", "10"},
-        {"longTermWindow", "100"}
+        {"shortTermWindow", "100"},
+        {"longTermWindow", "1000"}
     });
 
     env << "QUOTE askPrice=100.0 askSize=100.0 bidPrice=99.0 bidSize=1000.0 symbol=XBTUSD" LN;

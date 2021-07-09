@@ -27,6 +27,7 @@ public:
     const std::shared_ptr<Allocation>& get(price_t price_);
     void update(const std::shared_ptr<model::Execution>& exec_);
     bool modified() { return _modified; }
+    void setUnmodified() { _modified = false; }
 
     const std::shared_ptr<Allocation>& operator[] (price_t price_) { return get(price_); }
 
