@@ -23,6 +23,7 @@
 #include "Event.h"
 #include "ObjectPool.h"
 #include "Config.h"
+#include "HeartBeat.h"
 //#include "Signal.h"
 
 
@@ -197,6 +198,9 @@ class MarketData
     bool _initialised;
 
     bool _shouldAuth;
+
+    std::shared_ptr<HeartBeat> _heartBeat;
+    long _cycle;
 private:
     std::string getConnectionUri();
     std::string getBaseUrl();

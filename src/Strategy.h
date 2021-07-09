@@ -79,8 +79,8 @@ void Strategy<TOrdApi>::evaluate() {
     if (event->eventType() == EventType::BBO) {
         auto quote = event->getQuote();
         onBBO(event);
-        LOGDEBUG("BBO Update Bid=" << quote->getBidSize() << '@' << quote->getBidPrice()
-                    << " Ask=" << quote->getAskSize() << '@' << quote->getAskPrice());
+        LOGINFO("BBO Update Bid=" << quote->getBidSize() << '@' << quote->getBidPrice()
+                    << " Ask=" << quote->getAskSize() << '@' << quote->getAskPrice() << " " << LOG_NVP("Timestamp", quote->getTimestamp().to_string()));
     } else if (event->eventType() == EventType::TradeUpdate) {
         LOGDEBUG( "Trade: " << event->getTrade()->toJson().serialize());
         onTrade(event);

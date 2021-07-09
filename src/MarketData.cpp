@@ -45,9 +45,11 @@ MarketData::MarketData(const std::shared_ptr<Config>& config_)
 ,   _symbol(config_->get("symbol"))
 ,   _wsClient(std::make_shared<ws::client::websocket_callback_client>())
 ,   _initialised(false)
-// TODO bool helpers + templating get
 ,   _shouldAuth(config_->get("shouldAuth", "Yes") == "Yes")
+,   _heartBeat(std::make_shared<HeartBeat>(_wsClient))
+,   _cycle(0)
 {
+    // Config TODO bool helpers + templating get
 
 }
 
@@ -55,8 +57,12 @@ void MarketData::init() {
 
     _wsClient->set_message_handler(
             [&](const ws::client::websocket_incoming_message& in_msg) {
+                _heartBeat->startTimer(_cycle++);
                 auto msg = in_msg.extract_string();
                 auto stringVal = msg.get();
+                if (stringVal.find("pong") != std::string::npos) {
+                    return;
+                }
                 //std::cout << stringVal << std::endl;
                 web::json::value msgJson = web::json::value::parse(stringVal);
                 if (msgJson.has_field("info")) {
@@ -128,6 +134,8 @@ void MarketData::init() {
         message.set_utf8_message(payload);
         _wsClient->send(message);
     }
+
+    _heartBeat->init();
 
 }
 

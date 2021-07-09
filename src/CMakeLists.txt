@@ -25,6 +25,7 @@ add_library(trading_funcs SHARED
         Utils.cpp
         Allocation.cpp
         Allocations.cpp
+        HeartBeat.cpp
 
         # Signal.cpp
         #${CPPLOGGER_HEADER}

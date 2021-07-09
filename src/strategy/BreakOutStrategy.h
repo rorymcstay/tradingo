@@ -60,13 +60,14 @@ void BreakOutStrategy<TORDApi>::init(const std::shared_ptr<Config>& config_) {
 template<typename TORDApi>
 void BreakOutStrategy<TORDApi>::onExecution(const std::shared_ptr<Event> &event_) {
     LOGINFO("BreakOutStrategy::onExecution(): " << event_->getExec()->toJson().serialize());
+    StrategyApi::allocations()->update(event_->getExec());
 }
 
 template<typename TORDApi>
 void BreakOutStrategy<TORDApi>::onTrade(const std::shared_ptr<Event> &event_) {
-    _longTermAvg = _smaHigh(event_->getTrade()->getPrice());
-    _shortTermAvg = _smaLow(event_->getTrade()->getPrice());
-    LOGINFO(LOG_VAR(_longTermAvg) << LOG_VAR(_shortTermAvg));
+    auto trade = event_->getTrade();
+    LOGINFO("onTrade: " << LOG_NVP("Price", trade->getPrice()) << LOG_NVP("Size", trade->getSize())
+            << LOG_NVP("Side", trade->getSide())<< LOG_NVP("Timestamp", trade->getTimestamp().to_string()));
 }
 
 template<typename TORDApi>
@@ -81,7 +82,7 @@ void BreakOutStrategy<TORDApi>::onBBO(const std::shared_ptr<Event> &event_) {
         // short term average is higher than longterm, buy
         auto qtyToTrade = getQtyToTrade("Buy");
         StrategyApi::allocations()->addAllocation(bidPrice, qtyToTrade, "Buy");
-    } else {
+    } else if (_smaLow.is_ready() && _smaHigh.is_ready()) {
         auto qtyToTrade = getQtyToTrade("Sell");
         StrategyApi::allocations()->addAllocation(askPrice, qtyToTrade, "Sell");
     }

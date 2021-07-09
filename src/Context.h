@@ -139,11 +139,11 @@ Context<TMarketData, TOrderApi>::~Context() {
 
 template<typename TMarketData, typename TOrderApi>
 void Context<TMarketData, TOrderApi>::setupLogger() {
-
+    auto logLevel = AixLog::Filter(AixLog::to_severity(_config->get("logLevel", "info")));
     std::vector<std::shared_ptr<AixLog::Sink>> sinks =
     {
         /// Log normal (i.e. non-special) logs to SinkCout
-        std::make_shared<AixLog::SinkCout>(AixLog::Severity::trace),
+        std::make_shared<AixLog::SinkCout>(logLevel),
                 /// Log error and higher severity messages to cerr
                 std::make_shared<AixLog::SinkCerr>(AixLog::Severity::error),
                 /// Log special logs to native log (Syslog on Linux, Android Log on Android, EventLog on Windows, Unified logging on Apple)
@@ -169,7 +169,8 @@ void Context<TMarketData, TOrderApi>::setupLogger() {
         auto logFile = _config->get(
                 _config->get("logFileLocation") + "/"
                 + _config->get("symbol") + "_" + formatTime(std::chrono::system_clock::now())+".log");
-        auto sink = std::make_shared<AixLog::SinkFile>(AixLog::Severity::info, logFile);
+        LOGINFO("Logging to " << LOG_VAR(logFile));
+        auto sink = std::make_shared<AixLog::SinkFile>(logLevel, logFile);
         sinks.emplace_back(sink);
     }
 
