@@ -9,4 +9,4 @@ install(TARGETS
         trading_strategies
         RUNTIME DESTINATION bin
         LIBRARY DESTINATION lib
-        )
+	COMPONENT strategies)
