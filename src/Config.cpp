@@ -65,8 +65,11 @@ Config::Config(std::initializer_list<std::pair<std::string, std::string>> kvps)
 }
 
 std::string Config::get(const std::string &name_, const std::string &default_) {
-    if (_data.find(name_) == _data.end())
+    if (_data.find(name_) == _data.end()) {
+        LOGWARN("Defaulting " << name_ << " to " << default_);
         return default_;
-    else
+    }
+    else {
         return _data[name_];
+    }
 }

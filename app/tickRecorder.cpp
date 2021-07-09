@@ -3,11 +3,13 @@
 #include <filesystem>
 
 #include <boost/program_options.hpp>
+#include <api/OrderApi.h>
 
 #include "MarketData.h"
 #include "Event.h"
 #include "BatchWriter.h"
 #include "Utils.h"
+#include "Context.h"
 
 
 using namespace io::swagger::client;
@@ -35,12 +37,12 @@ int main(int argc, char **argv) {
     } else {
         return 1;
     }
+    auto context = std::make_shared<Context<MarketData, io::swagger::client::api::OrderApi>>(config);
+    context->init();
+
+    auto marketData = context->marketData();
 
     LOGINFO("Starting tick recording with " << LOG_VAR(symbol) << LOG_VAR(storage));
-
-    auto marketData = std::make_shared<MarketData>(config);
-    marketData->init();
-    marketData->subscribe();
 
     // table writers
     auto trades = std::make_shared<BatchWriter>("trades", symbol, storage);
