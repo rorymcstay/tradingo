@@ -1,7 +1,7 @@
 link_directories(/usr/local/lib)
 
-add_executable(tickRecorder tickRecorder.cpp)
-add_executable(tradingo tradingo.cpp)
+add_executable(tickRecorder tickRecorder.cpp config/tickRecorder.cfg)
+add_executable(tradingo tradingo.cpp config/tradingo.cfg)
 # add_executable(tradingoLoader tradingoLoader.cpp)
 
 
@@ -31,4 +31,9 @@ install(TARGETS
            tickRecorder
         RUNTIME DESTINATION bin
         LIBRARY DESTINATION lib
-        )
+	COMPONENT app)
+
+install(FILES
+	config/tickRecorder.cfg
+	config/tradingo.cfg
+	DESTINATION etc/config COMPONENT app-config)
