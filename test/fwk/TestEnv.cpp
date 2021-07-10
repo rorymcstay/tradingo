@@ -1,5 +1,6 @@
 #define _TURN_OFF_PLATFORM_STRING
 #include <Context.h>
+#include <BatchWriter.h>
 #include "TestEnv.h"
 
 
@@ -125,5 +126,6 @@ void TestEnv::playback(const std::string& tradeFile_, const std::string& quoteFi
     }
     for (auto& event : outBuffer) {
         LOGINFO("Out Event" << event->toJson().serialize());
+        auto batchWriter = BatchWriter("replay", _context->config()->get("symbol"), "./");
     }
 }

@@ -59,6 +59,7 @@ public:
     const std::shared_ptr<api::ApiConfiguration>& apiConfig() const { return _apiConfig; }
     const std::shared_ptr<api::ApiClient>& apiClient() const { return _apiClient; }
     const std::shared_ptr<Strategy<TOrderApi>>& strategy() const { return _strategy; }
+    const std::shared_ptr<Config>& config() const { return _config; }
 
 };
 
@@ -104,6 +105,8 @@ Context<TMarketData, TOrderApi>::loadFactoryMethod() {
 
 template<typename TMarketData, typename TOrderApi>
 Context<TMarketData, TOrderApi>::Context(const std::shared_ptr<Config>& config_) {
+
+    LOGINFO("Context created. GIT_HASH='" << GIT_HASH << '\'' );
 
     _config = config_;
     setupLogger();
