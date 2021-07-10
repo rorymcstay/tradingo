@@ -6,6 +6,9 @@
 
 inline
 std::string getEventTypeFromString(const std::string &marketDataString) {
+    if (marketDataString == "NONE") {
+        return "NONE";
+    }
     return marketDataString.substr(0, marketDataString.find(' '));
 }
 

@@ -6,14 +6,14 @@
 #include "Utils.h"
 
 Allocations::Allocations(price_t midPoint_, price_t tickSize_)
-:   _data(2*(size_t)(midPoint_/tickSize_))
+:   _data()
 ,   _tickSize(tickSize_)
+,   _lowPrice(0.0)
+,   _highPrice(0.0)
 ,   _modified(false)
 {
     for (int i=0; i < 2*(size_t)(midPoint_/tickSize_); i++) {
-        auto alloc = std::make_shared<Allocation>();
-        alloc->setPrice(i*tickSize_);
-        _data.push_back(alloc);
+        _data.push_back(std::make_shared<Allocation>(i*tickSize_, 0.0));
     }
 
 }
@@ -25,7 +25,7 @@ size_t Allocations::allocIndex(price_t price_) {
 }
 
 /// allocate qty/price
-void Allocations::addAllocation(price_t price_, size_t qty_, const std::string& side_="") {
+void Allocations::addAllocation(price_t price_, qty_t qty_, const std::string& side_/*=""*/) {
     _modified = true;
     price_ = roundTickPassive(price_);
     if (qty_ > 0 && side_ == "Sell") {
@@ -37,7 +37,7 @@ void Allocations::addAllocation(price_t price_, size_t qty_, const std::string& 
         // shouldn't come in here.
         allocation = std::make_shared<Allocation>(price_, qty_);
     } else {
-        allocation->setTargetDelta(qty_);
+        allocation->setTargetDelta(qty_ + allocation->getTargetDelta());
     }
 }
 

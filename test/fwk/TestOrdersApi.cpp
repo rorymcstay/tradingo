@@ -55,6 +55,7 @@ TestOrdersApi::order_cancel(std::optional<utility::string_t> orderID,
         _orderCancels.push(nullptr);
     } else {
         _orders[orderID.value()]->setOrdStatus("PendingCancel");
+        _orders[orderID.value()]->setOrderQty(0.0);
         ordersRet.push_back(_orders[orderID.value()]);
         _orderCancels.push(_orders[orderID.value()]);
         _allEvents.push(_orders[orderID.value()]);
@@ -126,7 +127,7 @@ TestOrdersApi::order_newBulk(std::optional<utility::string_t> orders) {
     auto outOrders = std::vector<std::shared_ptr<model::Order>>();
     auto json = web::json::value::parse(orders.value()).as_array();
     for (auto& ordJson : json) {
-        ordJson.as_object()["orderID"] = web::json::value::string(std::to_string(_oidSeed++));
+        ordJson.as_object()["orderID"] = web::json::value::string(std::to_string(++_oidSeed));
         auto order = std::make_shared<model::Order>();
         add_order(order);
         order->fromJson(ordJson);
@@ -145,6 +146,11 @@ TestOrdersApi::order_newBulk(std::optional<utility::string_t> orders) {
 
 void TestOrdersApi::operator>>(const std::string &outEvent_) {
     auto eventType = getEventTypeFromString(outEvent_);
+    if (eventType == "NONE") {
+        if (!_newOrders.empty() || !_orderCancels.empty() || !_orderAmends.empty()) {
+            throw std::runtime_error("There are events still pending!" );
+        }
+    }
     auto params = Params(outEvent_);
     auto expectedOrder = fromJson<model::Order>(params.asJson());
     if (eventType == "ORDER_NEW") {
@@ -164,7 +170,10 @@ void TestOrdersApi::operator>>(const std::string &outEvent_) {
         }
         auto orderAmend = _orderAmends.front();
         _orderAmends.pop();
-        ASSERT_EQ(orderAmend, expectedOrder);
+        CHECK_VAL(orderAmend->getPrice(), expectedOrder->getPrice());
+        CHECK_VAL(orderAmend->getSide(), expectedOrder->getSide());
+        CHECK_VAL(orderAmend->getOrderQty(), expectedOrder->getOrderQty());
+        CHECK_VAL(orderAmend->getSymbol(), expectedOrder->getSymbol());
     } else if (eventType == "ORDER_CANCEL") {
         checkOrderExists(expectedOrder);
         if (_orderCancels.empty()) {
@@ -172,7 +181,10 @@ void TestOrdersApi::operator>>(const std::string &outEvent_) {
         }
         auto orderCancel = _orderCancels.front();
         _orderCancels.pop();
-        ASSERT_EQ(orderCancel, expectedOrder);
+        CHECK_VAL(orderCancel->getPrice(), expectedOrder->getPrice());
+        CHECK_VAL(orderCancel->getSide(), expectedOrder->getSide());
+        CHECK_VAL(orderCancel->getOrderQty(), expectedOrder->getOrderQty());
+        CHECK_VAL(orderCancel->getSymbol(), expectedOrder->getSymbol());
     } else {
         throw std::runtime_error("Must specify event type - One of ORDER_NEW, ORDER_AMEND, ORDER_CANCEL");
     }
@@ -188,8 +200,8 @@ void TestOrdersApi::checkOrderExists(const std::shared_ptr<model::Order> &order)
 }
 
 void TestOrdersApi::add_order(const std::shared_ptr<model::Order> &order_) {
-    //_orders[std::to_string(_oidSeed++)] = order_;
     order_->setOrderID(std::to_string(_oidSeed));
+    _orders[order_->getOrderID()] = order_;
     order_->setOrdStatus("New");
     _newOrders.push(order_);
     _allEvents.push(order_);

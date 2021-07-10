@@ -32,7 +32,7 @@ class Strategy {
     std::shared_ptr<Allocations>           _allocations;
     std::unordered_map<price_t, OrderPtr> _buyOrders;
     std::unordered_map<price_t, OrderPtr> _sellOrders;
-    std::unordered_map<price_t, OrderPtr> _orders;
+    std::unordered_map<long, OrderPtr> _orders;
 
     virtual void onExecution(const std::shared_ptr<Event>& event_) = 0;
     virtual void onTrade(const std::shared_ptr<Event>& event_) = 0;
@@ -54,7 +54,7 @@ protected:
     // allocation api
 
 public:
-    const std::shared_ptr<model::Instrument>& instrument() const { return _marketData->instrument(); }
+    std::shared_ptr<model::Instrument> instrument() const { return _marketData ? _marketData->instrument() : nullptr; }
 
     void placeAllocations();
 };
@@ -107,16 +107,10 @@ void Strategy<TOrdApi>::init(const std::shared_ptr<Config>& config_) {
 
     _symbol = _config->get("symbol");
     _clOrdIdPrefix = _config->get("clOrdPrefix");
-    for (auto& order : _marketData->getOrders())
-        LOGINFO("Open Order: " << LOG_NVP("OID", order.first) << LOG_NVP("Order",order.second->toJson().serialize()));
-
     double tickSize;
     double referencePrice;
-    if (instrument()) {
-        tickSize = instrument()->getTickSize();
-        referencePrice = instrument()->getPrevPrice24h();
-    } else {
-    }
+    tickSize = instrument()->getTickSize();
+    referencePrice = instrument()->getPrevPrice24h();
 
     LOGINFO("Initialising allocations with " << LOG_VAR(referencePrice) << LOG_VAR(tickSize));
     _allocations = std::make_shared<Allocations>(referencePrice, tickSize);
@@ -135,8 +129,12 @@ void Strategy<TOrdApi>::placeAllocations() {
     thread_local std::vector<std::shared_ptr<model::Order>> _newOrders;
     thread_local std::vector<std::shared_ptr<model::Order>> _cancels;
     _amends.clear(); _newOrders.clear(); _cancels.clear();
+    // TODO use ranges ontop of *_allocations iterator. - occupied price level view
     for (auto& allocation : *_allocations) {
         if (!allocation) {
+            continue;
+        }
+        if (almost_equal(allocation->getTargetDelta(), 0.0)) {
             continue;
         }
         std::shared_ptr<model::Order> order = createOrder(allocation);
@@ -145,13 +143,14 @@ void Strategy<TOrdApi>::placeAllocations() {
         if (currentOrder) {
             order->setOrderID(currentOrder->getOrderID());
             order->setClOrdID(currentOrder->getClOrdID());
-            assert(currentOrder->getLeavesQty() == allocation->getSize() && "Allocation + LeavesQty out of sync");
+            //assert(currentOrder->getLeavesQty() == allocation->getSize() && "Allocation + LeavesQty out of sync");
             // we have an order at this price level
             if (allocation->isChangingSide()) {
                 auto cancel = createOrder(allocation);
                 // cancel will be for opposite side
                 cancel->setSide("Buy" == allocation->getSide() ? "Sell" : "Buy");
                 cancel->setOrderQty(0);
+                cancel->setOrderID(currentOrder->getOrderID());
                 _cancels.push_back(cancel);
                 order->setOrderID("");
                 _newOrders.push_back(order);
@@ -168,7 +167,11 @@ void Strategy<TOrdApi>::placeAllocations() {
                 _cancels.push_back(order);
             } else if (allocation->isNew()) {
                 _newOrders.push_back(order);
+            } else {
+                LOGWARN("Couldn't determine action");
             }
+        } else if (allocation->isNew()) {
+            _newOrders.push_back(order);
         }
     }
 
@@ -190,7 +193,7 @@ void Strategy<TOrdApi>::placeAllocations() {
     if (!_amends.empty())
         _orderEngine->order_amendBulk(jsList.serialize()).then(taskUpdateFunc);
 
-    jsList = web::json::value();
+    jsList = web::json::value::array();
     count = 0;
     for (auto& toSend : _newOrders) {
         jsList.as_array()[count++] = toSend->toJson();
@@ -198,23 +201,18 @@ void Strategy<TOrdApi>::placeAllocations() {
     if (!_newOrders.empty())
         _orderEngine->order_newBulk(jsList.serialize()).then(taskUpdateFunc);
 
-    for (auto& order : _buyOrders) {
-        auto alloc = (*_allocations)[order.first];
-    }
     LOGINFO("Allocations have been reflected. " << LOG_NVP("amend", _amends.size())
         << LOG_NVP("new", _newOrders.size()) << LOG_NVP("cancel", _cancels.size()));
-    _allocations->setUnmodified();
-
+    _allocations->restAll();
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
 }
-
-
 
 template<typename TOrdApi>
 std::shared_ptr<model::Order> Strategy<TOrdApi>::createOrder(const std::shared_ptr<Allocation> &allocation_) {
     auto newOrder = std::make_shared<model::Order>();
     newOrder->setPrice(allocation_->getPrice());
-    newOrder->setSide(allocation_->getSide());
-    newOrder->setOrderQty(allocation_->getSize()+allocation_->getTargetDelta());
+    newOrder->setSide(allocation_->targetSide());
+    newOrder->setOrderQty(std::abs(allocation_->getSize()+allocation_->getTargetDelta()));
     newOrder->setClOrdID(_clOrdIdPrefix + std::to_string(_oidSeed++));
     newOrder->setSymbol(_symbol);
     return newOrder;

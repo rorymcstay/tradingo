@@ -11,12 +11,14 @@ class Allocations {
 private:
     std::vector<std::shared_ptr<Allocation>> _data;
     price_t _tickSize;
+    price_t _lowPrice;
+    price_t _highPrice;
 
     bool _modified;
 public:
     size_t allocIndex(price_t price_);
     Allocations(price_t midPoint_, price_t tickSize_);
-    void addAllocation(price_t price_, size_t qty_, const std::string& side_);
+    void addAllocation(price_t price_, qty_t qty_, const std::string& side_="");
     std::vector<std::shared_ptr<Allocation>> allocations() { return _data; }
 
     price_t roundTickPassive(price_t price_);;
@@ -31,8 +33,15 @@ public:
 
     const std::shared_ptr<Allocation>& operator[] (price_t price_) { return get(price_); }
 
-    std::vector<std::shared_ptr<Allocation>>::iterator begin() { return _data.begin(); }
-    std::vector<std::shared_ptr<Allocation>>::iterator end() { return _data.end(); }
+    std::vector<std::shared_ptr<Allocation>>::iterator begin() { return _data.begin(); } // &_data[_low]
+    std::vector<std::shared_ptr<Allocation>>::iterator end() { return _data.end(); } // &_data[_high]
+
+    void restAll() {
+        std::for_each(_data.begin(), _data.end(), [](const std::shared_ptr<Allocation>& alloc_ ) {
+            alloc_->rest();
+        });
+        setUnmodified();
+    }
 
 };
 

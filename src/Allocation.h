@@ -21,6 +21,7 @@ class Allocation {
     qty_t _targetDelta;
 public:
     std::string getSide() const { return (_size < 0) ? "Sell" : "Buy"; }
+    std::string targetSide() const { return (_size + _targetDelta < 0.0) ? "Sell" : "Buy"; }
     const std::shared_ptr<model::Order> &getOrder() const { return _order; }
     void setOrder(const std::shared_ptr<model::Order> &order) { _order = order; }
     price_t getPrice() const { return _price; }
@@ -32,11 +33,11 @@ public:
 
     void rest();
     void cancelDelta();
-    bool isChangingSide() const { return sgn(_targetDelta) != sgn(_size) && std::abs(_targetDelta) >= std::abs(_size); }
-    bool isNew() const { return _size == 0 && _targetDelta != 0; }
+    bool isChangingSide() const { return sgn(_targetDelta) != sgn(_size) && std::abs(_targetDelta) > std::abs(_size); }
+    bool isNew() const { return almost_equal(_size, 0.0) && !almost_equal(_targetDelta, 0.0); }
     bool isAmendUp() const { return !isChangingSide() && std::abs(_targetDelta+_size) > _targetDelta+_size; }
     bool isAmendDown() const {return !isChangingSide() && std::abs(_targetDelta+_size) < _targetDelta+_size; };
-    bool isCancel() const { return _targetDelta == _size; };
+    bool isCancel() const { return almost_equal(std::abs(_targetDelta), std::abs(_size)) && sgn(_targetDelta) != sgn(_size); };
 
 public:
     Allocation();

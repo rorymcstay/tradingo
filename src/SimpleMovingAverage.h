@@ -6,6 +6,7 @@
 #define TRADINGO_SIMPLEMOVINGAVERAGE_H
 
 #include <stdint.h>
+#include "Utils.h"
 
 template <class input_t = uint16_t, class sum_t = uint32_t>
 class SimpleMovingAverage {
@@ -29,7 +30,7 @@ private:
     sum_t sum                 = 0;
     bool primed;
 public:
-    bool is_ready() const { return true; }
+    bool is_ready() const { return primed; }
 };
 
 template<class input_t, class sum_t>
@@ -40,7 +41,8 @@ input_t SimpleMovingAverage<input_t, sum_t>::operator()(input_t input) {
     if (++index == N) {
         index = 0;
     }
-    if (count++ > primedCount) {
+    if (++count == primedCount) {
+        LOGINFO("SimpleMovingAverage is primed");
         primed = true;
     }
     return (sum) / N;
