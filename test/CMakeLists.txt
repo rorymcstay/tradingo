@@ -22,16 +22,13 @@ add_executable(testTradingo
 
         # test files
         TestBreakOutStrategy.cpp
-        test_main.cpp
-        )
 
-add_executable(testTradingoLibs
         test_api_OrderApi.cpp
         TestSimpleMovingAverage.cpp
         TestAllocations.cpp
+        TestStrategy.cpp
         test_main.cpp
-
-        TestStrategy.cpp)
+        )
 
 include_directories(${PROJECT_SOURCE_DIR}/src/)
 include_directories(${BITMEX_INCLUDE})
@@ -50,14 +47,6 @@ target_link_libraries(test_trading_funcs
         ${OPENSSL_CRYPTO_LIBRARY}
         )
 target_link_libraries(testTradingo
-        test_trading_funcs
-        ${GTEST_LIBRARY}
-        ${OPENSSL_CRYPTO_LIBRARY}
-        CppRestSwaggerClient
-        boost_system
-        pthread
-        )
-target_link_libraries(testTradingoLibs
         test_trading_funcs
         ${GTEST_LIBRARY}
         ${OPENSSL_CRYPTO_LIBRARY}
