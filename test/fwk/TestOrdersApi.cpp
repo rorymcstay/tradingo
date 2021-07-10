@@ -150,6 +150,7 @@ void TestOrdersApi::operator>>(const std::string &outEvent_) {
         if (!_newOrders.empty() || !_orderCancels.empty() || !_orderAmends.empty()) {
             throw std::runtime_error("There are events still pending!" );
         }
+        return;
     }
     auto params = Params(outEvent_);
     auto expectedOrder = fromJson<model::Order>(params.asJson());
