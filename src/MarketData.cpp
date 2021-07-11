@@ -79,44 +79,43 @@ void MarketData::init() {
                 auto msg = in_msg.extract_string();
                 auto stringVal = msg.get();
                 if (stringVal.find("ping") != std::string::npos
-                    || stringVal.find("pong") != std::string::npos) {
+                         || stringVal.find("pong") != std::string::npos) {
                     return;
                 }
-                //std::cout << stringVal << std::endl;
-                web::json::value msgJson = web::json::value::parse(stringVal);
-                if (msgJson.has_field("info")) {
+                web::json::value msgJson = web::json::value::parse(stringVal);u
+                if (msgJson.has_field("table")) {
+                    const std::string &table = msgJson.at("table").as_string();
+                    const std::string &action = msgJson.at("action").as_string();
+                    web::json::array &data = msgJson.at("data").as_array();
+
+                    if (table == "quote") {
+                        auto quotes = getData<model::Quote, decltype(_quotePool)>(data, _quotePool);
+                        handleQuotes(quotes, action);
+                    } else if (table == "trade") {
+                        auto trades = getData<model::Trade, decltype(_tradePool)>(data, _tradePool);
+                        handleTrades(trades, action);
+                    } else if (table == "execution") {
+                        auto exec = getData<model::Execution, decltype(_execPool)>(data, _execPool);
+                        handleExecutions(exec, action);
+                    } else if (table == "position") {
+                        auto positions = getData<model::Position, decltype(_positionPool)>(data, _positionPool);
+                        handlePositions(positions, action);
+                    } else if (table == "order") {
+                        auto orders = getData<model::Order, decltype(_orderPool)>(data, _orderPool);
+                        handleOrders(orders, action);
+                    }
+                } else if (msgJson.has_field("info")) {
                     LOGINFO("Connection Response: " << msgJson.serialize());
                     _initialised = true;
                     return;
-                }
-                if (msgJson.has_field("success") && msgJson.at("success").as_bool()) {
+                } else if (msgJson.has_field("success") && msgJson.at("success").as_bool()) {
                     LOGINFO("Operation success: " << msgJson.serialize());
                     return;
-                }
-                if (msgJson.has_field("error")) {
+                } else if (msgJson.has_field("error")) {
                     LOGWARN("Websocket Error :" << stringVal);
                     return;
-                }
-
-                const std::string& table = msgJson.at("table").as_string();
-                const std::string& action = msgJson.at("action").as_string();
-                web::json::array& data = msgJson.at("data").as_array();
-
-                if (table == "quote") {
-                    auto quotes = getData<model::Quote, decltype(_quotePool)>(data, _quotePool);
-                    handleQuotes(quotes, action);
-                } else if (table == "trade") {
-                    auto trades = getData<model::Trade, decltype(_tradePool)>(data, _tradePool);
-                    handleTrades(trades, action);
-                } else if (table == "execution") {
-                    auto exec = getData<model::Execution, decltype(_execPool)>(data, _execPool);
-                    handleExecutions(exec, action);
-                } else if (table == "position") {
-                    auto positions = getData<model::Position, decltype(_positionPool)>(data, _positionPool);
-                    handlePositions(positions, action);
-                } else if (table == "order") {
-                    auto orders = getData<model::Order, decltype(_orderPool)>(data,_orderPool);
-                    handleOrders(orders, action);
+                } else if (msgJson.has_field("cancelTime")) {
+                    LOGWARN("CancelAfter success" << stringVal);
                 }
             });
 
@@ -188,15 +187,17 @@ void MarketData::subscribe() {
     LOGINFO("Doing subscribe " << payload.serialize());
     _wsClient->send(subMessage);
     if (_cancelAllAfter && _shouldAuth) {
-        LOGINFO("Registering kill switch " << LOG_VAR(_cancelAllTimeout));
         web::websockets::client::websocket_outgoing_message killSwitchMessage;
-        killSwitchMessage.set_utf8_message(R"({"op": "cancelAllAfter", "args": )" + std::to_string(_cancelAllTimeout) +"})");
+        std::string data = R"({"op": "cancelAllAfter", "args": [)" + std::to_string(_cancelAllTimeout) +"]}";
+        LOGINFO("Registering kill switch " << LOG_VAR(data));
+        killSwitchMessage.set_utf8_message(data);
         _wsClient->send(killSwitchMessage);
     }
 }
 
 void MarketData::reconnect() {
     LOGINFO("Reinitialising websocket client " << _wsClient);
+    _wsClient->close();
     _wsClient = std::shared_ptr<ws::client::websocket_callback_client>();
 
     init();
