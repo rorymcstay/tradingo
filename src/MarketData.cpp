@@ -105,17 +105,17 @@ void MarketData::init() {
                         handleOrders(orders, action);
                     }
                 } else if (msgJson.has_field("info")) {
-                    LOGINFO("Connection Response: " << msgJson.serialize());
+                    LOGINFO("Connection response: " << msgJson.serialize());
                     _initialised = true;
                     return;
                 } else if (msgJson.has_field("success") && msgJson.at("success").as_bool()) {
                     LOGINFO("Operation success: " << msgJson.serialize());
                     return;
                 } else if (msgJson.has_field("error")) {
-                    LOGWARN("Websocket Error :" << stringVal);
+                    LOGWARN("Websocket error :" << stringVal);
                     return;
                 } else if (msgJson.has_field("cancelTime")) {
-                    LOGWARN("CancelAfter success" << stringVal);
+                    LOGWARN("CancelAfter success: " << stringVal);
                 }
             });
 
