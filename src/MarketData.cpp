@@ -54,6 +54,7 @@ MarketData::MarketData(const std::shared_ptr<Config>& config_)
 
 }
 
+/// initialise heartbeat, callback method
 void MarketData::init() {
 
     _heartBeat = std::make_shared<HeartBeat>(_wsClient);
@@ -73,6 +74,7 @@ void MarketData::init() {
     // initialise callback
     _wsClient->set_message_handler(
             [&](const ws::client::websocket_incoming_message& in_msg) {
+                // TODO Move this logic into handler method.
                 _heartBeat->startTimer(_cycle++);
                 auto msg = in_msg.extract_string();
                 auto stringVal = msg.get();
@@ -83,8 +85,7 @@ void MarketData::init() {
                 //std::cout << stringVal << std::endl;
                 web::json::value msgJson = web::json::value::parse(stringVal);
                 if (msgJson.has_field("info")) {
-                    LOGINFO("info: " << msgJson["info"].as_string());
-                    LOGINFO("response" << msgJson.serialize());
+                    LOGINFO("Connection Response: " << msgJson.serialize());
                     _initialised = true;
                     return;
                 }
@@ -121,7 +122,7 @@ void MarketData::init() {
 
     _wsClient->set_close_handler(
             [](ws::client::websocket_close_status stat, const std::string& message_, std::error_code err_) {
-                std::cout << message_ << '\n';
+                LOGINFO("Websocket closed!");
             });
 
     std::string conString = getBaseUrl() + getConnectionUri();
@@ -158,6 +159,8 @@ void MarketData::init() {
 
 }
 
+/// subscribe to topics based on 'shouldAuth' config value.
+/// if 'cancelAllAfter' is true, register it with server.
 void MarketData::subscribe() {
 
     std::string subScribePayload = R"({"op": "subscribe", "args": ["execution:)"+_symbol+ R"(","position:)"+_symbol+ R"("]})";

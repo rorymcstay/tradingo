@@ -18,7 +18,7 @@ TEST(BreakOutStrategy, smoke_test)
     });
 
     env << "QUOTE askPrice=100.0 askSize=100.0 bidPrice=99.0 bidSize=1000.0 symbol=XBTUSD" LN;
-    //env >> "ORDER_NEW price=99.0 side=Buy orderQty=100.0 symbol=XBTUSD" LN;
+    // env >> "ORDER_NEW price=99.0 side=Buy orderQty=100.0 symbol=XBTUSD" LN;
     env << "TRADE foreignNotional=500 grossValue=1304800 homeNotional=0.013048000000000001 price=38320 side=Sell size=500 symbol=XBTUSD tickDirection=ZeroMinusTick trdMatchID=dac0793c-0ff4-74f5-a793-b00e3811a690" LN;
     env << "TRADE foreignNotional=500 grossValue=1304800 homeNotional=0.013048000000000001 price=38321 side=Sell size=500 symbol=XBTUSD tickDirection=ZeroMinusTick trdMatchID=dac0793c-0ff4-74f5-a793-b00e3811a690" LN;
 
