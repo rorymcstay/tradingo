@@ -7,6 +7,7 @@
 
 #include "TestUtils.h"
 #include "Params.h"
+#include "Config.h"
 
 #include "MarketData.h"
 

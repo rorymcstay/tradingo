@@ -9,7 +9,10 @@ execute_process(
         OUTPUT_VARIABLE GIT_HASH
         OUTPUT_STRIP_TRAILING_WHITESPACE
 )
-add_compile_definitions(GIT_HASH ${GIT_HASH})
+
+MESSAGE(STATUS "Git hash is ${GIT_HASH}")
+
+add_compile_definitions(TRADINGO_GIT_HASH=${GIT_HASH})
 
 set(CMAKE_CXX_STANDARD 20)
 add_compile_options("-fPIC")

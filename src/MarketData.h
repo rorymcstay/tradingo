@@ -153,6 +153,7 @@ protected:
     std::mutex _mutex;
     std::vector<std::string> _positionKey;
     std::vector<std::string> _orderKey;
+    std::string _symbol;
 
     cache::ObjectPool<model::Trade, 1000, TradeReleaser> _tradePool;
     cache::ObjectPool<model::Quote, 1000, QuoteReleaser> _quotePool;
@@ -190,7 +191,7 @@ protected:
 
 public:
     ~MarketDataInterface() {};
-    MarketDataInterface();
+    MarketDataInterface(const std::shared_ptr<Config>& config_);
     std::shared_ptr<Event> read();
     const std::unordered_map<std::string, OrderPtr>& getOrders() const;
     const std::queue<ExecPtr>& getExecutions() const;
@@ -206,16 +207,14 @@ class MarketData
 :   public MarketDataInterface
 {
     std::string _connectionString;
-    std::string _symbol;
     std::shared_ptr<ws::client::websocket_callback_client> _wsClient;
 
     std::string _apiSecret;
     std::string _apiKey;
     bool _initialised;
     bool _shouldAuth;
-
-private:
-
+    bool _cancelAllAfter;
+    int _cancelAllTimeout;
 
     std::shared_ptr<HeartBeat> _heartBeat;
     long _cycle;
@@ -226,6 +225,7 @@ private:
 
 public:
     void subscribe();
+    void reconnect();
 
     explicit MarketData(const std::shared_ptr<Config>& config_);
 

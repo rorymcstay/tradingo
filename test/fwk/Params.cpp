@@ -50,12 +50,7 @@ web::json::value Params::asJson() const {
     }
     // add timestamp if it is missing
     if (_data.find("timestamp") == _data.end()) {
-        std::chrono::time_point<std::chrono::system_clock> time_now = std::chrono::system_clock::now();
-        std::time_t time_now_t = std::chrono::system_clock::to_time_t(time_now);
-        std::tm now_tm = *std::localtime(&time_now_t);
-        char buf[256];
-        std::strftime(buf, 256, "%yyyy-%m-%dT%H:%m:%s.%f", &now_tm);
-        retVal["timestamp"] = web::json::value(buf);
+        retVal["timestamp"] = web::json::value(utility::datetime::utc_now().to_string());
     }
     return retVal;
 }

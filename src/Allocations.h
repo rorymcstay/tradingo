@@ -21,8 +21,7 @@ public:
     void addAllocation(price_t price_, qty_t qty_, const std::string& side_="");
     std::vector<std::shared_ptr<Allocation>> allocations() { return _data; }
 
-    price_t roundTickPassive(price_t price_);;
-
+    price_t roundTickPassive(price_t price_);
     qty_t allocatedAtLevel(price_t price_);
     qty_t totalAllocated();
 
@@ -33,8 +32,8 @@ public:
 
     const std::shared_ptr<Allocation>& operator[] (price_t price_) { return get(price_); }
 
-    std::vector<std::shared_ptr<Allocation>>::iterator begin() { return _data.begin(); } // &_data[_low]
-    std::vector<std::shared_ptr<Allocation>>::iterator end() { return _data.end(); } // &_data[_high]
+    std::vector<std::shared_ptr<Allocation>>::iterator begin() { return _data.begin(); }//*_data[_lowPrice]; }
+    std::vector<std::shared_ptr<Allocation>>::iterator end() { return  _data.end(); }
 
     void restAll() {
         std::for_each(_data.begin(), _data.end(), [](const std::shared_ptr<Allocation>& alloc_ ) {

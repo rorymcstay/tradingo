@@ -33,8 +33,7 @@ public:
     HeartBeat(std::shared_ptr<web::web_sockets::client::websocket_callback_client>);
     void startTimer(long cycle_);
     void sendPing();
-    void registerPong();
-    void init();
+    void init(const std::function<void()>& timeoutCallback_);
 
 };
 

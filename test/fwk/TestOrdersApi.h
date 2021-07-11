@@ -33,6 +33,7 @@ private:
 
     // functional helpers
     void add_order(const std::shared_ptr<model::Order>& order_);
+    void set_order_timestamp(const std::shared_ptr<model::Order>& order_);
 
     // API
 public:

@@ -35,8 +35,8 @@ public:
     void cancelDelta();
     bool isChangingSide() const { return sgn(_targetDelta) != sgn(_size) && std::abs(_targetDelta) > std::abs(_size); }
     bool isNew() const { return almost_equal(_size, 0.0) && !almost_equal(_targetDelta, 0.0); }
-    bool isAmendUp() const { return !isChangingSide() && std::abs(_targetDelta+_size) > _targetDelta+_size; }
-    bool isAmendDown() const {return !isChangingSide() && std::abs(_targetDelta+_size) < _targetDelta+_size; };
+    bool isAmendUp() const { return !isChangingSide() && std::abs(_targetDelta+_size) > _size; }
+    bool isAmendDown() const {return !isChangingSide() && std::abs(_targetDelta+_size) < _size; };
     bool isCancel() const { return almost_equal(std::abs(_targetDelta), std::abs(_size)) && sgn(_targetDelta) != sgn(_size); };
 
 public:

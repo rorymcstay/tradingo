@@ -38,15 +38,16 @@ MarketData::~MarketData() {
 
 
 MarketData::MarketData(const std::shared_ptr<Config>& config_)
-:   MarketDataInterface()
+:   MarketDataInterface(config_)
 ,   _connectionString(config_->get("connectionString"))
 ,   _apiKey(config_->get("apiKey", "NO_AUTH"))
 ,   _apiSecret(config_->get("apiSecret", "NO_AUTH"))
-,   _symbol(config_->get("symbol"))
 ,   _wsClient(std::make_shared<ws::client::websocket_callback_client>())
 ,   _initialised(false)
 ,   _shouldAuth(config_->get("shouldAuth", "Yes") == "Yes")
-,   _heartBeat(std::make_shared<HeartBeat>(_wsClient))
+,   _cancelAllAfter(config_->get("cancelAllAfter", "Yes") == "Yes")
+,   _cancelAllTimeout(std::stoi(config_->get("cancelAllTimeout", "15000")))
+,   _heartBeat(nullptr)
 ,   _cycle(0)
 {
     // Config TODO bool helpers + templating get
@@ -54,6 +55,8 @@ MarketData::MarketData(const std::shared_ptr<Config>& config_)
 }
 
 void MarketData::init() {
+
+    _heartBeat = std::make_shared<HeartBeat>(_wsClient);
 
     // get instrument
 #define SEVENNULL boost::none,boost::none,boost::none,boost::none,boost::none,boost::none,boost::none
@@ -148,7 +151,10 @@ void MarketData::init() {
         _wsClient->send(message);
     }
 
-    _heartBeat->init();
+    auto timeoutCallback = [this] () {
+        reconnect();
+    };
+    _heartBeat->init(timeoutCallback);
 
 }
 
@@ -178,6 +184,20 @@ void MarketData::subscribe() {
     subMessage.set_utf8_message(payload.serialize());
     LOGINFO("Doing subscribe " << payload.serialize());
     _wsClient->send(subMessage);
+    if (_cancelAllAfter && _shouldAuth) {
+        LOGINFO("Registering kill switch " << LOG_VAR(_cancelAllTimeout));
+        web::websockets::client::websocket_outgoing_message killSwitchMessage;
+        killSwitchMessage.set_utf8_message(R"({"op": "cancelAllAfter", "args": )" + std::to_string(_cancelAllTimeout) +"})");
+        _wsClient->send(killSwitchMessage);
+    }
+}
+
+void MarketData::reconnect() {
+    LOGINFO("Reinitialising websocket client " << _wsClient);
+    _wsClient = std::shared_ptr<ws::client::websocket_callback_client>();
+
+    init();
+    subscribe();
 }
 
 void MarketDataInterface::setInstrumentApi(const std::shared_ptr<api::InstrumentApi> &instrumentApi) {
@@ -308,13 +328,14 @@ const std::shared_ptr<model::Instrument>& MarketDataInterface::instrument() cons
     return _instrument;
 }
 
-MarketDataInterface::MarketDataInterface()
-:   _instrumentApi(nullptr) {
+MarketDataInterface::MarketDataInterface(const std::shared_ptr<Config>& config_)
+:   _instrumentApi(nullptr)
+,   _symbol(config_->get("symbol")) {
 
 }
 
 std::string getPositionKey(const std::shared_ptr<model::Position> &pos_) {
-    return std::to_string(pos_->getAccount())+":"+pos_->getSymbol();
+    return pos_->getSymbol();
 }
 
 std::string getOrderKey(const std::shared_ptr<model::Order> &order_) {

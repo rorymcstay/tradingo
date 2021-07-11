@@ -124,8 +124,12 @@ void TestEnv::playback(const std::string& tradeFile_, const std::string& quoteFi
         }
 
     }
+
+    // record replay actions to a file.
+    auto batchWriter = BatchWriter("replay", _context->config()->get("symbol"), "./");
     for (auto& event : outBuffer) {
         LOGINFO("Out Event" << event->toJson().serialize());
-        auto batchWriter = BatchWriter("replay", _context->config()->get("symbol"), "./");
+        batchWriter.write(event);
     }
+    batchWriter.write_batch();
 }

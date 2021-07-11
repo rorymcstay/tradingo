@@ -26,6 +26,14 @@ size_t Allocations::allocIndex(price_t price_) {
 
 /// allocate qty/price
 void Allocations::addAllocation(price_t price_, qty_t qty_, const std::string& side_/*=""*/) {
+    if (almost_equal(qty_,0.0)) {
+        return;
+    }
+    if (price_ < _lowPrice) {
+        _lowPrice = price_;
+    } else if (price_ > _highPrice) {
+        _highPrice = price_;
+    }
     _modified = true;
     price_ = roundTickPassive(price_);
     if (qty_ > 0 && side_ == "Sell") {
@@ -66,7 +74,7 @@ void Allocations::update(const std::shared_ptr<model::Execution> &exec_) {
     auto alloc = get(exec_->getPrice());
     if (execType == "New") {
         // do nothing - order placed
-    } else if (execType == "Trade" || execType == "Cancelled") {
+    } else if (execType == "Trade" || execType == "Canceled") {
         if (exec_->getSide() == "Buy") {
             // decrement
             alloc->setSize(alloc->getSize() + exec_->getLastQty());

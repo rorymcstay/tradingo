@@ -7,6 +7,7 @@
 
 #include "SimpleMovingAverage.h"
 #include "Strategy.h"
+#include "Event.h"
 
 using SMA_T = SimpleMovingAverage<uint64_t, uint64_t>;
 
@@ -59,8 +60,8 @@ void BreakOutStrategy<TORDApi>::init(const std::shared_ptr<Config>& config_) {
 
 template<typename TORDApi>
 void BreakOutStrategy<TORDApi>::onExecution(const std::shared_ptr<Event> &event_) {
-    LOGINFO("BreakOutStrategy::onExecution(): " << event_->getExec()->toJson().serialize());
-    StrategyApi::allocations()->update(event_->getExec());
+    LOGINFO(event_->getExec()->toJson().serialize());
+    LOGINFO("Position: " << StrategyApi::getMD()->getPositions().at(StrategyApi::_symbol)->toJson().serialize());
 }
 
 template<typename TORDApi>
@@ -79,7 +80,8 @@ void BreakOutStrategy<TORDApi>::onBBO(const std::shared_ptr<Event> &event_) {
     _shortTermAvg = _smaLow(midPoint);
     _longTermAvg = _smaHigh(midPoint);
     LOGINFO(LOG_VAR(_shortTermAvg) << LOG_VAR(_longTermAvg));
-    if ((_smaLow.is_ready() && _smaHigh.is_ready()) && _shortTermAvg - _longTermAvg >= _buyThreshold) {
+    if ((_smaLow.is_ready() && _smaHigh.is_ready())
+         && _shortTermAvg - _longTermAvg >= _buyThreshold) {
         // short term average is higher than longterm, buy
         auto qtyToTrade = getQtyToTrade("Buy");
         LOGINFO("Signal is good " << LOG_VAR(_shortTermAvg) << LOG_VAR(_longTermAvg) << LOG_VAR(qtyToTrade));
@@ -109,11 +111,14 @@ BreakOutStrategy<TORDApi>::BreakOutStrategy(std::shared_ptr<MarketDataInterface>
 template<typename TORDApi>
 qty_t BreakOutStrategy<TORDApi>::getQtyToTrade(const std::string& side_) {
     auto allocated = StrategyApi::allocations()->totalAllocated();
+    std::shared_ptr<model::Position> currentPosition = StrategyApi::getMD()->getPositions().at(StrategyApi::_symbol);
+    auto currentSize = currentPosition->getCurrentQty();
     if (side_ == "Buy") {
         // if we are buying
-        return std::max(_longExpose - allocated, 0.0);
+        return _longExpose - currentSize;
+
     } else {
-        return std::max(-_shortExpose - allocated, -_shortExpose);
+        return _shortExpose - currentSize;
     }
 }
 

@@ -25,9 +25,9 @@ void HeartBeat::sendPing() {
     _wsClient->send(message);
 }
 
-void HeartBeat::init() {
+void HeartBeat::init(const std::function<void()>& timeoutCallback_) {
 
-    auto timedPong = [this]() {
+    auto timedPong = [this, timeoutCallback_]() {
         long cycle;
         while (_wsClient) {
             cycle = _cycle;
@@ -40,9 +40,8 @@ void HeartBeat::init() {
                 if (_cycle == cycle) {
                     LOGWARN("Reconnecting to " << LOG_NVP("webSocketUrl", _wsClient->uri().to_string()));
                     // cycle not changed after ping
-                    _wsClient->connect(_wsClient->uri().to_string());
+                    timeoutCallback_();
                 }
-                //throw HeartBeatTimeOut("Timed out after sending heartbeat after 5 seconds.");
                 LOGINFO("Pong received after 5 seconds");
             }
         }

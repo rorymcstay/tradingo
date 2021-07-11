@@ -30,6 +30,7 @@ TestOrdersApi::order_amend(std::optional<utility::string_t> orderID, std::option
     order->setOrderQty(simpleOrderQty.value());
     order->setPrice(price.value());
     order->setStopPx(stopPx.value());
+    set_order_timestamp(order);
     _orderAmends.emplace(order);
     auto task = pplx::task_from_result(order);
     //auto task = pplx::task<decltype(order)>(order);
@@ -40,9 +41,18 @@ TestOrdersApi::order_amend(std::optional<utility::string_t> orderID, std::option
 pplx::task<std::vector<std::shared_ptr<model::Order>>>
 TestOrdersApi::order_amendBulk(std::optional<utility::string_t> orders) {
 
-    assert(false && "Not implemented");
-    std::vector<std::shared_ptr<model::Order>> ret = {nullptr};
-    return pplx::task_from_result(ret);
+    auto outOrders = std::vector<std::shared_ptr<model::Order>>();
+    auto json = web::json::value::parse(orders.value()).as_array();
+    for (auto& ordJson : json) {
+        auto order = std::make_shared<model::Order>();
+        order->fromJson(ordJson);
+        checkOrderExists(order);
+        set_order_timestamp(order);
+        _orderAmends.emplace(order);
+        outOrders.push_back(order);
+    }
+    auto tsk = pplx::task_from_result(outOrders);
+    return tsk;
 }
 
 pplx::task<std::vector<std::shared_ptr<model::Order>>>
@@ -56,6 +66,7 @@ TestOrdersApi::order_cancel(std::optional<utility::string_t> orderID,
     } else {
         _orders[orderID.value()]->setOrdStatus("PendingCancel");
         _orders[orderID.value()]->setOrderQty(0.0);
+        set_order_timestamp(_orders[orderID.value()]);
         ordersRet.push_back(_orders[orderID.value()]);
         _orderCancels.push(_orders[orderID.value()]);
         _allEvents.push(_orders[orderID.value()]);
@@ -72,6 +83,7 @@ TestOrdersApi::order_cancelAll(std::optional<utility::string_t> symbol, std::opt
         _orderCancels.push(orders.second);
         out.push_back(orders.second);
         _allEvents.push(orders.second);
+        set_order_timestamp(orders.second);
     }
     return pplx::task_from_result(out);
 }
@@ -118,6 +130,7 @@ TestOrdersApi::order_new(utility::string_t symbol, std::optional<utility::string
     if (price.has_value())
         order->setPrice(price.value());
     order->setOrderID(std::to_string(_oidSeed++));
+
     add_order(order);
     return pplx::task_from_result(order);
 }
@@ -204,8 +217,10 @@ void TestOrdersApi::add_order(const std::shared_ptr<model::Order> &order_) {
     order_->setOrderID(std::to_string(_oidSeed));
     _orders[order_->getOrderID()] = order_;
     order_->setOrdStatus("New");
+    set_order_timestamp(order_);
     _newOrders.push(order_);
     _allEvents.push(order_);
+
 }
 
 void TestOrdersApi::operator>>(std::vector<std::shared_ptr<model::ModelBase>>& outVec) {
@@ -222,6 +237,17 @@ void TestOrdersApi::operator>>(std::vector<std::shared_ptr<model::ModelBase>>& o
 
 void TestOrdersApi::operator<<(utility::datetime time_) {
     _time = time_;
+}
+
+void TestOrdersApi::set_order_timestamp(const std::shared_ptr<model::Order>& order_) {
+
+    if (!order_->timestampIsSet()) {
+        if (!_time.is_initialized()){
+            order_->setTimestamp(_time);
+        } else {
+            order_->setTimestamp(utility::datetime::utc_now());
+        }
+    }
 }
 
 

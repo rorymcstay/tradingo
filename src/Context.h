@@ -42,15 +42,12 @@ public:
     ~Context();
     /// set base variables, setupLogger, order manager
     explicit Context(const std::shared_ptr<Config>& config_);
-
+    /// load 'factoryMethod' from 'libraryLocation', specified in config.
     factoryMethod_t loadFactoryMethod();
-
     /// set log level, log to file if configured.
     void setupLogger();
-
     /// start market data
     void init();
-
     /// load symbol from library file, download instrument from InstrumentApi, and call strategy::init
     void initStrategy();
 
@@ -106,7 +103,7 @@ Context<TMarketData, TOrderApi>::loadFactoryMethod() {
 template<typename TMarketData, typename TOrderApi>
 Context<TMarketData, TOrderApi>::Context(const std::shared_ptr<Config>& config_) {
 
-    LOGINFO("Context created. GIT_HASH='" << GIT_HASH << '\'' );
+    LOGINFO("Context created. TRADINGO_GIT_HASH='"  TRADINGO_GIT_HASH <<  '\'' );
 
     _config = config_;
     setupLogger();
@@ -163,18 +160,11 @@ void Context<TMarketData, TOrderApi>::setupLogger() {
 template<typename TMarketData, typename TOrderApi>
 void Context<TMarketData, TOrderApi>::initStrategy() {
 
-    // TODO: move out to seperate initialiser so tickRecorder can reuse the context.
     Context<TMarketData,TOrderApi>::factoryMethod_t factoryMethod = loadFactoryMethod();
     std::shared_ptr<Strategy<TOrderApi>> strategy = factoryMethod(_marketData,_orderManager);
     _strategy = strategy;
 
-
-    if (_config->get("httpEnabled", "True") == "True") {
-    }
-    // block caller thread until above returns.
-    // do last
     _strategy->init(_config);
-
 
 }
 
