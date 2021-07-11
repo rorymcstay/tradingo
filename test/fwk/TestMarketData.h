@@ -13,31 +13,21 @@
 
 class TestMarketData : public MarketDataInterface {
     std::shared_ptr<Config> _config;
+
 public:
     explicit TestMarketData(const std::shared_ptr<Config>& ptr);
-    void init() {
-        auto tickSize = std::atof(_config->get("tickSize", "0.5").c_str());
-        auto referencePrice = std::atof(_config->get("referencePrice").c_str());
-        _instrument = std::make_shared<model::Instrument>();
-        _instrument->setPrevPrice24h(referencePrice);
-        _instrument->setTickSize(tickSize);
-    }
+    void init();
     void subscribe() {}
 
-    void operator << (const std::string& marketDataString);
-    void operator << (const std::shared_ptr<model::Quote>& quote_) {
-        std::vector<std::shared_ptr<model::Quote>> quotes = {quote_};
-        MarketDataInterface::handleQuotes(quotes, "INSERT");
+    void addPosition(const std::shared_ptr<model::Position>& position_) {
+        _positions[position_->getSymbol()] = position_;
     }
 
-    void operator << (const std::shared_ptr<model::Trade>& trade_) {
-        std::vector<std::shared_ptr<model::Trade>> trades = {trade_};
-        MarketDataInterface::handleTrades(trades, "INSERT");
-    }
-    void operator << (const std::shared_ptr<model::Execution>& exec_) {
-        std::vector<std::shared_ptr<model::Execution>> execs = {exec_};
-        MarketDataInterface::handleExecutions(execs, "INSERT");
-    }
+    void operator << (const std::string& marketDataString);
+    void operator << (const std::shared_ptr<model::Quote>& quote_);
+
+    void operator << (const std::shared_ptr<model::Trade>& trade_);
+    void operator << (const std::shared_ptr<model::Execution>& exec_);
 };
 
 

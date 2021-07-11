@@ -33,6 +33,7 @@ class TestEnv
 
     std::shared_ptr<Config> _config;
     std::shared_ptr<Context<TestMarketData, OrderApi>> _context;
+    std::shared_ptr<model::Position> _position;
 public:
     const std::shared_ptr<TStrategy>& strategy() const { return _context->strategy(); }
     explicit TestEnv(std::initializer_list<std::pair<std::string,std::string>>);

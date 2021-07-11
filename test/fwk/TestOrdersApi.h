@@ -11,6 +11,7 @@
 #include <model/Order.h>
 #include <Object.h>
 #include <ApiClient.h>
+#include <model/Position.h>
 
 // src
 #include "Utils.h"
@@ -30,6 +31,13 @@ private:
     std::queue<std::shared_ptr<model::ModelBase>> _allEvents;
     long _oidSeed;
     utility::datetime _time;
+    std::shared_ptr<model::Position> _position;
+public:
+    const std::shared_ptr<model::Position> &getPosition() const;
+
+    void setPosition(const std::shared_ptr<model::Position> &position);
+
+private:
 
     // functional helpers
     void add_order(const std::shared_ptr<model::Order>& order_);
@@ -114,6 +122,8 @@ public:
     // Testing helpers
 private:
     void checkOrderExists(const std::shared_ptr<model::Order>& order);
+    bool hasMatchingOrder(const std::shared_ptr<model::Trade>& trade_);
+    void addExecToPosition(const std::shared_ptr<model::Execution>& exec_);
 
 public:
     void operator >> (const std::string& outEvent_);

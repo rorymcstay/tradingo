@@ -35,12 +35,9 @@ public:
     std::vector<std::shared_ptr<Allocation>>::iterator begin() { return _data.begin(); }//*_data[_lowPrice]; }
     std::vector<std::shared_ptr<Allocation>>::iterator end() { return  _data.end(); }
 
-    void restAll() {
-        std::for_each(_data.begin(), _data.end(), [](const std::shared_ptr<Allocation>& alloc_ ) {
-            alloc_->rest();
-        });
-        setUnmodified();
-    }
+    void restAll();
+    void rest(const std::function<bool(const std::shared_ptr<Allocation>&)>& predicate_);
+    void cancel(const std::function<bool(const std::shared_ptr<Allocation>& )>& predicate_);
 
 };
 

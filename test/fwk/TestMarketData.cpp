@@ -43,3 +43,26 @@ TestMarketData::TestMarketData(const std::shared_ptr<Config>& ptr)
 , _config(ptr){
 
 }
+
+void TestMarketData::init() {
+    auto tickSize = std::atof(_config->get("tickSize", "0.5").c_str());
+    auto referencePrice = std::atof(_config->get("referencePrice").c_str());
+    _instrument = std::make_shared<model::Instrument>();
+    _instrument->setPrevPrice24h(referencePrice);
+    _instrument->setTickSize(tickSize);
+}
+
+void TestMarketData::operator<<(const std::shared_ptr<model::Quote> &quote_) {
+    std::vector<std::shared_ptr<model::Quote>> quotes = {quote_};
+    MarketDataInterface::handleQuotes(quotes, "INSERT");
+}
+
+void TestMarketData::operator<<(const std::shared_ptr<model::Trade> &trade_) {
+    std::vector<std::shared_ptr<model::Trade>> trades = {trade_};
+    MarketDataInterface::handleTrades(trades, "INSERT");
+}
+
+void TestMarketData::operator<<(const std::shared_ptr<model::Execution> &exec_) {
+    std::vector<std::shared_ptr<model::Execution>> execs = {exec_};
+    MarketDataInterface::handleExecutions(execs, "INSERT");
+}

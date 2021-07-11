@@ -80,6 +80,7 @@ void BreakOutStrategy<TORDApi>::onBBO(const std::shared_ptr<Event> &event_) {
     _shortTermAvg = _smaLow(midPoint);
     _longTermAvg = _smaHigh(midPoint);
     LOGINFO(LOG_VAR(_shortTermAvg) << LOG_VAR(_longTermAvg));
+    // TODO if signal is good if (_signal["name"]->is_good())
     if ((_smaLow.is_ready() && _smaHigh.is_ready())
          && _shortTermAvg - _longTermAvg >= _buyThreshold) {
         // short term average is higher than longterm, buy

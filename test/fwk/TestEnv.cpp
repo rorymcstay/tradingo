@@ -6,6 +6,7 @@
 
 TestEnv::TestEnv(std::initializer_list<std::pair<std::string,std::string>> config_)
 :   _config(std::make_shared<Config>(config_))
+,   _position(std::make_shared<model::Position>())
 {
     _config->set("libraryLocation", "/home/tradingo/install/lib/libtest_trading_strategies.so");
     _config->set("baseUrl", "https://localhost:8888/api/v1");
@@ -18,6 +19,10 @@ TestEnv::TestEnv(std::initializer_list<std::pair<std::string,std::string>> confi
     _context = std::make_shared<Context<TestMarketData, OrderApi>>(_config);
     _context->init();
     _context->initStrategy();
+
+    _position->setSymbol(_config->get("symbol"));
+    _context->orderApi()->setPosition(_position);
+    _context->marketData()->addPosition(_position);
 }
 
 void TestEnv::operator<<(const std::string &value_) {
@@ -49,7 +54,7 @@ std::shared_ptr<T> getEvent(std::ifstream& fileHandle_) {
     return quote;
 }
 
-std::shared_ptr<model::Execution> canTrade(std::shared_ptr<model::Order> order_, std::shared_ptr<model::Trade> trade_) {
+std::shared_ptr<model::Execution> canTrade(const std::shared_ptr<model::Order>& order_, const std::shared_ptr<model::Trade>& trade_) {
     auto orderQty = order_->getLeavesQty();
     auto tradeQty = trade_->getSize();
     auto orderPx = order_->getPrice();
@@ -68,6 +73,11 @@ std::shared_ptr<model::Execution> canTrade(std::shared_ptr<model::Order> order_,
         exec->setPrice(orderPx);
         exec->setCumQty(order_->getCumQty()+fillQty);
         exec->setLeavesQty(order_->getLeavesQty()-fillQty);
+
+        auto leavesQty = order_->getLeavesQty() - fillQty;
+        auto cumQty = order_->getCumQty() + fillQty;
+        order_->setLeavesQty(leavesQty);
+        order_->setCumQty(cumQty);
         return exec;
     } else {
         return nullptr;
@@ -101,7 +111,6 @@ void TestEnv::playback(const std::string& tradeFile_, const std::string& quoteFi
             if (not quote) {
                 stop = true;
             }
-
         } else { // send the trade.
 
             // TODO Check if trade can match on what we have? then send EXECUTION
@@ -111,11 +120,12 @@ void TestEnv::playback(const std::string& tradeFile_, const std::string& quoteFi
                 if (exec) {
                     // put resultant execution into marketData.
                     *_context->marketData() << exec;
+                    _context->orderApi()->addExecToPosition(exec);
                 }
             }
             *_context->marketData() << trade;
             _context->strategy()->evaluate();
-            _context->orderApi();
+
             trade = getEvent<model::Trade>(tradeFile);
             if (not trade) {
                 // trades are finished now

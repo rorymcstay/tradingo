@@ -4,6 +4,7 @@
 
 #define _TURN_OFF_PLATFORM_STRING
 #include <Object.h>
+#include <Allocation.h>
 #include "TestOrdersApi.h"
 
 TestOrdersApi::TestOrdersApi(std::shared_ptr<io::swagger::client::api::ApiClient> ptr)
@@ -248,6 +249,35 @@ void TestOrdersApi::set_order_timestamp(const std::shared_ptr<model::Order>& ord
             order_->setTimestamp(utility::datetime::utc_now());
         }
     }
+}
+
+bool TestOrdersApi::hasMatchingOrder(const std::shared_ptr<model::Trade>& trade_) {
+
+    for (auto& order : _orders) {
+        if ((order.second->getPrice() >= trade_->getPrice() && order.second->getSide() == "Buy")
+            || order.second->getPrice() <= trade_->getPrice() && order.second->getSide() == "Sell") {
+            // we may cross our order on the trade
+            return true;
+        }
+    }
+    return false;
+
+}
+
+void TestOrdersApi::addExecToPosition(const std::shared_ptr<model::Execution>& exec_) {
+
+    qty_t newPosition = _position->getCurrentQty() + exec_->getLastQty();
+    qty_t newCost = _position->getCurrentCost() + (exec_->getPrice() * exec_->getLastQty());
+    _position->setCurrentQty(newPosition);
+    _position->setCurrentCost(newCost);
+}
+
+const std::shared_ptr<model::Position> &TestOrdersApi::getPosition() const {
+    return _position;
+}
+
+void TestOrdersApi::setPosition(const std::shared_ptr<model::Position> &position) {
+    _position = position;
 }
 
 

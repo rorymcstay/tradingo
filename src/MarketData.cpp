@@ -82,7 +82,7 @@ void MarketData::init() {
                          || stringVal.find("pong") != std::string::npos) {
                     return;
                 }
-                web::json::value msgJson = web::json::value::parse(stringVal);u
+                web::json::value msgJson = web::json::value::parse(stringVal);
                 if (msgJson.has_field("table")) {
                     const std::string &table = msgJson.at("table").as_string();
                     const std::string &action = msgJson.at("action").as_string();

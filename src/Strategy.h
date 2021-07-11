@@ -188,6 +188,11 @@ void Strategy<TOrdApi>::placeAllocations() {
             _newOrders.push_back(order);
             LOGINFO("Placing new allocation: " << LOG_VAR(order->getClOrdID()) << LOG_VAR(order->getPrice())
                         << LOG_VAR(order->getOrderQty()));
+        } else {
+            LOGWARN("Missing order: " << LOG_NVP("Price", allocation->getPrice())
+                << LOG_NVP("Size", allocation->getSize())
+                << LOG_NVP("TargetDelta", allocation->getTargetDelta()));
+            _newOrders.push_back(order);
         }
     }
 
@@ -196,29 +201,52 @@ void Strategy<TOrdApi>::placeAllocations() {
         this->updateFromTask(orders_);
     };
     // make cancels first
+    // TODO cannot do error handling for changingSide - why not cancel or reset allocation on ack.
+    // TODO placeCancels method.
     for (auto& toSend : _cancels) {
-        _orderEngine->order_cancel(toSend->getOrderID(), toSend->getClOrdID(), std::string("Allocation removed")).then(taskUpdateFunc);
+        if (!_amends.empty()) {
+            try {
+                _orderEngine->order_cancel(toSend->getOrderID(), toSend->getClOrdID(), std::string("Allocation removed")).then(taskUpdateFunc);
+            } catch (api::ApiException &ex_) {
+                LOGERROR("Error cancelling order " << ex_.getContent()->rdbuf() << LOG_VAR(ex_.what()));
+                _allocations->cancel([](const std::shared_ptr<Allocation>& alloc_) {return alloc_->isCancel(); });
+            }
+        }
     }
 
+    // TODO placeOrderAmends method
     auto jsList = web::json::value::array();
     int count = 0;
     for (auto& toSend : _amends) {
         jsList.as_array()[count++] = toSend->toJson();
     }
     // and then amends
-    if (!_amends.empty())
-        _orderEngine->order_amendBulk(jsList.serialize()).then(taskUpdateFunc);
+    if (!_amends.empty()) {
+        try {
+            _orderEngine->order_amendBulk(jsList.serialize()).then(taskUpdateFunc);
+        } catch (api::ApiException &ex_) {
+            LOGERROR("Error amending orders " << ex_.getContent()->rdbuf() << LOG_VAR(ex_.what()));
+            _allocations->cancel([](const std::shared_ptr<Allocation>& alloc_) {return alloc_->isAmendDown() || alloc_->isAmendUp(); });
+        }
+    }
 
+    // TODO: placeNewOrders method.
     jsList = web::json::value::array();
     count = 0;
     for (auto& toSend : _newOrders) {
         jsList.as_array()[count++] = toSend->toJson();
     }
-    if (!_newOrders.empty())
-        _orderEngine->order_newBulk(jsList.serialize()).then(taskUpdateFunc);
+    if (!_newOrders.empty()) {
+        try {
+            _orderEngine->order_newBulk(jsList.serialize()).then(taskUpdateFunc);
+        } catch (api::ApiException &ex_) {
+            LOGERROR("Error placing new orders " << ex_.getContent()->rdbuf() << LOG_VAR(ex_.what()));
+            _allocations->cancel([](const std::shared_ptr<Allocation>& alloc_) {return alloc_->isNew();});
+        }
+    }
 
     LOGINFO("Allocations have been reflected. " << LOG_NVP("amend", _amends.size())
-        << LOG_NVP("new", _newOrders.size()) << LOG_NVP("cancel", _cancels.size()));
+            << LOG_NVP("new", _newOrders.size()) << LOG_NVP("cancel", _cancels.size()));
     _allocations->restAll();
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
 

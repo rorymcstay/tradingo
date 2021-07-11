@@ -1,9 +1,9 @@
 //
 // Created by rory on 08/07/2021.
 //
-
 #include "Allocations.h"
 #include "Utils.h"
+
 
 Allocations::Allocations(price_t midPoint_, price_t tickSize_)
 :   _data()
@@ -85,4 +85,29 @@ void Allocations::update(const std::shared_ptr<model::Execution> &exec_) {
     } else {
         // unhandled update
     }
+}
+
+void Allocations::restAll() {
+    std::for_each(_data.begin(), _data.end(), [](const std::shared_ptr<Allocation>& alloc_ ) {
+        alloc_->rest();
+    });
+    setUnmodified();
+}
+
+void Allocations::rest(const std::function<bool(const std::shared_ptr<Allocation>&)>& predicate_) {
+
+    std::for_each(_data.begin(), _data.end(), [predicate_](const std::shared_ptr<Allocation>& alloc_ ) {
+        if (predicate_(alloc_))
+            alloc_->rest();
+    });
+    setUnmodified();
+}
+
+void Allocations::cancel(const std::function<bool(const std::shared_ptr<Allocation>&)>& predicate_) {
+
+    std::for_each(_data.begin(), _data.end(), [predicate_](const std::shared_ptr<Allocation>& alloc_ ) {
+        if (predicate_(alloc_))
+            alloc_->cancelDelta();
+    });
+    setUnmodified();
 }
