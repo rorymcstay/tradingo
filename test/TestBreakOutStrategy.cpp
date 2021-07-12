@@ -37,7 +37,7 @@ TEST(BreakOutStrategy, test_playback) {
         {"referencePrice", "35000"},
         {"shortTermWindow", "10"},
         {"longTermWindow", "100"},
-        {"logLevel", "warning"}
+        {"logLevel", "info"}
     });
     env.playback("trades_XBTUSD.json", "quotes_XBTUSD.json");
 }

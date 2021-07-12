@@ -20,6 +20,7 @@
 #include "Utils.h"
 #include "api/InstrumentApi.h"
 
+
 template<typename TMarketData, typename TOrderApi>
 class Context {
 
@@ -99,11 +100,10 @@ Context<TMarketData, TOrderApi>::loadFactoryMethod() {
 
 }
 
-
 template<typename TMarketData, typename TOrderApi>
 Context<TMarketData, TOrderApi>::Context(const std::shared_ptr<Config>& config_) {
 
-    LOGINFO("Context created. TRADINGO_GIT_HASH='"  TRADINGO_GIT_HASH <<  '\'' );
+    LOGINFO("Context created. Version Info: GIT_BRANCH='" << GIT_BRANCH << "' GIT_TAG='" << GIT_TAG << "' GIT_DIFF='" << GIT_BRANCH << "'");
 
     _config = config_;
     setupLogger();
