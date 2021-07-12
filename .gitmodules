@@ -4,6 +4,3 @@
 [submodule "thirdparty/aixlog"]
 	path = thirdparty/aixlog
 	url = https://github.com/badaix/aixlog 
-[submodle "thirdparty/abseil-cpp"]
-	path = thirdparty/abseil-cpp
-	url = https://github.com/abseil/abseil-cpp
