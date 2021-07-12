@@ -58,6 +58,7 @@ std::shared_ptr<T> getEvent(std::ifstream& fileHandle_) {
     return quote;
 }
 
+/// if trade may not occur, return nullptr, else return exec report and modify order.
 std::shared_ptr<model::Execution> canTrade(const std::shared_ptr<model::Order>& order_, const std::shared_ptr<model::Trade>& trade_) {
     auto orderQty = order_->getLeavesQty();
     auto tradeQty = trade_->getSize();
@@ -66,6 +67,8 @@ std::shared_ptr<model::Execution> canTrade(const std::shared_ptr<model::Order>& 
     auto side = order_->getSide();
 
     if ((side == "Buy" ? tradePx <= orderPx : tradePx >= orderPx)) {
+        LOGINFO(AixLog::Color::GREEN << "TestEnv::IN>> Tradable order found: " << AixLog::Color::GREEN << order_->toJson().serialize()
+                << AixLog::Color::GREEN << LOG_VAR(trade_->toJson().serialize()));
         auto fillQty = std::min(orderQty, tradeQty);
         auto exec = std::make_shared<model::Execution>();
         exec->setSymbol("");
@@ -102,15 +105,14 @@ void TestEnv::playback(const std::string& tradeFile_, const std::string& quoteFi
 
     std::vector<std::shared_ptr<model::ModelBase>> outBuffer;
     while (not stop) {
-        // trades are ahead of quotes, send the quote
         if (!hasTrades or trade->getTimestamp() >= quote->getTimestamp()) {
+            // trades are ahead of quotes, send the quote
             auto time = quote->getTimestamp();
             *_context->orderApi() << time; //  >> std::vector
             *_context->marketData() << quote;
             _context->strategy()->evaluate();
             quote = getEvent<model::Quote>(quoteFile);
 
-            // TODO Need to record what came out here.
             *_context->orderApi() >> outBuffer; //  >> std::vector
             if (not quote) {
                 stop = true;
@@ -124,9 +126,11 @@ void TestEnv::playback(const std::string& tradeFile_, const std::string& quoteFi
                 if (exec) {
                     // put resultant execution into marketData.
                     _context->orderApi()->addExecToPosition(exec);
+                    LOGINFO(AixLog::Color::GREEN << "TestEnv: Sending Trade: " << AixLog::Color::GREEN << exec->toJson().serialize());
+                    LOGINFO(AixLog::Color::GREEN << "TestEnv: Position is: " << AixLog::Color::GREEN << _position->toJson().serialize());
                     *_context->marketData() << exec;
-                    *_context->marketData() << _context->orderApi()->getPosition();
                     *_context->marketData() << order.second;
+                    *_context->marketData() << _context->orderApi()->getPosition();
                 }
             }
             *_context->marketData() << trade;

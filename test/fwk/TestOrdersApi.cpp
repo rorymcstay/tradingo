@@ -188,7 +188,7 @@ void TestOrdersApi::operator>>(const std::string &outEvent_) {
                 failMessage << message(_orderCancels.front()) << "\n";
                 _orderCancels.pop();
             }
-            throw std::runtime_error("There are events still pending!\n"+failMessage.str() );
+            throw std::runtime_error("There are events still pending!\n"+failMessage.str());
         }
         return;
     }
@@ -255,12 +255,12 @@ void TestOrdersApi::operator>>(std::vector<std::shared_ptr<model::ModelBase>>& o
     while (!_allEvents.empty()){
         auto top = _allEvents.front();
         auto val = top->toJson();
+        LOGINFO(AixLog::Color::GREEN << "TestOrdersApi::OUT>> " << AixLog::Color::GREEN << val.serialize());
         val.as_object()["timestamp"] = web::json::value(_time.to_string());
         top->fromJson(val);
         outVec.push_back(top);
         _allEvents.pop();
     }
-
 }
 
 void TestOrdersApi::operator<<(utility::datetime time_) {
