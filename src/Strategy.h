@@ -149,9 +149,9 @@ void Strategy<TOrdApi>::placeAllocations() {
                     << LOG_VAR(currentOrder->getOrderQty())
                     << LOG_VAR(currentOrder->getPrice())
                     << LOG_VAR(currentOrder->getOrderID()));
-            order->setOrderID(currentOrder->getOrderID());
+            //order->setOrderID(currentOrder->getOrderID());
             // 2021-07-11 22-31-13.707 [Info] (updateFromTask) 	ApiException: {"error":{"message":"You may send orderID or origClOrdID, but not both.","name":"ValidationError"}} apiException.error_code()='generic:400', apiException.what()='error calling order_amendBulk: Bad Request',  |Strategy.h:282
-            //order->setOrigClOrdID(currentOrder->getClOrdID());
+            order->setOrigClOrdID(currentOrder->getClOrdID());
             //assert(currentOrder->getLeavesQty() == allocation->getSize() && "Allocation + LeavesQty out of sync");
             // we have an order at this price level
             if (allocation->isChangingSide()) {
