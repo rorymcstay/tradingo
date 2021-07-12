@@ -146,6 +146,7 @@ void Strategy<TOrdApi>::placeAllocations() {
 
         std::shared_ptr<model::Order> order = createOrder(allocation);
         size_t priceIndex = _allocations->allocIndex(order->getPrice());
+        // TODO: Move the creation of orders into seperate function
         auto& currentOrder = _orders[priceIndex];
         if (currentOrder) {
             LOGINFO("Price level is occupied " << LOG_VAR(order->getPrice())
@@ -204,7 +205,6 @@ void Strategy<TOrdApi>::placeAllocations() {
         }
     }
 
-
     // make cancels first
     // TODO cannot do error handling for changingSide - why not cancel or reset allocation on ack.
     // TODO placeCancels method.
@@ -213,14 +213,13 @@ void Strategy<TOrdApi>::placeAllocations() {
             try {
                 _orderEngine->order_cancel(boost::none, toSend->getOrigClOrdID(), std::string("Allocation removed")).then(
                     [this, &toSend](const pplx::task<std::vector<std::shared_ptr<model::Order>>> &orders_) {
-                            this->updateFromTask(orders_);
+                        this->updateFromTask(orders_);
                     });
             } catch (api::ApiException &ex_) {
                 LOGERROR("Error cancelling order " << ex_.getContent()->rdbuf() << LOG_VAR(ex_.what())
                                                    << LOG_NVP("order", toSend->toJson().serialize()));
                 _allocations->get(toSend->getPrice())->cancelDelta();
             }
-
         }
     }
 
@@ -287,24 +286,10 @@ std::shared_ptr<model::Order> Strategy<TOrdApi>::createOrder(const std::shared_p
 
 template<typename TOrdApi>
 void Strategy<TOrdApi>::updateFromTask(const pplx::task<std::vector<std::shared_ptr<model::Order>>>& task_) {
-    try {
-        for (auto& order : task_.get()) {
-            auto index = _allocations->allocIndex(order->getPrice());
-            LOGINFO(order->toJson().serialize());
-            _orders[index] = order;
-        }
-    } catch (api::ApiException apiException) {
-        auto reason = apiException.getContent();
-        LOGINFO("ApiException: " << apiException.getContent()->rdbuf() << " "
-                << LOG_VAR(apiException.error_code())
-                << LOG_VAR(apiException.what()));
-        LOGINFO("APIException caught failed to action on order: " << LOG_VAR(apiException.what())
-                                                             << LOG_NVP("Reason", reason->rdbuf()));
-        throw apiException;
-    } catch (web::http::http_exception& httpException) {
-        LOGINFO("Failed to send order! " << LOG_VAR(httpException.what())
-                                         << LOG_VAR(httpException.error_code()));
-        throw httpException;
+    for (auto& order : task_.get()) {
+        auto index = _allocations->allocIndex(order->getPrice());
+        LOGINFO(order->toJson().serialize());
+        _orders[index] = order;
     }
 }
 
