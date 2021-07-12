@@ -5,11 +5,13 @@
 #include "Utils.h"
 
 
-Allocations::Allocations(price_t midPoint_, price_t tickSize_)
+Allocations::Allocations(price_t midPoint_, price_t tickSize_, qty_t lotSize_)
 :   _data()
 ,   _tickSize(tickSize_)
+,   _referencePrice(midPoint_)
 ,   _lowPrice(0.0)
 ,   _highPrice(0.0)
+,   _lotSize(lotSize_)
 ,   _modified(false)
 {
     for (int i=0; i < 2*(size_t)(midPoint_/tickSize_); i++) {
@@ -107,7 +109,14 @@ void Allocations::cancel(const std::function<bool(const std::shared_ptr<Allocati
 
     std::for_each(_data.begin(), _data.end(), [predicate_](const std::shared_ptr<Allocation>& alloc_ ) {
         if (predicate_(alloc_))
+            LOGINFO("Allocations::cancel: Cancelling allocationDelta " << LOG_VAR(alloc_->getPrice()));
             alloc_->cancelDelta();
     });
     setUnmodified();
+}
+
+qty_t Allocations::roundLotSize(qty_t size_) {
+    if (size_ <= _lotSize)
+        return 0.0;
+    return size_ - ((int)size_ % (int)_lotSize);
 }

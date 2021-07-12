@@ -47,9 +47,11 @@ TestMarketData::TestMarketData(const std::shared_ptr<Config>& ptr)
 void TestMarketData::init() {
     auto tickSize = std::atof(_config->get("tickSize", "0.5").c_str());
     auto referencePrice = std::atof(_config->get("referencePrice").c_str());
+    auto lotSize = std::atof(_config->get("lotSize", "100").c_str());
     _instrument = std::make_shared<model::Instrument>();
     _instrument->setPrevPrice24h(referencePrice);
     _instrument->setTickSize(tickSize);
+    _instrument->setLotSize(lotSize);
 }
 
 void TestMarketData::operator<<(const std::shared_ptr<model::Quote> &quote_) {
@@ -65,4 +67,22 @@ void TestMarketData::operator<<(const std::shared_ptr<model::Trade> &trade_) {
 void TestMarketData::operator<<(const std::shared_ptr<model::Execution> &exec_) {
     std::vector<std::shared_ptr<model::Execution>> execs = {exec_};
     MarketDataInterface::handleExecutions(execs, "INSERT");
+}
+
+void TestMarketData::operator<<(const std::shared_ptr<model::Position> &pos_) {
+    std::vector<std::shared_ptr<model::Position>> positions = {pos_};
+    MarketDataInterface::handlePositions(positions, "INSERT");
+}
+
+void TestMarketData::operator<<(const std::shared_ptr<model::Order> &order_) {
+    std::string action = "insert";
+    if (order_->getOrdStatus() == "Canceled") {
+        action = "delete";
+    } else if (order_->getOrdStatus() == "Filled") {
+        action = "delete";
+    } else if (order_->getOrdStatus() == "Rejected") {
+        action = "delete";
+    }
+    std::vector<std::shared_ptr<model::Order>> orders = {order_};
+    MarketDataInterface::handleOrders(orders, action);
 }

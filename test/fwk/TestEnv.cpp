@@ -16,6 +16,7 @@ TestEnv::TestEnv(std::initializer_list<std::pair<std::string,std::string>> confi
     _config->set("clOrdPrefix", "MCST");
     _config->set("httpEnabled", "False");
     _config->set("tickSize", "0.5");
+    _config->set("lotSize", "100");
     _context = std::make_shared<Context<TestMarketData, OrderApi>>(_config);
     _context->init();
     _context->initStrategy();
@@ -23,6 +24,7 @@ TestEnv::TestEnv(std::initializer_list<std::pair<std::string,std::string>> confi
     _position->setSymbol(_config->get("symbol"));
     _context->orderApi()->setPosition(_position);
     _context->marketData()->addPosition(_position);
+    _context->orderApi()->init(_config);
 }
 
 void TestEnv::operator<<(const std::string &value_) {
@@ -119,8 +121,10 @@ void TestEnv::playback(const std::string& tradeFile_, const std::string& quoteFi
                 auto exec = canTrade(order.second, trade);
                 if (exec) {
                     // put resultant execution into marketData.
-                    *_context->marketData() << exec;
                     _context->orderApi()->addExecToPosition(exec);
+                    *_context->marketData() << exec;
+                    *_context->marketData() << _context->orderApi()->getPosition();
+                    *_context->marketData() << order.second;
                 }
             }
             *_context->marketData() << trade;

@@ -28,6 +28,8 @@ public:
 
     void operator << (const std::shared_ptr<model::Trade>& trade_);
     void operator << (const std::shared_ptr<model::Execution>& exec_);
+    void operator << (const std::shared_ptr<model::Position> &pos_);
+    void operator << (const std::shared_ptr<model::Order> &order_);
 };
 
 

@@ -11,17 +11,20 @@ class Allocations {
 private:
     std::vector<std::shared_ptr<Allocation>> _data;
     price_t _tickSize;
+    price_t _referencePrice;
     price_t _lowPrice;
     price_t _highPrice;
+    qty_t _lotSize;
 
     bool _modified;
 public:
     size_t allocIndex(price_t price_);
-    Allocations(price_t midPoint_, price_t tickSize_);
+    Allocations(price_t midPoint_, price_t tickSize_, qty_t lotSize_);
     void addAllocation(price_t price_, qty_t qty_, const std::string& side_="");
     std::vector<std::shared_ptr<Allocation>> allocations() { return _data; }
 
     price_t roundTickPassive(price_t price_);
+    qty_t roundLotSize(qty_t size_);
     qty_t allocatedAtLevel(price_t price_);
     qty_t totalAllocated();
 

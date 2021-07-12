@@ -13,6 +13,8 @@
 #include <ApiClient.h>
 #include <model/Position.h>
 
+#include "Config.h"
+
 // src
 #include "Utils.h"
 
@@ -32,6 +34,7 @@ private:
     long _oidSeed;
     utility::datetime _time;
     std::shared_ptr<model::Position> _position;
+    std::shared_ptr<Config> _config;
 public:
     const std::shared_ptr<model::Position> &getPosition() const;
 
@@ -42,10 +45,12 @@ private:
     // functional helpers
     void add_order(const std::shared_ptr<model::Order>& order_);
     void set_order_timestamp(const std::shared_ptr<model::Order>& order_);
+    bool validateOrder(const std::shared_ptr<model::Order>& order_);
 
     // API
 public:
     TestOrdersApi(std::shared_ptr<io::swagger::client::api::ApiClient> ptr);
+    void init(std::shared_ptr<Config> config_);
 
     pplx::task<std::shared_ptr<model::Order>> order_amend(
             std::optional<utility::string_t> orderID,
@@ -123,6 +128,7 @@ public:
 private:
     void checkOrderExists(const std::shared_ptr<model::Order>& order);
     bool hasMatchingOrder(const std::shared_ptr<model::Trade>& trade_);
+public:
     void addExecToPosition(const std::shared_ptr<model::Execution>& exec_);
 
 public:

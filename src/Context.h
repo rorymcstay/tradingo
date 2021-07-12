@@ -131,17 +131,13 @@ Context<TMarketData, TOrderApi>::~Context() {
 template<typename TMarketData, typename TOrderApi>
 void Context<TMarketData, TOrderApi>::setupLogger() {
     auto logLevel = AixLog::Filter(AixLog::to_severity(_config->get("logLevel", "info")));
-    std::vector<std::shared_ptr<AixLog::Sink>> sinks =
-    {
-        /// Log normal (i.e. non-special) logs to SinkCout
+    std::vector<std::shared_ptr<AixLog::Sink>> sinks = {
         std::make_shared<AixLog::SinkCout>(logLevel),
-                /// Log error and higher severity messages to cerr
-                std::make_shared<AixLog::SinkCerr>(AixLog::Severity::error),
+        std::make_shared<AixLog::SinkCerr>(AixLog::Severity::error),
     };
     auto logDir =_config->get("logFileLocation", "");
     if (not logDir.empty()) {
-        if (not std::filesystem::exists(logDir))
-        {
+        if (not std::filesystem::exists(logDir)) {
             LOGINFO("Creating new directory " << LOG_VAR(logDir));
             std::filesystem::create_directories(logDir);
         }

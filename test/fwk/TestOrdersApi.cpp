@@ -7,6 +7,8 @@
 #include <Allocation.h>
 #include "TestOrdersApi.h"
 
+
+
 TestOrdersApi::TestOrdersApi(std::shared_ptr<io::swagger::client::api::ApiClient> ptr)
 :   _orders()
 ,   _newOrders()
@@ -26,7 +28,6 @@ TestOrdersApi::order_amend(std::optional<utility::string_t> orderID, std::option
                            std::optional<double> stopPx, std::optional<double> pegOffsetValue,
                            std::optional<utility::string_t> text) {
     auto order = std::make_shared<model::Order>();
-    order->setOrderID(orderID.value());
     order->setClOrdID(origClOrdID.value());
     order->setOrderQty(simpleOrderQty.value());
     order->setPrice(price.value());
@@ -49,6 +50,7 @@ TestOrdersApi::order_amendBulk(std::optional<utility::string_t> orders) {
         order->fromJson(ordJson);
         checkOrderExists(order);
         set_order_timestamp(order);
+        validateOrder(order);
         _orderAmends.emplace(order);
         outOrders.push_back(order);
     }
@@ -68,6 +70,7 @@ TestOrdersApi::order_cancel(std::optional<utility::string_t> orderID,
         _orders[orderID.value()]->setOrdStatus("PendingCancel");
         _orders[orderID.value()]->setOrderQty(0.0);
         set_order_timestamp(_orders[orderID.value()]);
+        //validateOrder(_orders[orderID.value()]);
         ordersRet.push_back(_orders[orderID.value()]);
         _orderCancels.push(_orders[orderID.value()]);
         _allEvents.push(_orders[orderID.value()]);
@@ -132,7 +135,9 @@ TestOrdersApi::order_new(utility::string_t symbol, std::optional<utility::string
         order->setPrice(price.value());
     order->setOrderID(std::to_string(_oidSeed++));
 
+    validateOrder(order);
     add_order(order);
+
     return pplx::task_from_result(order);
 }
 
@@ -143,8 +148,10 @@ TestOrdersApi::order_newBulk(std::optional<utility::string_t> orders) {
     for (auto& ordJson : json) {
         ordJson.as_object()["orderID"] = web::json::value::string(std::to_string(++_oidSeed));
         auto order = std::make_shared<model::Order>();
+        validateOrder(order);
         add_order(order);
         order->fromJson(ordJson);
+        /// TODO this is not atomic some orders will be placed?
         outOrders.push_back(order);
     }
     auto tsk = pplx::task_from_result(outOrders);
@@ -162,7 +169,24 @@ void TestOrdersApi::operator>>(const std::string &outEvent_) {
     auto eventType = getEventTypeFromString(outEvent_);
     if (eventType == "NONE") {
         if (!_newOrders.empty() || !_orderCancels.empty() || !_orderAmends.empty()) {
-            throw std::runtime_error("There are events still pending!" );
+            auto message = [](const std::shared_ptr<model::ModelBase>& ptr_ ) { return ptr_->toJson().serialize(); };
+            std::stringstream failMessage;
+            failMessage << "ORDER_NEW:\n";
+            while (!_newOrders.empty()) {
+                failMessage << message(_newOrders.front()) << "\n";
+                _newOrders.pop();
+            }
+            failMessage << "ORDER_AMEND:\n";
+            while (!_orderAmends.empty()) {
+                failMessage << message(_orderAmends.front()) << "\n";
+                _orderAmends.pop();
+            }
+            failMessage << "ORDER_CANCEL:\n";
+            while (!_orderCancels.empty()) {
+                failMessage << message(_orderCancels.front()) << "\n";
+                _orderCancels.pop();
+            }
+            throw std::runtime_error("There are events still pending!\n"+failMessage.str() );
         }
         return;
     }
@@ -278,6 +302,23 @@ const std::shared_ptr<model::Position> &TestOrdersApi::getPosition() const {
 
 void TestOrdersApi::setPosition(const std::shared_ptr<model::Position> &position) {
     _position = position;
+}
+
+// TODO validate and add order
+bool TestOrdersApi::validateOrder(const std::shared_ptr<model::Order> &order_) {
+    if (order_->origClOrdIDIsSet() && order_->getOrderID() != "") {
+        throw api::ApiException(400, "Must specify only one of orderID or origClOrdId", nullptr);
+    }
+    if ((int)order_->getOrderQty() % std::stoi(_config->get("lotSize", "100")) != 0) {
+        throw api::ApiException(400, "Orderty is not a multiple of lotsize", nullptr);
+    }
+    return true;
+}
+
+void TestOrdersApi::init(std::shared_ptr<Config> config_) {
+
+    _config = config_;
+
 }
 
 
