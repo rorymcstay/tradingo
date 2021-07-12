@@ -316,9 +316,7 @@ bool TestOrdersApi::validateOrder(const std::shared_ptr<model::Order> &order_) {
 }
 
 void TestOrdersApi::init(std::shared_ptr<Config> config_) {
-
     _config = config_;
-
 }
 
 

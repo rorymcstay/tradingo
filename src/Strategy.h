@@ -30,8 +30,6 @@ class Strategy {
     std::shared_ptr<Config> _config;
 
     std::shared_ptr<Allocations>           _allocations;
-    std::unordered_map<price_t, OrderPtr> _buyOrders;
-    std::unordered_map<price_t, OrderPtr> _sellOrders;
     std::unordered_map<long, OrderPtr> _orders;
 
     virtual void onExecution(const std::shared_ptr<Event>& event_) = 0;
@@ -48,7 +46,7 @@ public:
     virtual void init(const std::shared_ptr<Config>& config_);
     virtual bool shouldEval();
     const std::shared_ptr<Allocations>& allocations() { return _allocations; }
-    const std::shared_ptr<MarketDataInterface> getMD() const { return _marketData; }
+    std::shared_ptr<MarketDataInterface> getMD() const { return _marketData; }
 
 protected:
     // allocation api
@@ -65,9 +63,7 @@ Strategy<TOrdApi>::Strategy(std::shared_ptr<MarketDataInterface> md_, std::share
 :   _marketData(std::move(md_))
 ,   _orderEngine(std::move(od_))
 ,   _allocations(nullptr)
-,   _buyOrders()
-,   _sellOrders() {
-
+,   _oidSeed(0) {
 }
 
 
@@ -203,9 +199,6 @@ void Strategy<TOrdApi>::placeAllocations() {
     }
 
 
-    auto taskUpdateFunc = [this](const pplx::task<std::vector<std::shared_ptr<model::Order>>>& orders_) {
-        this->updateFromTask(orders_);
-    };
     // make cancels first
     // TODO cannot do error handling for changingSide - why not cancel or reset allocation on ack.
     // TODO placeCancels method.
@@ -291,7 +284,7 @@ void Strategy<TOrdApi>::updateFromTask(const pplx::task<std::vector<std::shared_
             LOGINFO(order->toJson().serialize());
             _orders[index] = order;
         }
-    } catch (api::ApiException &apiException) {
+    } catch (api::ApiException apiException) {
         auto reason = apiException.getContent();
         LOGINFO("ApiException: " << apiException.getContent()->rdbuf() << " "
                 << LOG_VAR(apiException.error_code())
