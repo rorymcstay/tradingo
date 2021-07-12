@@ -21,12 +21,12 @@ TestOrdersApi::TestOrdersApi(std::shared_ptr<io::swagger::client::api::ApiClient
 }
 
 pplx::task<std::shared_ptr<model::Order>>
-TestOrdersApi::order_amend(std::optional<utility::string_t> orderID, std::optional<utility::string_t> origClOrdID,
-                           std::optional<utility::string_t> clOrdID, std::optional<double> simpleOrderQty,
-                           std::optional<double> orderQty, std::optional<double> simpleLeavesQty,
-                           std::optional<double> leavesQty, std::optional<double> price,
-                           std::optional<double> stopPx, std::optional<double> pegOffsetValue,
-                           std::optional<utility::string_t> text) {
+TestOrdersApi::order_amend(boost::optional<utility::string_t> orderID, boost::optional<utility::string_t> origClOrdID,
+                           boost::optional<utility::string_t> clOrdID, boost::optional<double> simpleOrderQty,
+                           boost::optional<double> orderQty, boost::optional<double> simpleLeavesQty,
+                           boost::optional<double> leavesQty, boost::optional<double> price,
+                           boost::optional<double> stopPx, boost::optional<double> pegOffsetValue,
+                           boost::optional<utility::string_t> text) {
     auto order = std::make_shared<model::Order>();
     order->setClOrdID(origClOrdID.value());
     order->setOrderQty(simpleOrderQty.value());
@@ -41,7 +41,7 @@ TestOrdersApi::order_amend(std::optional<utility::string_t> orderID, std::option
 }
 
 pplx::task<std::vector<std::shared_ptr<model::Order>>>
-TestOrdersApi::order_amendBulk(std::optional<utility::string_t> orders) {
+TestOrdersApi::order_amendBulk(boost::optional<utility::string_t> orders) {
 
     auto outOrders = std::vector<std::shared_ptr<model::Order>>();
     auto json = web::json::value::parse(orders.value()).as_array();
@@ -59,28 +59,28 @@ TestOrdersApi::order_amendBulk(std::optional<utility::string_t> orders) {
 }
 
 pplx::task<std::vector<std::shared_ptr<model::Order>>>
-TestOrdersApi::order_cancel(std::optional<utility::string_t> orderID,
-                            std::optional<utility::string_t> clOrdID,
-                            std::optional<utility::string_t> text) {
+TestOrdersApi::order_cancel(boost::optional<utility::string_t> orderID,
+                            boost::optional<utility::string_t> clOrdID,
+                            boost::optional<utility::string_t> text) {
     std::vector<std::shared_ptr<model::Order>> ordersRet;
-    if (_orders.find(orderID.value()) == _orders.end()) {
-        LOGWARN(LOG_NVP("OrderID",orderID.value()) << " not found to cancel.");
+    if (_orders.find(clOrdID.value()) == _orders.end()) {
+        LOGWARN(LOG_NVP("ClOrdID",clOrdID.value()) << " not found to cancel.");
         _orderCancels.push(nullptr);
     } else {
-        _orders[orderID.value()]->setOrdStatus("PendingCancel");
-        _orders[orderID.value()]->setOrderQty(0.0);
-        set_order_timestamp(_orders[orderID.value()]);
+        _orders[clOrdID.value()]->setOrdStatus("PendingCancel");
+        _orders[clOrdID.value()]->setOrderQty(0.0);
+        set_order_timestamp(_orders[clOrdID.value()]);
         //validateOrder(_orders[orderID.value()]);
-        ordersRet.push_back(_orders[orderID.value()]);
-        _orderCancels.push(_orders[orderID.value()]);
-        _allEvents.push(_orders[orderID.value()]);
+        ordersRet.push_back(_orders[clOrdID.value()]);
+        _orderCancels.push(_orders[clOrdID.value()]);
+        _allEvents.push(_orders[clOrdID.value()]);
     }
     return pplx::task_from_result(ordersRet);
 }
 
 pplx::task<std::vector<std::shared_ptr<model::Order>>>
-TestOrdersApi::order_cancelAll(std::optional<utility::string_t> symbol, std::optional<utility::string_t> filter,
-                               std::optional<utility::string_t> text) {
+TestOrdersApi::order_cancelAll(boost::optional<utility::string_t> symbol, boost::optional<utility::string_t> filter,
+                               boost::optional<utility::string_t> text) {
     std::vector<std::shared_ptr<model::Order>> out = {};
     for (auto& orders : _orders) {
         orders.second->setOrdStatus("PendingCancel");
@@ -97,16 +97,16 @@ pplx::task<std::shared_ptr<model::Object>> TestOrdersApi::order_cancelAllAfter(d
 }
 
 pplx::task<std::shared_ptr<model::Order>>
-TestOrdersApi::order_closePosition(utility::string_t symbol, std::optional<double> price) {
+TestOrdersApi::order_closePosition(utility::string_t symbol, boost::optional<double> price) {
     return pplx::task_from_result(std::make_shared<model::Order>());
 }
 
 pplx::task<std::vector<std::shared_ptr<model::Order>>>
-TestOrdersApi::order_getOrders(std::optional<utility::string_t> symbol, std::optional<utility::string_t> filter,
-                               std::optional<utility::string_t> columns, std::optional<double> count,
-                               std::optional<double> start, std::optional<bool> reverse,
-                               std::optional<utility::datetime> startTime,
-                               std::optional<utility::datetime> endTime) {
+TestOrdersApi::order_getOrders(boost::optional<utility::string_t> symbol, boost::optional<utility::string_t> filter,
+                               boost::optional<utility::string_t> columns, boost::optional<double> count,
+                               boost::optional<double> start, boost::optional<bool> reverse,
+                               boost::optional<utility::datetime> startTime,
+                               boost::optional<utility::datetime> endTime) {
     auto orders = std::vector<std::shared_ptr<model::Order>>();
     for (auto& ord : _orders) {
         orders.push_back(ord.second);
@@ -115,14 +115,14 @@ TestOrdersApi::order_getOrders(std::optional<utility::string_t> symbol, std::opt
 }
 
 pplx::task<std::shared_ptr<model::Order>>
-TestOrdersApi::order_new(utility::string_t symbol, std::optional<utility::string_t> side,
-                         std::optional<double> simpleOrderQty, std::optional<double> orderQty,
-                         std::optional<double> price, std::optional<double> displayQty,
-                         std::optional<double> stopPx, std::optional<utility::string_t> clOrdID,
-                         std::optional<utility::string_t> clOrdLinkID, std::optional<double> pegOffsetValue,
-                         std::optional<utility::string_t> pegPriceType, std::optional<utility::string_t> ordType,
-                         std::optional<utility::string_t> timeInForce, std::optional<utility::string_t> execInst,
-                         std::optional<utility::string_t> contingencyType, std::optional<utility::string_t> text) {
+TestOrdersApi::order_new(utility::string_t symbol, boost::optional<utility::string_t> side,
+                         boost::optional<double> simpleOrderQty, boost::optional<double> orderQty,
+                         boost::optional<double> price, boost::optional<double> displayQty,
+                         boost::optional<double> stopPx, boost::optional<utility::string_t> clOrdID,
+                         boost::optional<utility::string_t> clOrdLinkID, boost::optional<double> pegOffsetValue,
+                         boost::optional<utility::string_t> pegPriceType, boost::optional<utility::string_t> ordType,
+                         boost::optional<utility::string_t> timeInForce, boost::optional<utility::string_t> execInst,
+                         boost::optional<utility::string_t> contingencyType, boost::optional<utility::string_t> text) {
     auto order = std::make_shared<model::Order>();
     order->setOrdStatus("New");
     if (side.has_value())
@@ -133,23 +133,22 @@ TestOrdersApi::order_new(utility::string_t symbol, std::optional<utility::string
         order->setOrderQty(simpleOrderQty.value());
     if (price.has_value())
         order->setPrice(price.value());
-    order->setOrderID(std::to_string(_oidSeed++));
-
-    validateOrder(order);
+    
     add_order(order);
+    validateOrder(order);
 
     return pplx::task_from_result(order);
 }
 
 pplx::task<std::vector<std::shared_ptr<model::Order>>>
-TestOrdersApi::order_newBulk(std::optional<utility::string_t> orders) {
+TestOrdersApi::order_newBulk(boost::optional<utility::string_t> orders) {
     auto outOrders = std::vector<std::shared_ptr<model::Order>>();
     auto json = web::json::value::parse(orders.value()).as_array();
     for (auto& ordJson : json) {
         ordJson.as_object()["orderID"] = web::json::value::string(std::to_string(++_oidSeed));
         auto order = std::make_shared<model::Order>();
-        validateOrder(order);
         add_order(order);
+        validateOrder(order);
         order->fromJson(ordJson);
         /// TODO this is not atomic some orders will be placed?
         outOrders.push_back(order);
@@ -230,17 +229,18 @@ void TestOrdersApi::operator>>(const std::string &outEvent_) {
 }
 
 void TestOrdersApi::checkOrderExists(const std::shared_ptr<model::Order> &order) {
-    if (_orders.find(order->getOrderID()) == _orders.end()) {
+    if (_orders.find(order->getOrigClOrdID()) == _orders.end()) {
         // reject amend request, fail test
         std::stringstream str;
-        str << "Original order " << LOG_VAR(order->getOrderID()) << " not found.";
+        str << "Original order " << LOG_VAR(order->getClOrdID()) << " not found.";
         throw std::runtime_error(str.str());
     }
 }
 
 void TestOrdersApi::add_order(const std::shared_ptr<model::Order> &order_) {
+    _oidSeed++;
     order_->setOrderID(std::to_string(_oidSeed));
-    _orders[order_->getOrderID()] = order_;
+    _orders[order_->getClOrdID()] = order_;
     order_->setOrdStatus("New");
     set_order_timestamp(order_);
     _newOrders.push(order_);
@@ -305,9 +305,13 @@ void TestOrdersApi::setPosition(const std::shared_ptr<model::Position> &position
 }
 
 // TODO validate and add order
+// TODO assert clordid is unique.
 bool TestOrdersApi::validateOrder(const std::shared_ptr<model::Order> &order_) {
     if (order_->origClOrdIDIsSet() && order_->getOrderID() != "") {
         throw api::ApiException(400, "Must specify only one of orderID or origClOrdId", nullptr);
+    }
+    if (order_->origClOrdIDIsSet() && !order_->clOrdIDIsSet()){
+        throw api::ApiException(400, "Must specify ClOrdID if OrigClOrdID is set", nullptr);
     }
     if ((int)order_->getOrderQty() % std::stoi(_config->get("lotSize", "100")) != 0) {
         throw api::ApiException(400, "Orderty is not a multiple of lotsize", nullptr);
