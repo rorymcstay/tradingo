@@ -31,5 +31,6 @@ endif()
 add_compile_definitions("GIT_TAG=\"${GIT_TAG}\"")
 add_compile_definitions("GIT_BRANCH=\"${GIT_BRANCH}\"")
 add_compile_definitions("GIT_DIFF=\"${GIT_DIFF}\"")
+add_compile_definitions("GIT_REV=\"${GIT_REV}\"")
 
 message(STATUS "GIT_REV=${GIT_REV} GIT_BRANCH=${GIT_BRANCH}")
