@@ -165,9 +165,11 @@ void Strategy<TOrdApi>::placeAllocations() {
                 cancel->setSide("Buy" == allocation->getSide() ? "Sell" : "Buy");
                 cancel->setOrderQty(0);
                 cancel->setOrderID(currentOrder->getOrderID());
+                cancel->setOrigClOrdID(order->getOrigClOrdID());
                 _cancels.push_back(cancel);
                 order->setOrderID("");
                 _newOrders.push_back(order);
+
             } else if (allocation->isAmendDown()) {
                 LOGINFO("Amending down: " << LOG_VAR(order->getClOrdID()) << LOG_VAR(order->getPrice())
                                           << LOG_VAR(order->getOrderQty()));
@@ -209,7 +211,7 @@ void Strategy<TOrdApi>::placeAllocations() {
     for (auto& toSend : _cancels) {
         if (!_cancels.empty()) {
             try {
-                _orderEngine->order_cancel(boost::none, toSend->getClOrdID(), std::string("Allocation removed")).then(
+                _orderEngine->order_cancel(boost::none, toSend->getOrigClOrdID(), std::string("Allocation removed")).then(
                     [this, &toSend](const pplx::task<std::vector<std::shared_ptr<model::Order>>> &orders_) {
                             this->updateFromTask(orders_);
                     });
