@@ -1,6 +1,6 @@
 [submodule "thirdparty/api-connectors"]
 	path = thirdparty/api-connectors
-	url = git@github.com:rorymcstay/api-connectors.git
+	url = https://github.com/rorymcstay/api-connectors.git
 [submodule "thirdparty/aixlog"]
 	path = thirdparty/aixlog
 	url = https://github.com/badaix/aixlog 
