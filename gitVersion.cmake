@@ -32,4 +32,4 @@ add_compile_definitions("GIT_TAG=\"${GIT_TAG}\"")
 add_compile_definitions("GIT_BRANCH=\"${GIT_BRANCH}\"")
 add_compile_definitions("GIT_DIFF=\"${GIT_DIFF}\"")
 
-message(STATUS "GIT_REV=${GIT_REV} GIT_TAG=${GIT_TAG} GIT_BRANCH=${GIT_BRANCH}")
+message(STATUS "GIT_REV=${GIT_REV} GIT_BRANCH=${GIT_BRANCH}")
