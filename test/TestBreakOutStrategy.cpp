@@ -27,8 +27,7 @@ TEST(BreakOutStrategy, smoke_test)
 
 }
 
-TEST(BreakOutStrategy, test_playback) {
-
+TEST(BreakOutStrategy, DISABLED_test_playback) {
     TestEnv env({
         {"symbol", "XBTUSD"},
         {"clOrdPrefix", "MCST"},

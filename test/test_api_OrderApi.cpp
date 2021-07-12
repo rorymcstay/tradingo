@@ -63,6 +63,7 @@ TEST(OrderApi, order_newBulk) {
 TEST(OrderApi, order_newBulk_throws_ApiException) {
 
     OrderManager om {};
+
     model::Order order1 {};
     order1.setOrderQty(100);
     order1.setPrice(33370.5);
@@ -70,27 +71,32 @@ TEST(OrderApi, order_newBulk_throws_ApiException) {
     order1.setClOrdID(std::to_string(om.oidSeed));
     order1.setSymbol("XBTUSD");
     model::Order order2 {};
+
+    // create second order with duplicate ClOrdID
     order2.setOrderQty(100);
     order2.setPrice(33370.5);
     order2.setSide("Buy");
-    order2.setClOrdID(std::to_string(om.oidSeed));
+    order2.setClOrdID(std::to_string(om.oidSeed)); // duplicate cloordid
     order2.setSymbol("XBTUSD");
 
     std::error_code res;
-    auto newOrders = om.orderApi->order_newBulk(om.to_string({order1, order2})).then(
-            [&res](const std::vector<std::shared_ptr<model::Order>> &orders_) {
-                try {
-                    for (const auto& order : orders_) {
-                        std::cout << order->toJson().serialize() << '\n';
-                    }
-                } catch (api::ApiException& ex_ ) {
-                    res = ex_.error_code();
-                    LOGINFO("ApiException: " << ex_.getContent()->rdbuf());
+    try {
+        auto newOrders = om.orderApi->order_newBulk(om.to_string({order1, order2})).then(
+            [](const std::vector<std::shared_ptr<model::Order>> &orders_) {
+                for (const auto& order : orders_) {
+                    std::cout << order->toJson().serialize() << '\n';
                 }
             }
-    );
+        );
+        newOrders.get();
+    } catch (api::ApiException& ex_ ) {
+        res = ex_.error_code();
+        LOGINFO("ApiException: " << ex_.getContent()->rdbuf());
+    } catch (web::http::http_exception ex_) {
+        LOGINFO("Httpexception!");
+    }
 
-    newOrders.get();
+
 
     LOGINFO(LOG_VAR(res));
 }

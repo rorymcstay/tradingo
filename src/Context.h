@@ -103,7 +103,7 @@ Context<TMarketData, TOrderApi>::loadFactoryMethod() {
 template<typename TMarketData, typename TOrderApi>
 Context<TMarketData, TOrderApi>::Context(const std::shared_ptr<Config>& config_) {
 
-    LOGINFO("Context created. Version Info: GIT_BRANCH='" << GIT_BRANCH << "' GIT_TAG='" << GIT_TAG << "' GIT_DIFF='" << GIT_BRANCH << "'");
+    LOGINFO("Context created. Version Info: GIT_BRANCH='" << GIT_BRANCH << "' GIT_TAG='" << GIT_TAG << "' GIT_DIFF='" << GIT_DIFF << "'");
 
     _config = config_;
     setupLogger();

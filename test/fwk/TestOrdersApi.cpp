@@ -133,7 +133,9 @@ TestOrdersApi::order_new(utility::string_t symbol, boost::optional<utility::stri
         order->setOrderQty(simpleOrderQty.value());
     if (price.has_value())
         order->setPrice(price.value());
-    
+    if (clOrdID.has_value()) {
+        order->setClOrdID(clOrdID.value());
+    }
     add_order(order);
     validateOrder(order);
 
@@ -147,6 +149,7 @@ TestOrdersApi::order_newBulk(boost::optional<utility::string_t> orders) {
     for (auto& ordJson : json) {
         ordJson.as_object()["orderID"] = web::json::value::string(std::to_string(++_oidSeed));
         auto order = std::make_shared<model::Order>();
+        order->setClOrdID(ordJson.at("clOrdID").as_string());
         add_order(order);
         validateOrder(order);
         order->fromJson(ordJson);

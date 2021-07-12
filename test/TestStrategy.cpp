@@ -56,5 +56,4 @@ TEST(Strategy, changing_sides) {
     strategy->placeAllocations();
     env >> "ORDER_CANCEL price=10 orderQty=0 symbol=XBTUSD side=Buy orderID=1" LN;
     env >> "ORDER_NEW price=10 orderQty=100 symbol=XBTUSD  side=Sell orderID=1" LN;
-
 }

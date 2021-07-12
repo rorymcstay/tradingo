@@ -64,6 +64,7 @@ Strategy<TOrdApi>::Strategy(std::shared_ptr<MarketDataInterface> md_, std::share
 ,   _orderEngine(std::move(od_))
 ,   _allocations(nullptr)
 ,   _oidSeed(std::chrono::system_clock::now().time_since_epoch().count()) {
+
 }
 
 
@@ -147,7 +148,7 @@ void Strategy<TOrdApi>::placeAllocations() {
         size_t priceIndex = _allocations->allocIndex(order->getPrice());
         auto& currentOrder = _orders[priceIndex];
         if (currentOrder) {
-            LOGINFO("Price level is occupied "<< LOG_VAR(order->getPrice())
+            LOGINFO("Price level is occupied " << LOG_VAR(order->getPrice())
                     << LOG_VAR(order->getOrderQty())
                     << LOG_VAR(currentOrder->getOrderQty())
                     << LOG_VAR(currentOrder->getPrice())
@@ -207,16 +208,17 @@ void Strategy<TOrdApi>::placeAllocations() {
     // TODO placeCancels method.
     for (auto& toSend : _cancels) {
         if (!_cancels.empty()) {
-            _orderEngine->order_cancel(toSend->getOrderID(), toSend->getClOrdID(), std::string("Allocation removed")).then(
-                [this, &toSend](const pplx::task<std::vector<std::shared_ptr<model::Order>>> &orders_) {
-                    try {
-                        this->updateFromTask(orders_);
-                    } catch (api::ApiException &ex_) {
-                        LOGERROR("Error cancelling order " << ex_.getContent()->rdbuf() << LOG_VAR(ex_.what())
-                                    << LOG_NVP("order", toSend->toJson().serialize()));
-                        _allocations->get(toSend->getPrice())->cancelDelta();
-                    }
-                });
+            try {
+                _orderEngine->order_cancel(boost::none, toSend->getClOrdID(), std::string("Allocation removed")).then(
+                    [this, &toSend](const pplx::task<std::vector<std::shared_ptr<model::Order>>> &orders_) {
+                            this->updateFromTask(orders_);
+                    });
+            } catch (api::ApiException &ex_) {
+                LOGERROR("Error cancelling order " << ex_.getContent()->rdbuf() << LOG_VAR(ex_.what())
+                                                   << LOG_NVP("order", toSend->toJson().serialize()));
+                _allocations->get(toSend->getPrice())->cancelDelta();
+            }
+
         }
     }
 
@@ -228,18 +230,19 @@ void Strategy<TOrdApi>::placeAllocations() {
     }
     // and then amends
     if (!_amends.empty()) {
-        _orderEngine->order_amendBulk(jsList.serialize()).then(
-            [this, &_amends](const pplx::task<std::vector<std::shared_ptr<model::Order>>>& orders_) {
-                try {
+        try {
+            _orderEngine->order_amendBulk(jsList.serialize()).then(
+                [this, &_amends](const pplx::task<std::vector<std::shared_ptr<model::Order>>>& orders_) {
                     this->updateFromTask(orders_);
-                } catch (api::ApiException &ex_) {
-                    LOGERROR("Error amending orders: " << ex_.getContent()->rdbuf() << LOG_VAR(ex_.what()));
-                    _amends.clear();
-                    _allocations->cancel([](const std::shared_ptr<Allocation> &alloc_) {
-                        return alloc_->isAmendDown() || alloc_->isAmendUp();
-                    });
-                }
+                });
+        } catch (api::ApiException &ex_) {
+            LOGERROR("Error amending orders: " << ex_.getContent()->rdbuf() << LOG_VAR(ex_.what()));
+            _amends.clear();
+            _allocations->cancel([](const std::shared_ptr<Allocation> &alloc_) {
+                return alloc_->isAmendDown() || alloc_->isAmendUp();
             });
+
+        }
     }
 
     // TODO: placeNewOrders method.
@@ -249,16 +252,17 @@ void Strategy<TOrdApi>::placeAllocations() {
         jsList.as_array()[count++] = toSend->toJson();
     }
     if (!_newOrders.empty()) {
-        _orderEngine->order_newBulk(jsList.serialize()).then(
-            [this, &_newOrders](const pplx::task<std::vector<std::shared_ptr<model::Order>>>& orders_) {
-                try {
-                    this->updateFromTask(orders_);
-                } catch (api::ApiException &ex_) {
-                    LOGERROR("Error placing new orders " << ex_.getContent()->rdbuf() << LOG_VAR(ex_.what()));
-                    _newOrders.clear();
-                    _allocations->cancel([](const std::shared_ptr<Allocation>& alloc_) {return alloc_->isNew();});
-                }
+        try {
+            _orderEngine->order_newBulk(jsList.serialize()).then(
+                [this, &_newOrders](const pplx::task<std::vector<std::shared_ptr<model::Order>>>& orders_) {
+                        this->updateFromTask(orders_);
             });
+        } catch (api::ApiException &ex_) {
+            LOGERROR("Error placing new orders " << ex_.getContent()->rdbuf() << LOG_VAR(ex_.what()));
+            _newOrders.clear();
+            _allocations->cancel([](const std::shared_ptr<Allocation>& alloc_) {return alloc_->isNew();});
+        }
+
     }
 
     LOGINFO("Allocations have been reflected. " << LOG_NVP("amend", _amends.size())
