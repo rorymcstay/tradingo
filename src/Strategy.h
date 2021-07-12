@@ -63,7 +63,7 @@ Strategy<TOrdApi>::Strategy(std::shared_ptr<MarketDataInterface> md_, std::share
 :   _marketData(std::move(md_))
 ,   _orderEngine(std::move(od_))
 ,   _allocations(nullptr)
-,   _oidSeed(0) {
+,   _oidSeed(std::chrono::system_clock::now().time_since_epoch().count()) {
 }
 
 
@@ -106,7 +106,10 @@ void Strategy<TOrdApi>::init(const std::shared_ptr<Config>& config_) {
 
     _symbol = _config->get("symbol");
     _clOrdIdPrefix = _config->get("clOrdPrefix");
-
+    auto cloidSeed = _config->get("cloidSeed", "");
+    if (!cloidSeed.empty()) {
+        _oidSeed = std::stoi(cloidSeed);
+    }
     auto tickSize = instrument()->getTickSize();
     auto referencePrice = instrument()->getPrevPrice24h();
     auto lotSize = instrument()->getLotSize();
