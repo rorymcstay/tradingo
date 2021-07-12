@@ -85,16 +85,27 @@ void BreakOutStrategy<TORDApi>::onBBO(const std::shared_ptr<Event> &event_) {
     _longTermAvg = _smaHigh(midPoint);
     LOGINFO(LOG_VAR(_shortTermAvg) << LOG_VAR(_longTermAvg));
     // TODO if signal is good if (_signal["name"]->is_good())
+    std::string side;
+    qty_t qtyToTrade;
+    price_t price;
     if ((_smaLow.is_ready() && _smaHigh.is_ready())
-         && _shortTermAvg - _longTermAvg >= _buyThreshold) {
+         && _shortTermAvg - _longTermAvg > _buyThreshold) {
         // short term average is higher than longterm, buy
-        auto qtyToTrade = getQtyToTrade("Buy");
-        LOGINFO("Signal is good: " << LOG_VAR(_shortTermAvg) << LOG_VAR(_longTermAvg) << LOG_VAR(qtyToTrade));
-        StrategyApi::allocations()->addAllocation(bidPrice, qtyToTrade, "Buy");
+        qtyToTrade = getQtyToTrade("Buy");
+        price = bidPrice;
+        side = "Buy";
     } else if (_smaLow.is_ready() && _smaHigh.is_ready()) {
-        auto qtyToTrade = getQtyToTrade("Sell");
-        LOGINFO("Signal is bad: Reverting position " << LOG_VAR(qtyToTrade) << LOG_VAR(_shortTermAvg) << LOG_VAR(_longTermAvg));
+        qtyToTrade = getQtyToTrade("Sell");
+        price = askPrice;
+        side = "Sell";
         StrategyApi::allocations()->addAllocation(askPrice, qtyToTrade, "Sell");
+    }
+    LOGINFO("Signal is " << LOG_VAR(side) << LOG_VAR(_shortTermAvg) << LOG_VAR(_longTermAvg)
+                << LOG_VAR(qtyToTrade) << LOG_VAR(price));
+    if (almost_equal(qtyToTrade, 0.0)) {
+        LOGDEBUG("No quantity to trade");
+    } else {
+        StrategyApi::allocations()->addAllocation(price, qtyToTrade, side);
     }
 
 }
