@@ -283,7 +283,11 @@ template<typename TOrdApi>
 void Strategy<TOrdApi>::updateFromTask(const pplx::task<std::vector<std::shared_ptr<model::Order>>>& task_) {
     for (auto& order : task_.get()) {
         auto index = _allocations->allocIndex(order->getPrice());
-        LOGINFO(order->toJson().serialize());
+        LOGINFO("Success: " << LOG_NVP("price", order->getPrice())
+                << LOG_NVP("ordStatus", order->getOrdStatus())
+                << LOG_NVP("orderQty", order->getOrderQty())
+                << LOG_NVP("leavesQty",order->getLeavesQty())
+                << LOG_NVP("cumQty", order->getCumQty()));
         _orders[index] = order;
     }
 }

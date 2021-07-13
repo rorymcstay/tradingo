@@ -60,7 +60,10 @@ void BreakOutStrategy<TORDApi>::init(const std::shared_ptr<Config>& config_) {
 
 template<typename TORDApi>
 void BreakOutStrategy<TORDApi>::onExecution(const std::shared_ptr<Event> &event_) {
-    LOGINFO(event_->getExec()->toJson().serialize());
+    auto exec = event_->getExec();
+    LOGINFO(LOG_NVP("ordStatus", exec->getOrdStatus()) << LOG_NVP("price", exec->getPrice())
+            << LOG_NVP("orderQty", exec->getOrderQty()) << LOG_NVP("leavesQty", exec->getLeavesQty())
+            << LOG_NVP("cumQty", exec->getCumQty()) << LOG_NVP("lastQty", exec->getLastQty()));
     std::shared_ptr<model::Position> pos = StrategyApi::getMD()->getPositions().at(StrategyApi::_symbol);
     LOGINFO("Position: " << LOG_NVP("CurrentQty", pos->getCurrentQty())
             << LOG_NVP("UnrealisedPnl", pos->getUnrealisedPnl())
@@ -107,9 +110,6 @@ void BreakOutStrategy<TORDApi>::onBBO(const std::shared_ptr<Event> &event_) {
                                         << LOG_VAR(qtyToTrade) << LOG_VAR(price));
         StrategyApi::allocations()->addAllocation(price, qtyToTrade, side);
     }
-
-
-
 }
 
 template<typename TORDApi>
