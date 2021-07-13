@@ -73,9 +73,6 @@ void BreakOutStrategy<TORDApi>::onTrade(const std::shared_ptr<Event> &event_) {
     auto trade = event_->getTrade();
     LOGINFO(LOG_NVP("Price", trade->getPrice()) << LOG_NVP("Size", trade->getSize())
             << LOG_NVP("Side", trade->getSide())<< LOG_NVP("Timestamp", trade->getTimestamp().to_string()));
-    if (StrategyApi::allocations()->totalAllocated() > 0.0 && trade->getPrice()) {
-        
-    }
 }
 
 template<typename TORDApi>
@@ -86,7 +83,6 @@ void BreakOutStrategy<TORDApi>::onBBO(const std::shared_ptr<Event> &event_) {
     auto midPoint = (askPrice+bidPrice)/2;
     _shortTermAvg = _smaLow(midPoint);
     _longTermAvg = _smaHigh(midPoint);
-    LOGINFO(LOG_VAR(_shortTermAvg) << LOG_VAR(_longTermAvg));
     // TODO if signal is good if (_signal["name"]->is_good())
     std::string side = "Not ready";
     qty_t qtyToTrade;
@@ -103,13 +99,16 @@ void BreakOutStrategy<TORDApi>::onBBO(const std::shared_ptr<Event> &event_) {
         side = "Sell";
         StrategyApi::allocations()->addAllocation(askPrice, qtyToTrade, "Sell");
     }
-    LOGINFO(LOG_NVP("Signal", side) << LOG_VAR(_shortTermAvg) << LOG_VAR(_longTermAvg)
-                << LOG_VAR(qtyToTrade) << LOG_VAR(price));
     if (almost_equal(qtyToTrade, 0.0)) {
         LOGDEBUG("No quantity to trade");
+        return;
     } else {
+        LOGINFO(LOG_NVP("Signal", side) << LOG_VAR(_shortTermAvg) << LOG_VAR(_longTermAvg)
+                                        << LOG_VAR(qtyToTrade) << LOG_VAR(price));
         StrategyApi::allocations()->addAllocation(price, qtyToTrade, side);
     }
+
+
 
 }
 

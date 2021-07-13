@@ -17,7 +17,8 @@ TestEnv::TestEnv(std::initializer_list<std::pair<std::string,std::string>> confi
     _config->set("httpEnabled", "False");
     _config->set("tickSize", "0.5");
     _config->set("lotSize", "100");
-    _config->set("logLevel", "debug");
+    if (_config->get("logLevel", "").empty())
+        _config->set("logLevel", "debug");
     _config->set("cloidSeed", "0");
     _context = std::make_shared<Context<TestMarketData, OrderApi>>(_config);
     _context->init();

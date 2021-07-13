@@ -16,5 +16,4 @@ RUN apt-get update && apt-get -y install cmake libcpprest-dev libgtest-dev libbo
 #TODO install packages
 RUN mkdir build
 RUN cd build && cmake -DCPPREST_ROOT=/usr/ -DCMAKE_INSTALL_PREFIX=/usr/tradingo/  ../
-RUN cd build
-ENTRYPOINT ["make", "package", "-j3"]
+RUN cd build && make package -j3
