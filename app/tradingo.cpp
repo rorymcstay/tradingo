@@ -40,8 +40,10 @@ int main(int argc, char **argv) {
 
     // running loop
      while (context->strategy()->shouldEval()) {
-        context->strategy()->evaluate();
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+         LOGINFO(AixLog::Color::YELLOW << "======== START Evaluate ========" << AixLog::Color::none);
+         context->strategy()->evaluate();
+         LOGINFO(AixLog::Color::YELLOW << "======== FINISH Evaluate ========" << AixLog::Color::none);
+         std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
     LOGINFO("exiting");
     return 0;

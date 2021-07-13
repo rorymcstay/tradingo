@@ -27,7 +27,7 @@ TEST(BreakOutStrategy, smoke_test)
 
 }
 
-TEST(BreakOutStrategy, DISABLED_test_playback) {
+TEST(BreakOutStrategy, test_playback) {
     TestEnv env({
         {"symbol", "XBTUSD"},
         {"clOrdPrefix", "MCST"},
@@ -38,5 +38,5 @@ TEST(BreakOutStrategy, DISABLED_test_playback) {
         {"longTermWindow", "100"},
         {"logLevel", "info"}
     });
-    env.playback("trades_XBTUSD.json", "quotes_XBTUSD.json");
+    env.playback("data/trades_XBTUSD.json", "data/quotes_XBTUSD.json");
 }

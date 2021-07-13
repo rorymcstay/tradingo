@@ -23,7 +23,6 @@ TEST(StrategyApi, smooke)
 
     auto strategy = env.strategy();
     strategy->allocations()->addAllocation(10, 100.0);
-
     strategy->placeAllocations();
     env >> "ORDER_NEW price=10 orderQty=100 symbol=XBTUSD  side=Buy orderID=1" LN;
     strategy->allocations()->addAllocation(11,100.0);
@@ -58,4 +57,32 @@ TEST(Strategy, changing_sides) {
     env >> "ORDER_CANCEL price=10 orderQty=0 symbol=XBTUSD side=Buy orderID=1 clOrdID=MCST0" LN;
     env >> "ORDER_NEW price=10 orderQty=100 symbol=XBTUSD  side=Sell orderID=1" LN;
     env >> "NONE" LN;
+}
+
+TEST(Strategy, amend_order_more_than_once)
+{
+    TestEnv env({
+        {"symbol", "XBTUSD"},
+        {"clOrdPrefix", "MCST"},
+        {"factoryMethod", "RegisterBreakOutStrategy"},
+        {"startingAmount", "1000"},
+        {"referencePrice", "100"},
+        {"shortTermWindow", "100"},
+        {"longTermWindow", "1000"}
+    });
+
+    auto strategy = env.strategy();
+    strategy->allocations()->addAllocation(10, 100.0);
+    strategy->placeAllocations();
+    env >> "ORDER_NEW price=10 orderQty=100 symbol=XBTUSD  side=Buy orderID=1 clOrdID=MCST0" LN;
+    strategy->allocations()->addAllocation(10,100);
+    strategy->placeAllocations();
+    env >> "ORDER_AMEND price=10 orderQty=200 symbol=XBTUSD  side=Buy clOrdID=MCST1" LN;
+    strategy->allocations()->addAllocation(10,100);
+    strategy->placeAllocations();
+    env >> "ORDER_AMEND price=10 orderQty=300 symbol=XBTUSD  side=Buy clOrdID=MCST2" LN;
+    strategy->allocations()->addAllocation(10,100);
+    strategy->placeAllocations();
+    env >> "ORDER_AMEND price=10 orderQty=400 symbol=XBTUSD  side=Buy clOrdID=MCST3" LN;
+
 }

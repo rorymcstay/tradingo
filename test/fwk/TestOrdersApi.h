@@ -128,7 +128,7 @@ public:
 
     // Testing helpers
 private:
-    void checkOrderExists(const std::shared_ptr<model::Order>& order);
+    std::shared_ptr<model::Order> checkOrderExists(const std::shared_ptr<model::Order>& order);
     bool hasMatchingOrder(const std::shared_ptr<model::Trade>& trade_);
 public:
     void addExecToPosition(const std::shared_ptr<model::Execution>& exec_);

@@ -48,9 +48,15 @@ TestOrdersApi::order_amendBulk(boost::optional<utility::string_t> orders) {
     for (auto& ordJson : json) {
         auto order = std::make_shared<model::Order>();
         order->fromJson(ordJson);
-        checkOrderExists(order);
+        auto origOrder = checkOrderExists(order);
+        // checkValidAmend(order);
+        order->setLeavesQty(order->getOrderQty() - origOrder->getCumQty());
+        order->setCumQty(origOrder->getCumQty());
+        _orders[order->getClOrdID()] = order;
         set_order_timestamp(order);
+        _orders.erase(order->getOrigClOrdID());
         validateOrder(order);
+        order->setOrdStatus("New");
         _orderAmends.emplace(order);
         outOrders.push_back(order);
     }
@@ -63,6 +69,7 @@ TestOrdersApi::order_cancel(boost::optional<utility::string_t> orderID,
                             boost::optional<utility::string_t> clOrdID,
                             boost::optional<utility::string_t> text) {
     std::vector<std::shared_ptr<model::Order>> ordersRet;
+
     if (_orders.find(clOrdID.value()) == _orders.end()) {
         LOGWARN(LOG_NVP("ClOrdID",clOrdID.value()) << " not found to cancel.");
         _orderCancels.push(nullptr);
@@ -74,6 +81,8 @@ TestOrdersApi::order_cancel(boost::optional<utility::string_t> orderID,
         ordersRet.push_back(_orders[clOrdID.value()]);
         _orderCancels.push(_orders[clOrdID.value()]);
         _allEvents.push(_orders[clOrdID.value()]);
+        _orders.erase(clOrdID.value());
+
     }
     return pplx::task_from_result(ordersRet);
 }
@@ -150,9 +159,9 @@ TestOrdersApi::order_newBulk(boost::optional<utility::string_t> orders) {
         ordJson.as_object()["orderID"] = web::json::value::string(std::to_string(++_oidSeed));
         auto order = std::make_shared<model::Order>();
         order->setClOrdID(ordJson.at("clOrdID").as_string());
+        order->fromJson(ordJson);
         add_order(order);
         validateOrder(order);
-        order->fromJson(ordJson);
         /// TODO this is not atomic some orders will be placed?
         outOrders.push_back(order);
     }
@@ -231,13 +240,26 @@ void TestOrdersApi::operator>>(const std::string &outEvent_) {
     }
 }
 
-void TestOrdersApi::checkOrderExists(const std::shared_ptr<model::Order> &order) {
-    if (_orders.find(order->getOrigClOrdID()) == _orders.end()) {
+std::shared_ptr<model::Order> TestOrdersApi::checkOrderExists(const std::shared_ptr<model::Order> &order) {
+    // hack storing orders under both id's.
+    if (_orders.find(order->getClOrdID()) != _orders.end()
+        || _orders.find(order->getOrigClOrdID()) != _orders.end()) {
+        // is amend
+        return _orders.find(order->getClOrdID()) != _orders.end() ? _orders[order->getClOrdID()] : _orders[order->getOrigClOrdID()];
+        /*assert((
+                _orders[order->getClOrdID()]->getOrdStatus() == "PendingCancel"
+             || _orders[order->getClOrdID()]->getOrdStatus() == "PendingAmend"
+             || _orders[order->getClOrdID()]->getOrdStatus() == "New")
+                && "Unhandled condition for TestOrdersApi::checkOrderExists ClOrdID check")*/
+    } else {
         // reject amend request, fail test
         std::stringstream str;
-        str << "Original order " << LOG_VAR(order->getClOrdID()) << " not found.";
+        str << "Original order " << LOG_NVP("OrderID",order->getOrderID())
+            << LOG_NVP("ClOrdID", order->getClOrdID())
+            << LOG_NVP("OrigClOrdID", order->getOrigClOrdID()) << " not found.";
         throw std::runtime_error(str.str());
     }
+
 }
 
 void TestOrdersApi::add_order(const std::shared_ptr<model::Order> &order_) {
@@ -245,6 +267,8 @@ void TestOrdersApi::add_order(const std::shared_ptr<model::Order> &order_) {
     order_->setOrderID(std::to_string(_oidSeed));
     _orders[order_->getClOrdID()] = order_;
     order_->setOrdStatus("New");
+    order_->setLeavesQty(order_->getOrderQty());
+    order_->setCumQty(0.0);
     set_order_timestamp(order_);
     _newOrders.push(order_);
     _allEvents.push(order_);
@@ -255,7 +279,7 @@ void TestOrdersApi::operator>>(std::vector<std::shared_ptr<model::ModelBase>>& o
     while (!_allEvents.empty()){
         auto top = _allEvents.front();
         auto val = top->toJson();
-        LOGINFO(AixLog::Color::GREEN << "TestOrdersApi::OUT>> " << AixLog::Color::GREEN << val.serialize());
+        LOGINFO(AixLog::Color::GREEN << "TestOrdersApi::OUT>> " << AixLog::Color::GREEN << val.serialize() << AixLog::Color::none);
         val.as_object()["timestamp"] = web::json::value(_time.to_string());
         top->fromJson(val);
         outVec.push_back(top);
@@ -311,13 +335,21 @@ void TestOrdersApi::setPosition(const std::shared_ptr<model::Position> &position
 // TODO assert clordid is unique.
 bool TestOrdersApi::validateOrder(const std::shared_ptr<model::Order> &order_) {
     if (order_->origClOrdIDIsSet() && order_->getOrderID() != "") {
-        throw api::ApiException(400, "Must specify only one of orderID or origClOrdId", nullptr);
+        auto msg = order_->toJson().serialize();
+        auto content = std::make_shared<std::istringstream>(msg);
+        auto error = api::ApiException(400, "Must specify only one of orderID or origClOrdId", content);
+        throw error;
     }
     if (order_->origClOrdIDIsSet() && !order_->clOrdIDIsSet()){
-        throw api::ApiException(400, "Must specify ClOrdID if OrigClOrdID is set", nullptr);
+        auto msg = order_->toJson().serialize();
+        auto content = std::make_shared<std::istringstream>(msg);
+        auto error = api::ApiException(400, "Must specify ClOrdID if OrigClOrdID is set", content);
+        throw error;
     }
     if ((int)order_->getOrderQty() % std::stoi(_config->get("lotSize", "100")) != 0) {
-        throw api::ApiException(400, "Orderty is not a multiple of lotsize", nullptr);
+        auto msg = order_->toJson().serialize();
+        auto content = std::make_shared<std::istringstream>(msg);
+        throw api::ApiException(400, "Orderty is not a multiple of lotsize", content);
     }
     return true;
 }

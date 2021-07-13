@@ -66,12 +66,17 @@ std::shared_ptr<model::Execution> canTrade(const std::shared_ptr<model::Order>& 
     auto tradePx = trade_->getPrice();
     auto side = order_->getSide();
 
-    if ((side == "Buy" ? tradePx <= orderPx : tradePx >= orderPx)) {
+    if (order_->getOrdStatus() == "Canceled"
+        || order_->getOrdStatus() == "Rejected"
+        || order_->getOrdStatus() == "Filled") {
+        return nullptr;
+        // order is filled, do nothing
+    } else if ((side == "Buy" ? tradePx <= orderPx : tradePx >= orderPx)) {
         LOGINFO(AixLog::Color::GREEN << "TestEnv::IN>> Tradable order found: " << AixLog::Color::GREEN << order_->toJson().serialize()
-                << AixLog::Color::GREEN << LOG_VAR(trade_->toJson().serialize()));
+                << AixLog::Color::GREEN << LOG_VAR(trade_->toJson().serialize()) << AixLog::Color::none);
         auto fillQty = std::min(orderQty, tradeQty);
         auto exec = std::make_shared<model::Execution>();
-        exec->setSymbol("");
+        exec->setSymbol(order_->getSymbol());
         exec->setSide(side);
         exec->setOrderID(order_->getOrderID());
         exec->setAccount(1.0);
@@ -82,6 +87,11 @@ std::shared_ptr<model::Execution> canTrade(const std::shared_ptr<model::Order>& 
         exec->setLeavesQty(order_->getLeavesQty()-fillQty);
 
         auto leavesQty = order_->getLeavesQty() - fillQty;
+        if (almost_equal(leavesQty, 0.0)) {
+            order_->setOrdStatus("Filled");
+        } else {
+            order_->setOrdStatus("PartiallyFilled");
+        }
         auto cumQty = order_->getCumQty() + fillQty;
         order_->setLeavesQty(leavesQty);
         order_->setCumQty(cumQty);
@@ -118,19 +128,21 @@ void TestEnv::playback(const std::string& tradeFile_, const std::string& quoteFi
                 stop = true;
             }
         } else { // send the trade.
-
             // TODO Check if trade can match on what we have? then send EXECUTION
-            for (auto& order : _context->orderApi()->orders())
-            {
+            for (auto& order : _context->orderApi()->orders()) {
                 auto exec = canTrade(order.second, trade);
                 if (exec) {
                     // put resultant execution into marketData.
                     _context->orderApi()->addExecToPosition(exec);
-                    LOGINFO(AixLog::Color::GREEN << "TestEnv: Sending Trade: " << AixLog::Color::GREEN << exec->toJson().serialize());
-                    LOGINFO(AixLog::Color::GREEN << "TestEnv: Position is: " << AixLog::Color::GREEN << _position->toJson().serialize());
+                    LOGINFO(AixLog::Color::GREEN << "TestEnv: Sending Execution=" << AixLog::Color::GREEN << exec->toJson().serialize() << AixLog::Color::none);
+                    LOGINFO(AixLog::Color::GREEN << "TestEnv: Position is: " << AixLog::Color::GREEN << _position->toJson().serialize() << AixLog::Color::none);
                     *_context->marketData() << exec;
                     *_context->marketData() << order.second;
                     *_context->marketData() << _context->orderApi()->getPosition();
+
+                    if (exec->getOrdStatus() == "Filled") {
+                        LOGDEBUG("Filled order");
+                    }
                 }
             }
             *_context->marketData() << trade;
