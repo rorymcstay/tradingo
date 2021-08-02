@@ -115,6 +115,8 @@ void TestEnv::playback(const std::string& tradeFile_, const std::string& quoteFi
     bool hasTrades = true;
 
     std::vector<std::shared_ptr<model::ModelBase>> outBuffer;
+    auto batchWriter = BatchWriter("replay", _context->config()->get("symbol"), _context->config()->get("storage"), 5);
+
     while (not stop) {
         if (!hasTrades or trade->getTimestamp() >= quote->getTimestamp()) {
             // trades are ahead of quotes, send the quote
@@ -124,7 +126,8 @@ void TestEnv::playback(const std::string& tradeFile_, const std::string& quoteFi
             _context->strategy()->evaluate();
             quote = getEvent<model::Quote>(quoteFile);
 
-            *_context->orderApi() >> outBuffer; //  >> std::vector
+            // record replay actions to a file.
+            *_context->orderApi() >> batchWriter;
             if (not quote) {
                 stop = true;
             }
@@ -156,13 +159,6 @@ void TestEnv::playback(const std::string& tradeFile_, const std::string& quoteFi
             }
         }
 
-    }
-
-    // record replay actions to a file.
-    auto batchWriter = BatchWriter("replay", _context->config()->get("symbol"), "./");
-    for (auto& event : outBuffer) {
-        LOGINFO("Out Event" << event->toJson().serialize());
-        batchWriter.write(event);
     }
     batchWriter.write_batch();
 }

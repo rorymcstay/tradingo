@@ -172,7 +172,7 @@ TestOrdersApi::order_newBulk(boost::optional<utility::string_t> orders) {
 #define CHECK_VAL(val1, val2)                                                                  \
     if (val1 != val2) {                                                                        \
         std::stringstream ss;                                                                  \
-        ss << "The values " <<  LOG_NVP(#val1, val1) << " and " << LOG_NVP(#val2, val2) << " ";\
+        ss << "The values " << LOG_NVP(#val1, val1) << " and " << LOG_NVP(#val2, val2) << " ";\
         throw std::runtime_error(ss.str());                                                    \
     }
 
@@ -287,6 +287,17 @@ void TestOrdersApi::operator>>(std::vector<std::shared_ptr<model::ModelBase>>& o
     }
 }
 
+void TestOrdersApi::operator>>(BatchWriter& outVec) {
+    while (!_allEvents.empty()){
+        auto top = _allEvents.front();
+        auto val = top->toJson();
+        LOGINFO(AixLog::Color::GREEN << "TestOrdersApi::OUT>> " << AixLog::Color::GREEN << val.serialize() << AixLog::Color::none);
+        val.as_object()["timestamp"] = web::json::value(_time.to_string());
+        top->fromJson(val);
+        outVec.write(top);
+        _allEvents.pop();
+    }
+}
 void TestOrdersApi::operator<<(utility::datetime time_) {
     _time = time_;
 }
