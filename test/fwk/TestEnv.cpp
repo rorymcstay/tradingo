@@ -17,7 +17,8 @@ TestEnv::TestEnv(std::initializer_list<std::pair<std::string,std::string>> confi
     _config->set("httpEnabled", "False");
     _config->set("tickSize", "0.5");
     _config->set("lotSize", "100");
-    _config->set("logLevel", "debug");
+    if (_config->get("logLevel", "").empty())
+        _config->set("logLevel", "debug");
     _config->set("cloidSeed", "0");
     _context = std::make_shared<Context<TestMarketData, OrderApi>>(_config);
     _context->init();
@@ -66,12 +67,17 @@ std::shared_ptr<model::Execution> canTrade(const std::shared_ptr<model::Order>& 
     auto tradePx = trade_->getPrice();
     auto side = order_->getSide();
 
-    if ((side == "Buy" ? tradePx <= orderPx : tradePx >= orderPx)) {
+    if (order_->getOrdStatus() == "Canceled"
+        || order_->getOrdStatus() == "Rejected"
+        || order_->getOrdStatus() == "Filled") {
+        return nullptr;
+        // order is filled, do nothing
+    } else if ((side == "Buy" ? tradePx <= orderPx : tradePx >= orderPx)) {
         LOGINFO(AixLog::Color::GREEN << "TestEnv::IN>> Tradable order found: " << AixLog::Color::GREEN << order_->toJson().serialize()
-                << AixLog::Color::GREEN << LOG_VAR(trade_->toJson().serialize()));
+                << AixLog::Color::GREEN << LOG_VAR(trade_->toJson().serialize()) << AixLog::Color::none);
         auto fillQty = std::min(orderQty, tradeQty);
         auto exec = std::make_shared<model::Execution>();
-        exec->setSymbol("");
+        exec->setSymbol(order_->getSymbol());
         exec->setSide(side);
         exec->setOrderID(order_->getOrderID());
         exec->setAccount(1.0);
@@ -82,6 +88,11 @@ std::shared_ptr<model::Execution> canTrade(const std::shared_ptr<model::Order>& 
         exec->setLeavesQty(order_->getLeavesQty()-fillQty);
 
         auto leavesQty = order_->getLeavesQty() - fillQty;
+        if (almost_equal(leavesQty, 0.0)) {
+            order_->setOrdStatus("Filled");
+        } else {
+            order_->setOrdStatus("PartiallyFilled");
+        }
         auto cumQty = order_->getCumQty() + fillQty;
         order_->setLeavesQty(leavesQty);
         order_->setCumQty(cumQty);
@@ -104,6 +115,8 @@ void TestEnv::playback(const std::string& tradeFile_, const std::string& quoteFi
     bool hasTrades = true;
 
     std::vector<std::shared_ptr<model::ModelBase>> outBuffer;
+    auto batchWriter = BatchWriter("replay", _context->config()->get("symbol"), _context->config()->get("storage"), 5);
+
     while (not stop) {
         if (!hasTrades or trade->getTimestamp() >= quote->getTimestamp()) {
             // trades are ahead of quotes, send the quote
@@ -113,24 +126,27 @@ void TestEnv::playback(const std::string& tradeFile_, const std::string& quoteFi
             _context->strategy()->evaluate();
             quote = getEvent<model::Quote>(quoteFile);
 
-            *_context->orderApi() >> outBuffer; //  >> std::vector
+            // record replay actions to a file.
+            *_context->orderApi() >> batchWriter;
             if (not quote) {
                 stop = true;
             }
         } else { // send the trade.
-
             // TODO Check if trade can match on what we have? then send EXECUTION
-            for (auto& order : _context->orderApi()->orders())
-            {
+            for (auto& order : _context->orderApi()->orders()) {
                 auto exec = canTrade(order.second, trade);
                 if (exec) {
                     // put resultant execution into marketData.
                     _context->orderApi()->addExecToPosition(exec);
-                    LOGINFO(AixLog::Color::GREEN << "TestEnv: Sending Trade: " << AixLog::Color::GREEN << exec->toJson().serialize());
-                    LOGINFO(AixLog::Color::GREEN << "TestEnv: Position is: " << AixLog::Color::GREEN << _position->toJson().serialize());
+                    LOGINFO(AixLog::Color::GREEN << "TestEnv: Sending Execution=" << AixLog::Color::GREEN << exec->toJson().serialize() << AixLog::Color::none);
+                    LOGINFO(AixLog::Color::GREEN << "TestEnv: Position is: " << AixLog::Color::GREEN << _position->toJson().serialize() << AixLog::Color::none);
                     *_context->marketData() << exec;
                     *_context->marketData() << order.second;
                     *_context->marketData() << _context->orderApi()->getPosition();
+
+                    if (exec->getOrdStatus() == "Filled") {
+                        LOGDEBUG("Filled order");
+                    }
                 }
             }
             *_context->marketData() << trade;
@@ -143,13 +159,6 @@ void TestEnv::playback(const std::string& tradeFile_, const std::string& quoteFi
             }
         }
 
-    }
-
-    // record replay actions to a file.
-    auto batchWriter = BatchWriter("replay", _context->config()->get("symbol"), "./");
-    for (auto& event : outBuffer) {
-        LOGINFO("Out Event" << event->toJson().serialize());
-        batchWriter.write(event);
     }
     batchWriter.write_batch();
 }

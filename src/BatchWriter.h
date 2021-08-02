@@ -32,7 +32,7 @@ class BatchWriter
     void update_file_location();
 
 public:
-    BatchWriter(std::string tableName_, std::string symbol_, std::string storage_);
+    BatchWriter(std::string tableName_, std::string symbol_, std::string storage_, int batchSize_);
     void write(std::shared_ptr<model::ModelBase> item_);
     void write_batch();
 

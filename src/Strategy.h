@@ -78,14 +78,9 @@ void Strategy<TOrdApi>::evaluate() {
     if (event->eventType() == EventType::BBO) {
         auto quote = event->getQuote();
         onBBO(event);
-        LOGINFO("BBO Update Bid=" << quote->getBidSize() << '@' << quote->getBidPrice()
-                    << " Ask=" << quote->getAskSize() << '@' << quote->getAskPrice()
-                    << " " << LOG_NVP("Timestamp", quote->getTimestamp().to_string()));
     } else if (event->eventType() == EventType::TradeUpdate) {
-        LOGDEBUG( "Trade: " << event->getTrade()->toJson().serialize());
         onTrade(event);
     } else if (event->eventType() == EventType::Exec) {
-        LOGDEBUG("Execution: " << event->getExec()->toJson().serialize());
         _allocations->update(event->getExec());
         onExecution(event);
     }
@@ -269,7 +264,7 @@ void Strategy<TOrdApi>::placeAllocations() {
     LOGINFO("Allocations have been reflected. " << LOG_NVP("amend", _amends.size())
             << LOG_NVP("new", _newOrders.size()) << LOG_NVP("cancel", _cancels.size()));
     _allocations->restAll();
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    //std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
 }
 
@@ -288,7 +283,11 @@ template<typename TOrdApi>
 void Strategy<TOrdApi>::updateFromTask(const pplx::task<std::vector<std::shared_ptr<model::Order>>>& task_) {
     for (auto& order : task_.get()) {
         auto index = _allocations->allocIndex(order->getPrice());
-        LOGINFO(order->toJson().serialize());
+        LOGINFO("Success: " << LOG_NVP("price", order->getPrice())
+                << LOG_NVP("ordStatus", order->getOrdStatus())
+                << LOG_NVP("orderQty", order->getOrderQty())
+                << LOG_NVP("leavesQty",order->getLeavesQty())
+                << LOG_NVP("cumQty", order->getCumQty()));
         _orders[index] = order;
     }
 }

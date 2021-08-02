@@ -25,8 +25,8 @@ void BatchWriter::update_file_location() {
     _fileLocation = location + "/" + _tableName + "_" + _symbol + ".json";
 }
 
-BatchWriter::BatchWriter(std::string tableName_, std::string symbol_, std::string storage_)
-:   _batchSize(1000)
+BatchWriter::BatchWriter(std::string tableName_, std::string symbol_, std::string storage_, int batchSize_)
+:   _batchSize(batchSize_)
 ,   _filehandle()
 ,   _batch()
 ,   _dateString(formatTime(std::chrono::system_clock::now()))
@@ -47,8 +47,7 @@ void BatchWriter::write(std::shared_ptr<model::ModelBase> item_) {
 void BatchWriter::write_batch() {
     LOGINFO("Writing batch " << LOG_VAR(_tableName) << " to " << LOG_VAR(_fileLocation));
     _filehandle.open(_fileLocation, std::ios::app);
-    for (auto& message : _batch)
-    {
+    for (auto& message : _batch) {
         _filehandle << *message << "\n";
     }
     _filehandle.close();

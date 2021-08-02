@@ -13,6 +13,7 @@
 #include <Object.h>
 #include <ApiClient.h>
 #include <model/Position.h>
+#include <BatchWriter.h>
 
 #include "Config.h"
 
@@ -128,7 +129,7 @@ public:
 
     // Testing helpers
 private:
-    void checkOrderExists(const std::shared_ptr<model::Order>& order);
+    std::shared_ptr<model::Order> checkOrderExists(const std::shared_ptr<model::Order>& order);
     bool hasMatchingOrder(const std::shared_ptr<model::Trade>& trade_);
 public:
     void addExecToPosition(const std::shared_ptr<model::Execution>& exec_);
@@ -136,6 +137,8 @@ public:
 public:
     void operator >> (const std::string& outEvent_);
     void operator >> (std::vector<std::shared_ptr<model::ModelBase>>& outBuffer_);
+    void operator >> (BatchWriter& outBuffer_);
+
     void operator << (utility::datetime time_);
 
     std::map<std::string, std::shared_ptr<model::Order>>& orders() { return _orders; }

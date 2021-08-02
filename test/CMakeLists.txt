@@ -27,8 +27,15 @@ add_executable(testTradingo
         TestSimpleMovingAverage.cpp
         TestAllocations.cpp
         TestStrategy.cpp
+        test_json.cpp
         test_main.cpp
         )
+
+add_executable(replayTradingo
+        replay/ReplayBreakOutStrategy.cpp
+        test_main.cpp)
+
+
 
 include_directories(${PROJECT_SOURCE_DIR}/src/)
 include_directories(${BITMEX_INCLUDE})
@@ -54,12 +61,22 @@ target_link_libraries(testTradingo
         boost_system
         pthread
         )
+target_link_libraries(replayTradingo
+        test_trading_funcs
+        ${GTEST_LIBRARY}
+        ${OPENSSL_CRYPTO_LIBRARY}
+        CppRestSwaggerClient
+        boost_system
+        pthread
+        )
+
 
 add_subdirectory(strategy)
 
 
 install(TARGETS
             testTradingo
+            replayTradingo
             test_trading_funcs
         RUNTIME DESTINATION bin
         LIBRARY DESTINATION lib

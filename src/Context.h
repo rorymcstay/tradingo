@@ -104,7 +104,7 @@ template<typename TMarketData, typename TOrderApi>
 Context<TMarketData, TOrderApi>::Context(const std::shared_ptr<Config>& config_) {
 
     LOGINFO("Context created. Version Info: GIT_BRANCH='" << GIT_BRANCH << "' GIT_TAG='" << GIT_TAG
-                    << "' GIT_REV='" << GIT_REV <<  "'");
+                    << "' GIT_REV='" << GIT_REV << "'");
 
     _config = config_;
     setupLogger();
