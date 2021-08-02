@@ -27,16 +27,18 @@ TEST(BreakOutStrategy, smoke_test)
 
 }
 
-TEST(BreakOutStrategy, DISABLED_test_playback) {
+TEST(BreakOutStrategy, test_playback) {
+    std::string storage = "/home/rory/tradingo/storage/tickRecorder/2021-07-12";
     TestEnv env({
         {"symbol", "XBTUSD"},
         {"clOrdPrefix", "MCST"},
         {"factoryMethod", "RegisterBreakOutStrategy"},
         {"startingAmount", "1000"},
         {"referencePrice", "35000"},
-        {"shortTermWindow", "10"},
-        {"longTermWindow", "100"},
-        {"logLevel", "info"}
+        {"shortTermWindow", "100"},
+        {"longTermWindow", "1000"},
+        {"logLevel", "info"},
+	{"logFileLocation", "/home/rory/tradingo/replay/RegisterBreakOutStrategy-" GIT_REV "-2021-07-12"}
     });
-    env.playback("trades_XBTUSD.json", "quotes_XBTUSD.json");
+    env.playback(storage+"/trades_XBTUSD.json", storage+"quotes_XBTUSD.json");
 }
