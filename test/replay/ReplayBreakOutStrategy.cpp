@@ -14,7 +14,7 @@ TEST(BreakOutStrategy, test_playback) {
         {"shortTermWindow", "1000"},
         {"longTermWindow", "100000"},
         {"logLevel", "info"},
-        {"storage", "./"}
+        {"storage", "/home/rory/tradingo/storage/tickRecorder/2021-07-09"}
     });
     env.playback("trades_XBTUSD.json", "quotes_XBTUSD.json");
 }
