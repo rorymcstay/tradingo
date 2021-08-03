@@ -197,9 +197,9 @@ void MarketData::subscribe() {
 
 void MarketData::reconnect() {
     LOGINFO("Reinitialising websocket client " << _wsClient);
+    _heartBeat->stop();
     _wsClient->close();
     _wsClient = std::shared_ptr<ws::client::websocket_callback_client>();
-
     init();
     subscribe();
 }

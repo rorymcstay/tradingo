@@ -14,7 +14,8 @@ void HeartBeat::startTimer(long cycle_) {
 HeartBeat::HeartBeat(std::shared_ptr<web::web_sockets::client::websocket_callback_client> client_)
 :   _wsClient(std::move(client_))
 ,   _cycle(0)
-,   _timerThread() {
+,   _timerThread()
+,   _stop(false) {
 
 
 }
@@ -29,7 +30,7 @@ void HeartBeat::init(const std::function<void()>& timeoutCallback_) {
 
     auto timedPong = [this, timeoutCallback_]() {
         long cycle;
-        while (_wsClient) {
+        while (not _stop) {
             cycle = _cycle;
             std::this_thread::sleep_for(std::chrono::seconds(5));
             // if cycle has not changes after 5 seconds
@@ -48,4 +49,8 @@ void HeartBeat::init(const std::function<void()>& timeoutCallback_) {
     };
     _timerThread = std::thread(timedPong);
     LOGINFO("Initiated HeartBeatThread");
+}
+
+void HeartBeat::stop() {
+    _stop = true;
 }

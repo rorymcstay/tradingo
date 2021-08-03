@@ -28,12 +28,14 @@ class HeartBeat {
     std::shared_ptr<web::web_sockets::client::websocket_callback_client> _wsClient;
     std::thread _timerThread;
     long _cycle;
+    bool _stop;
 
 public:
     HeartBeat(std::shared_ptr<web::web_sockets::client::websocket_callback_client>);
     void startTimer(long cycle_);
     void sendPing();
     void init(const std::function<void()>& timeoutCallback_);
+    void stop();
 
 };
 
