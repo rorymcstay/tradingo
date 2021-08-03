@@ -26,3 +26,19 @@ TEST(BreakOutStrategy, smoke_test)
     env << "TRADE foreignNotional=500 grossValue=1304800 homeNotional=0.013048000000000001 price=38321 side=Sell size=500 symbol=XBTUSD tickDirection=ZeroMinusTick trdMatchID=dac0793c-0ff4-74f5-a793-b00e3811a690" LN;
 
 }
+
+TEST(BreakOutStrategy, test_playback) {
+    std::string storage = "/home/rory/tradingo/storage/tickRecorder/2021-07-12";
+    TestEnv env({
+        {"symbol", "XBTUSD"},
+        {"clOrdPrefix", "MCST"},
+        {"factoryMethod", "RegisterBreakOutStrategy"},
+        {"startingAmount", "1000"},
+        {"referencePrice", "35000"},
+        {"shortTermWindow", "100"},
+        {"longTermWindow", "1000"},
+        {"logLevel", "info"},
+	{"logFileLocation", "/home/rory/tradingo/replay/RegisterBreakOutStrategy-" GIT_REV "-2021-07-12"}
+    });
+    env.playback(storage+"/trades_XBTUSD.json", storage+"quotes_XBTUSD.json");
+}
