@@ -27,6 +27,7 @@ add_executable(testTradingo
         TestSimpleMovingAverage.cpp
         TestAllocations.cpp
         TestStrategy.cpp
+        TestMarketData.cpp
         test_json.cpp
         test_main.cpp
         )
