@@ -74,6 +74,8 @@ target_link_libraries(replayTradingo
 
 add_subdirectory(strategy)
 
+add_compile_definitions("LIBRARY_LOCATION=\"${CMAKE_INSTALL_PREFIX}/lib\"")
+
 
 install(TARGETS
             testTradingo

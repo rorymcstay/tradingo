@@ -8,7 +8,7 @@ TestEnv::TestEnv(std::initializer_list<std::pair<std::string,std::string>> confi
 :   _config(std::make_shared<Config>(config_))
 ,   _position(std::make_shared<model::Position>())
 {
-    _config->set("libraryLocation", "/home/rory/install/tradingo/lib/libtest_trading_strategies.so");
+    _config->set("libraryLocation", LIBRARY_LOCATION"/libtest_trading_strategies.so");
     _config->set("baseUrl", "https://localhost:8888/api/v1");
     _config->set("apiKey", "dummy");
     _config->set("apiSecret", "dummy");
@@ -108,7 +108,10 @@ void TestEnv::playback(const std::string& tradeFile_, const std::string& quoteFi
     std::ifstream quoteFile;
     tradeFile.open(tradeFile_);
     quoteFile.open(quoteFile_);
-
+    if (not tradeFile.is_open())
+        FAIL() << LOG_VAR(tradeFile_) << " does not exist.";
+    if (not quoteFile.is_open())
+        FAIL() << LOG_VAR(quoteFile_) << " does not exist.";
     bool stop = false;
     auto quote = getEvent<model::Quote>(quoteFile);
     auto trade = getEvent<model::Trade>(tradeFile);
