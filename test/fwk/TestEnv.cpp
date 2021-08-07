@@ -8,7 +8,7 @@ TestEnv::TestEnv(std::initializer_list<std::pair<std::string,std::string>> confi
 :   _config(std::make_shared<Config>(config_))
 ,   _position(std::make_shared<model::Position>())
 {
-    _config->set("libraryLocation", "/home/rory/install/tradingo/lib/libtest_trading_strategies.so");
+    _config->set("libraryLocation", "/usr/lib/libtest_trading_strategies.so");
     _config->set("baseUrl", "https://localhost:8888/api/v1");
     _config->set("apiKey", "dummy");
     _config->set("apiSecret", "dummy");

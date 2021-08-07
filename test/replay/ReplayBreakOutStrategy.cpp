@@ -9,12 +9,13 @@ TEST(BreakOutStrategy, test_playback) {
         {"symbol", "XBTUSD"},
         {"clOrdPrefix", "MCST"},
         {"factoryMethod", "RegisterBreakOutStrategy"},
+        {"libraryLocation", "/usr/lib"},
         {"startingAmount", "1000"},
         {"referencePrice", "35000"},
         {"shortTermWindow", "1000"},
         {"longTermWindow", "100000"},
         {"logLevel", "info"},
-        {"storage", "/home/rory/tradingo/storage/tickRecorder/2021-07-09"}
+        {"storage", "./"}
     });
     env.playback("trades_XBTUSD.json", "quotes_XBTUSD.json");
 }
