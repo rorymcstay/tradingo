@@ -1,7 +1,7 @@
 connectionString=wss://testnet.bitmex.com
 baseUrl=https://testnet.bitmex.com/api/v1/
 
-logFileLocation=/home/tradingo/logs/tradingo
+logFileLocation=@CMAKE_INSTALL_PREFIX@/tradingo
 
 apiKey=-rqipjFxM43WSRKdC8keq83K
 apiSecret=uaCYIiwpwpXNKuVGCBPWE3ThzvyhOzKs6F9mWFzc9LueG3yd
@@ -13,8 +13,8 @@ factoryMethod=RegisterBreakOutStrategy
 clOrdPrefix=MCST2
 startingAmount=100
 
-shortTermWindow=2
-longTermWindow=5
+shortTermWindow=200
+longTermWindow=5000
 
 longExpose=1000
-shortExpose=1000
+shortExpose=100
