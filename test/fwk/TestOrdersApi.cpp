@@ -298,14 +298,14 @@ void TestOrdersApi::operator>>(BatchWriter& outVec) {
         _allEvents.pop();
     }
 }
-void TestOrdersApi::operator<<(utility::datetime time_) {
+void TestOrdersApi::operator<<(const utility::datetime& time_) {
     _time = time_;
 }
 
 void TestOrdersApi::set_order_timestamp(const std::shared_ptr<model::Order>& order_) {
 
     if (!order_->timestampIsSet()) {
-        if (!_time.is_initialized()){
+        if (_time.is_initialized()){
             order_->setTimestamp(_time);
         } else {
             order_->setTimestamp(utility::datetime::utc_now());

@@ -139,7 +139,7 @@ public:
     void operator >> (std::vector<std::shared_ptr<model::ModelBase>>& outBuffer_);
     void operator >> (BatchWriter& outBuffer_);
 
-    void operator << (utility::datetime time_);
+    void operator << (const utility::datetime& time_);
 
     std::map<std::string, std::shared_ptr<model::Order>>& orders() { return _orders; }
 };
