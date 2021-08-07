@@ -118,7 +118,8 @@ void TestEnv::playback(const std::string& tradeFile_, const std::string& quoteFi
     bool hasTrades = true;
 
     std::vector<std::shared_ptr<model::ModelBase>> outBuffer;
-    auto batchWriter = BatchWriter("replay", _context->config()->get("symbol"), _context->config()->get("storage"), 5);
+    auto batchWriter = BatchWriter("replay_orders", _context->config()->get("symbol"), _context->config()->get("storage"), 5);
+    auto positionWriter = BatchWriter("replay_positions", _context->config()->get("symbol"), _context->config()->get("storage"), 5);
 
     while (not stop) {
         if (!hasTrades or trade->getTimestamp() >= quote->getTimestamp()) {
@@ -131,6 +132,7 @@ void TestEnv::playback(const std::string& tradeFile_, const std::string& quoteFi
 
             // record replay actions to a file.
             *_context->orderApi() >> batchWriter;
+
             if (not quote) {
                 stop = true;
             }
@@ -139,10 +141,16 @@ void TestEnv::playback(const std::string& tradeFile_, const std::string& quoteFi
             for (auto& order : _context->orderApi()->orders()) {
                 auto exec = canTrade(order.second, trade);
                 if (exec) {
+                    _context->orderApi()->set_order_timestamp(order.second);
+                    exec->setTimestamp(order.second->getTimestamp());
                     // put resultant execution into marketData.
                     _context->orderApi()->addExecToPosition(exec);
-                    LOGINFO(AixLog::Color::GREEN << "TestEnv: Sending Execution=" << AixLog::Color::GREEN << exec->toJson().serialize() << AixLog::Color::none);
-                    LOGINFO(AixLog::Color::GREEN << "TestEnv: Position is: " << AixLog::Color::GREEN << _position->toJson().serialize() << AixLog::Color::none);
+                    LOGDEBUG(AixLog::Color::GREEN << "TestEnv: Sending Execution=" << AixLog::Color::GREEN << exec->toJson().serialize() << AixLog::Color::none);
+                    LOGINFO(AixLog::Color::GREEN << "TestEnv: Position is: " << AixLog::Color::GREEN
+                        << LOG_NVP("CurrentCost", _position->getCurrentCost())
+                        << LOG_NVP("Size", _position->getCurrentQty())
+                        << LOG_NVP("Time", _position->getTimestamp().to_string())
+                        << AixLog::Color::none);
                     *_context->marketData() << exec;
                     *_context->marketData() << order.second;
                     *_context->marketData() << _context->orderApi()->getPosition();
@@ -150,6 +158,7 @@ void TestEnv::playback(const std::string& tradeFile_, const std::string& quoteFi
                     if (exec->getOrdStatus() == "Filled") {
                         LOGDEBUG("Filled order");
                     }
+                    positionWriter.write(_context->orderApi()->getPosition());
                 }
             }
             *_context->marketData() << trade;

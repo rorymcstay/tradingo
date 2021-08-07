@@ -47,11 +47,11 @@ private:
 
     // functional helpers
     void add_order(const std::shared_ptr<model::Order>& order_);
-    void set_order_timestamp(const std::shared_ptr<model::Order>& order_);
     bool validateOrder(const std::shared_ptr<model::Order>& order_);
 
     // API
 public:
+    void set_order_timestamp(const std::shared_ptr<model::Order>& order_);
     TestOrdersApi(std::shared_ptr<io::swagger::client::api::ApiClient> ptr);
     void init(std::shared_ptr<Config> config_);
 
