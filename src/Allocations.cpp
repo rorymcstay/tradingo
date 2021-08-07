@@ -85,6 +85,7 @@ void Allocations::update(const std::shared_ptr<model::Execution> &exec_) {
             alloc->reduce(-exec_->getLastQty());
         }
     } else {
+        LOGWARN("Unhandled update " << LOG_VAR(execType));
         // unhandled update
     }
 }
