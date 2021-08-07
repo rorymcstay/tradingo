@@ -29,6 +29,7 @@ include_directories(${CPPLOGGER_INCLUDES})
 
 install(TARGETS
            tickRecorder
+           tradingo
         RUNTIME DESTINATION bin
         LIBRARY DESTINATION lib
 	COMPONENT app)

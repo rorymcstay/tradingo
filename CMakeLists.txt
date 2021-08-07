@@ -8,6 +8,7 @@ include(gitVersion.cmake)
 
 set(CMAKE_CXX_STANDARD 20)
 add_compile_options("-fPIC")
+set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
 
 add_subdirectory(thirdparty)
 add_subdirectory(src)
