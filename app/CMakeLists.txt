@@ -1,8 +1,7 @@
 link_directories(/usr/local/lib)
 
-add_executable(tickRecorder tickRecorder.cpp config/tickRecorder.cfg)
-add_executable(tradingo tradingo.cpp config/tradingo.cfg.tmpl)
-# add_executable(tradingoLoader tradingoLoader.cpp)
+add_executable(tickRecorder bin/tickRecorder.cpp etc/config/tickRecorder.cfg)
+add_executable(tradingo bin/tradingo.cpp etc/config/tradingo.cfg)
 
 
 target_link_libraries(tickRecorder
@@ -27,7 +26,10 @@ include_directories(${Boost_INCLUDE_DIR})
 include_directories(${OPENSSL_INCLUDE_DIR})
 include_directories(${CPPLOGGER_INCLUDES})
 
-configure_file(config/tradingo.cfg.tmpl config/tradingo.cfg @ONLY)
+configure_file(etc/config/tradingo.cfg etc/config/tradingo.cfg @ONLY)
+configure_file(etc/config/tickRecorder.cfg etc/config/tickRecorder.cfg @ONLY)
+configure_file(etc/tickrecorder.service  etc/tickrecorder.service @ONLY)
+configure_file(etc/tradingo.service etc/tradingo.service @ONLY)
 
 install(TARGETS
            tickRecorder
@@ -37,6 +39,10 @@ install(TARGETS
 	COMPONENT app)
 
 install(FILES
-	config/tickRecorder.cfg
-		config/tradingo.cfg.tmpl
+	etc/config/tickRecorder.cfg
+	etc/config/tradingo.cfg
 	DESTINATION etc/config COMPONENT app-config)
+
+install(FILES
+    scripts/tickrecorder.sh
+    DESTINATION scripts COMPONENT app-scripts)
