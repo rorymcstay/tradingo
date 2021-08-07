@@ -77,6 +77,8 @@ std::shared_ptr<model::Execution> canTrade(const std::shared_ptr<model::Order>& 
                 << AixLog::Color::GREEN << LOG_VAR(trade_->toJson().serialize()) << AixLog::Color::none);
         auto fillQty = std::min(orderQty, tradeQty);
         auto exec = std::make_shared<model::Execution>();
+        auto leavesQty = order_->getLeavesQty() - fillQty;
+
         exec->setSymbol(order_->getSymbol());
         exec->setSide(side);
         exec->setOrderID(order_->getOrderID());
@@ -85,9 +87,9 @@ std::shared_ptr<model::Execution> canTrade(const std::shared_ptr<model::Order>& 
         exec->setLastQty(fillQty);
         exec->setPrice(orderPx);
         exec->setCumQty(order_->getCumQty()+fillQty);
-        exec->setLeavesQty(order_->getLeavesQty()-fillQty);
+        exec->setLeavesQty(leavesQty);
+        exec->setExecType("Trade");
 
-        auto leavesQty = order_->getLeavesQty() - fillQty;
         if (almost_equal(leavesQty, 0.0)) {
             order_->setOrdStatus("Filled");
         } else {

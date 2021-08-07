@@ -30,6 +30,7 @@ public:
     void setSize(qty_t size) { _size = size; }
     void setTargetDelta(qty_t delta_) { _targetDelta = delta_; }
     qty_t getTargetDelta() const { return _targetDelta; }
+    void reduce(qty_t amount_) { _size -= amount_; }
 
     void rest();
     void cancelDelta();

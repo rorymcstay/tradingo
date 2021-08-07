@@ -79,12 +79,13 @@ void Allocations::update(const std::shared_ptr<model::Execution> &exec_) {
     } else if (execType == "Trade" || execType == "Canceled") {
         if (exec_->getSide() == "Buy") {
             // decrement
-            alloc->setSize(alloc->getSize() + exec_->getLastQty());
+            alloc->reduce(exec_->getLastQty());
         } else {
             // increment
-            alloc->setSize(alloc->getSize() - exec_->getLastQty());
+            alloc->reduce(-exec_->getLastQty());
         }
     } else {
+        LOGWARN("Unhandled update " << LOG_VAR(execType));
         // unhandled update
     }
 }

@@ -48,7 +48,7 @@ void BreakOutStrategy<TORDApi>::init(const std::shared_ptr<Config>& config_) {
 
     _buyThreshold = std::atof(config_->get("buyThreshold", "0.0").c_str());
     _shortExpose = std::atof(config_->get("shortExpose", "0.0").c_str());
-    _longExpose = std::atof(config_->get("longExpose", "100.0").c_str());
+    _longExpose = std::atof(config_->get("longExpose", "1000.0").c_str());
 
     auto primePercent = std::atof(config_->get("primePercent", "1.0").c_str());
     auto shortTermWindow = std::stoi(config_->get("shortTermWindow"));
