@@ -33,6 +33,8 @@ TestOrdersApi::order_amend(boost::optional<utility::string_t> orderID, boost::op
     order->setPrice(price.value());
     order->setStopPx(stopPx.value());
     set_order_timestamp(order);
+    order->setOrdStatus("Replaced");
+    set_order_timestamp(order);
     _orderAmends.emplace(order);
     auto task = pplx::task_from_result(order);
     //auto task = pplx::task<decltype(order)>(order);
@@ -74,7 +76,7 @@ TestOrdersApi::order_cancel(boost::optional<utility::string_t> orderID,
         LOGWARN(LOG_NVP("ClOrdID",clOrdID.value()) << " not found to cancel.");
         _orderCancels.push(nullptr);
     } else {
-        _orders[clOrdID.value()]->setOrdStatus("PendingCancel");
+        _orders[clOrdID.value()]->setOrdStatus("Canceled");
         _orders[clOrdID.value()]->setOrderQty(0.0);
         set_order_timestamp(_orders[clOrdID.value()]);
         //validateOrder(_orders[orderID.value()]);
@@ -82,7 +84,6 @@ TestOrdersApi::order_cancel(boost::optional<utility::string_t> orderID,
         _orderCancels.push(_orders[clOrdID.value()]);
         _allEvents.push(_orders[clOrdID.value()]);
         _orders.erase(clOrdID.value());
-
     }
     return pplx::task_from_result(ordersRet);
 }
@@ -92,9 +93,10 @@ TestOrdersApi::order_cancelAll(boost::optional<utility::string_t> symbol, boost:
                                boost::optional<utility::string_t> text) {
     std::vector<std::shared_ptr<model::Order>> out = {};
     for (auto& orders : _orders) {
-        orders.second->setOrdStatus("PendingCancel");
+        orders.second->setOrdStatus("Canceled");
         _orderCancels.push(orders.second);
         out.push_back(orders.second);
+        set_order_timestamp(orders.second);
         _allEvents.push(orders.second);
         set_order_timestamp(orders.second);
     }
@@ -291,8 +293,8 @@ void TestOrdersApi::operator>>(BatchWriter& outVec) {
     while (!_allEvents.empty()){
         auto top = _allEvents.front();
         auto val = top->toJson();
-        LOGINFO(AixLog::Color::GREEN << "TestOrdersApi::OUT>> " << AixLog::Color::GREEN << val.serialize() << AixLog::Color::none);
         val.as_object()["timestamp"] = web::json::value(_time.to_string());
+        LOGINFO(AixLog::Color::GREEN << "TestOrdersApi::OUT>> " << AixLog::Color::GREEN << val.serialize() << AixLog::Color::none);
         top->fromJson(val);
         outVec.write(top);
         _allEvents.pop();
