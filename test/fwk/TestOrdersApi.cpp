@@ -330,10 +330,11 @@ bool TestOrdersApi::hasMatchingOrder(const std::shared_ptr<model::Trade>& trade_
 
 void TestOrdersApi::addExecToPosition(const std::shared_ptr<model::Execution>& exec_) {
 
-    qty_t newPosition = _position->getCurrentQty() + exec_->getLastQty();
-    qty_t newCost = _position->getCurrentCost() + (exec_->getPrice() * exec_->getLastQty());
+    qty_t newPosition = _position->getCurrentQty() + ((exec_->getSide() == "Buy") ? exec_->getLastQty() : -exec_->getLastQty());
+    qty_t newCost = _position->getCurrentCost() + ((1/exec_->getPrice() * exec_->getLastQty())*(exec_->getSide()=="Buy" ? 1 : -1));
     _position->setCurrentQty(newPosition);
     _position->setCurrentCost(newCost);
+    _position->setTimestamp(exec_->getTimestamp());
 }
 
 const std::shared_ptr<model::Position> &TestOrdersApi::getPosition() const {

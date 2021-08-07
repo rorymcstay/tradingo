@@ -74,7 +74,7 @@ void BreakOutStrategy<TORDApi>::onExecution(const std::shared_ptr<Event> &event_
 template<typename TORDApi>
 void BreakOutStrategy<TORDApi>::onTrade(const std::shared_ptr<Event> &event_) {
     auto trade = event_->getTrade();
-    LOGINFO(LOG_NVP("Price", trade->getPrice()) << LOG_NVP("Size", trade->getSize())
+    LOGDEBUG(LOG_NVP("Price", trade->getPrice()) << LOG_NVP("Size", trade->getSize())
             << LOG_NVP("Side", trade->getSide())<< LOG_NVP("Timestamp", trade->getTimestamp().to_string()));
 }
 
