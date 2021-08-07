@@ -294,7 +294,7 @@ void TestOrdersApi::operator>>(BatchWriter& outVec) {
         auto top = _allEvents.front();
         auto val = top->toJson();
         val.as_object()["timestamp"] = web::json::value(_time.to_string());
-        LOGINFO(AixLog::Color::GREEN << "TestOrdersApi::OUT>> " << AixLog::Color::GREEN << val.serialize() << AixLog::Color::none);
+        LOGDEBUG(AixLog::Color::GREEN << "TestOrdersApi::OUT>> " << AixLog::Color::GREEN << val.serialize() << AixLog::Color::none);
         top->fromJson(val);
         outVec.write(top);
         _allEvents.pop();
