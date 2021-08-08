@@ -54,6 +54,8 @@ std::shared_ptr<T> getEvent(std::ifstream& fileHandle_) {
     auto quote = std::make_shared<T>();
     if (not std::getline(fileHandle_, str))
         return nullptr;
+    if (str.empty())
+        return getEvent<T>(fileHandle_);
     auto json = web::json::value::parse(str);
     quote->fromJson(json);
     return quote;
