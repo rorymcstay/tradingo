@@ -86,7 +86,7 @@ void Strategy<TOrdApi>::evaluate() {
         _allocations->update(event->getExec());
         auto exec = event->getExec();
         if (exec->getExecType() == "Trade") {
-            _balance += (exec->getLastPx() * exec->getLastQty() * ((exec->getSide() == "Buy") ? 1 : -1));
+            _balance += (1/exec->getLastPx() * exec->getLastQty() * ((exec->getSide() == "Buy") ? 1 : -1));
         }
         onExecution(event);
     }
