@@ -51,6 +51,7 @@ public:
 protected:
     // allocation api
     std::string _symbol;
+    price_t _balance;
 
 public:
     std::shared_ptr<model::Instrument> instrument() const { return _marketData ? _marketData->instrument() : nullptr; }
@@ -83,6 +84,10 @@ void Strategy<TOrdApi>::evaluate() {
         onTrade(event);
     } else if (event->eventType() == EventType::Exec) {
         _allocations->update(event->getExec());
+        auto exec = event->getExec();
+        if (exec->getExecType() == "Trade") {
+            _balance += (exec->getLastPx() * exec->getLastQty() * ((exec->getSide() == "Buy") ? 1 : -1));
+        }
         onExecution(event);
     }
 
@@ -111,6 +116,7 @@ void Strategy<TOrdApi>::init(const std::shared_ptr<Config>& config_) {
     auto tickSize = instrument()->getTickSize();
     auto referencePrice = instrument()->getPrevPrice24h();
     auto lotSize = instrument()->getLotSize();
+    _balance = std::atof(_config->get("balance", "0.01"));
 
 
     LOGINFO("Initialising allocations with " << LOG_VAR(referencePrice) << LOG_VAR(tickSize));

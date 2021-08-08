@@ -155,6 +155,7 @@ void TestEnv::playback(const std::string& tradeFile_, const std::string& quoteFi
                         << "OnTrade: "
                         << LOG_NVP("ClOrdID", exec->getClOrdID())
                         << LOG_NVP("OrderID", exec->getOrderID())
+                        << LOG_NVP("Side", order.second->getSide())
                         << LOG_NVP("OrderQty", exec->getOrderQty())
                         << LOG_NVP("Price", exec->getPrice())
                         << LOG_NVP("LastQty", exec->getLastQty())

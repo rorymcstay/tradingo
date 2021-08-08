@@ -67,9 +67,11 @@ void BreakOutStrategy<TORDApi>::onExecution(const std::shared_ptr<Event> &event_
             << LOG_NVP("cumQty", exec->getCumQty()) << LOG_NVP("lastQty", exec->getLastQty()));
     std::shared_ptr<model::Position> pos = StrategyApi::getMD()->getPositions().at(StrategyApi::_symbol);
     LOGINFO("Position: " << LOG_NVP("CurrentQty", pos->getCurrentQty())
+            << LOG_NVP("CurrentCost", pos->getCurrentCost())
             << LOG_NVP("UnrealisedPnl", pos->getUnrealisedPnl())
             << LOG_NVP("RealisedPnl", pos->getRealisedPnl())
-            << LOG_NVP("UnrealisedRoe%", pos->getUnrealisedRoePcnt()));
+            << LOG_NVP("UnrealisedRoe%", pos->getUnrealisedRoePcnt())
+            << LOG_NVP("Balance", StrategyApi::_balance));
 }
 
 template<typename TORDApi>
