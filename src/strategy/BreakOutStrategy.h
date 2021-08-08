@@ -109,6 +109,8 @@ void BreakOutStrategy<TORDApi>::onBBO(const std::shared_ptr<Event> &event_) {
         LOGDEBUG("No quantity to trade");
         return;
     } else {
+        //qtyToTrade *= 0.10;
+        //qtyToTrade = std::max(100.0, qtyToTrade);
         LOGINFO(LOG_NVP("Signal", side) << LOG_VAR(_shortTermAvg) << LOG_VAR(_longTermAvg)
                                         << LOG_VAR(qtyToTrade) << LOG_VAR(price));
         if (_previousDirection != side) {
@@ -140,9 +142,17 @@ template<typename TORDApi>
 qty_t BreakOutStrategy<TORDApi>::getQtyToTrade(const std::string& side_) {
     std::shared_ptr<model::Position> currentPosition = StrategyApi::getMD()->getPositions().at(StrategyApi::_symbol);
     auto currentSize = currentPosition->getCurrentQty();
+    if (std::abs(StrategyApi::allocations()->totalAllocated()) > std::max(std::abs(_shortExpose), std::abs(_longExpose))) {
+        return 0;
+    }
     auto currentlyAllocated = StrategyApi::allocations()->totalAllocated();
     if (side_ == "Buy") {
         // if we are buying
+        if (greater_equal(_longExpose, currentSize)) {
+            return 100;
+        } else {
+            return 0;
+        }
         auto toMakeUp = _longExpose - currentSize;
         if (toMakeUp < 0) {
             //
@@ -153,6 +163,11 @@ qty_t BreakOutStrategy<TORDApi>::getQtyToTrade(const std::string& side_) {
             return toMakeUp;
         }
     } else {
+        if (greater_equal(currentSize, _shortExpose)) {
+            return -100;
+        } else {
+            return 0;
+        }
         auto toMakeUp = (_shortExpose - currentSize);
         if (toMakeUp > 0) {
             return 0;
