@@ -3,7 +3,7 @@
 //
 #include <gtest/gtest.h>
 #define _TURN_OFF_PLATFORM_STRING
-#include "fwk/TestEnv.h"
+#include "../fwk/TestEnv.h"
 
 TEST(BreakOutStrategy, smoke_test)
 {

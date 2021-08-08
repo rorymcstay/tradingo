@@ -215,6 +215,8 @@ void Strategy<TOrdApi>::placeAllocations() {
                                                    << LOG_NVP("order", toSend->toJson().serialize()));
                 _allocations->get(toSend->getPrice())->cancelDelta();
             }
+            _cancels.clear();
+
         }
     }
 
@@ -233,12 +235,11 @@ void Strategy<TOrdApi>::placeAllocations() {
                 });
         } catch (api::ApiException &ex_) {
             LOGERROR("Error amending orders: " << ex_.getContent()->rdbuf() << LOG_VAR(ex_.what()));
-            _amends.clear();
             _allocations->cancel([](const std::shared_ptr<Allocation> &alloc_) {
                 return alloc_->isAmendDown() || alloc_->isAmendUp();
             });
-
         }
+        _amends.clear();
     }
 
     // TODO: placeNewOrders method.
@@ -255,9 +256,9 @@ void Strategy<TOrdApi>::placeAllocations() {
             });
         } catch (api::ApiException &ex_) {
             LOGERROR("Error placing new orders " << ex_.getContent()->rdbuf() << LOG_VAR(ex_.what()));
-            _newOrders.clear();
             _allocations->cancel([](const std::shared_ptr<Allocation>& alloc_) {return alloc_->isNew();});
         }
+        _newOrders.clear();
 
     }
 

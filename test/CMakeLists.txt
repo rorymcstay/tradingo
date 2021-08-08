@@ -21,7 +21,7 @@ add_library(test_trading_funcs
 add_executable(testTradingo
 
         # test files
-        TestBreakOutStrategy.cpp
+        strategy/TestBreakOutStrategy.cpp
 
         test_api_OrderApi.cpp
         TestSimpleMovingAverage.cpp
