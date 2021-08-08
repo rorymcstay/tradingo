@@ -20,6 +20,7 @@ class BreakOutStrategy final : public Strategy<TORDApi> {
     price_t _shortTermAvg;
     qty_t _shortExpose;
     qty_t _longExpose;
+    qty_t _displaySize;
 
     price_t _buyThreshold;
 
@@ -50,6 +51,7 @@ void BreakOutStrategy<TORDApi>::init(const std::shared_ptr<Config>& config_) {
     _buyThreshold = std::atof(config_->get("buyThreshold", "0.0").c_str());
     _shortExpose = std::atof(config_->get("shortExpose", "0.0").c_str());
     _longExpose = std::atof(config_->get("longExpose", "1000.0").c_str());
+    _displaySize = std::atof(config_->get("displaySize", "200").c_str());
 
     auto primePercent = std::atof(config_->get("primePercent", "1.0").c_str());
     auto shortTermWindow = std::stoi(config_->get("shortTermWindow"));
@@ -142,7 +144,7 @@ template<typename TORDApi>
 qty_t BreakOutStrategy<TORDApi>::getQtyToTrade(const std::string& side_) {
     std::shared_ptr<model::Position> currentPosition = StrategyApi::getMD()->getPositions().at(StrategyApi::_symbol);
     auto currentSize = currentPosition->getCurrentQty();
-    if (std::abs(StrategyApi::allocations()->totalAllocated()) > std::max(std::abs(_shortExpose), std::abs(_longExpose))) {
+    if (std::abs(StrategyApi::allocations()->totalAllocated()) > _displaySize) {
         return 0;
     }
     auto currentlyAllocated = StrategyApi::allocations()->totalAllocated();

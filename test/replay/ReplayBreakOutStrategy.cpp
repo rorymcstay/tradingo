@@ -10,6 +10,7 @@ TEST(BreakOutStrategy, test_playback) {
         {"clOrdPrefix", "MCST"},
         {"factoryMethod", "RegisterBreakOutStrategy"},
         {"startingAmount", "1000"},
+        {"displaySize", "200"},
         {"referencePrice", "35000"},
         {"shortTermWindow", "10000"},
         {"longTermWindow", "50000"},
