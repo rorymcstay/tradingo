@@ -20,7 +20,7 @@ class Allocation {
     qty_t _size;
     qty_t _targetDelta;
 public:
-    std::string getSide() const { return (_size < 0) ? "Sell" : "Buy"; }
+    std::string getSide() const;
     std::string targetSide() const { return (_size + _targetDelta < 0.0) ? "Sell" : "Buy"; }
     const std::shared_ptr<model::Order> &getOrder() const { return _order; }
     void setOrder(const std::shared_ptr<model::Order> &order) { _order = order; }

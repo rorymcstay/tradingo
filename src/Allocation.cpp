@@ -28,3 +28,10 @@ void Allocation::rest() {
 void Allocation::cancelDelta() {
     _targetDelta = 0;
 }
+
+std::string Allocation::getSide() const {
+    if (almost_equal(_size, 0.0))
+        return "";
+    else
+        return (less_equal(_size, 0.0)) ? "Sell" : "Buy";
+}

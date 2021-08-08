@@ -140,6 +140,10 @@ public:
     using QuotePtr = std::shared_ptr<model::Quote>;
     using ExecPtr = std::shared_ptr<model::Execution>;
 
+    std::function<void()> _callback;
+
+    void setCallback(const std::function<void()> &callback);
+
 private:
     std::priority_queue<std::shared_ptr<Event>, std::vector<std::shared_ptr<Event>>, QueueArrange> _eventBuffer;
     //std::unordered_map<std::string, std::shared_ptr<Signal>> _signals;
@@ -173,6 +177,7 @@ protected:
     void handlePositions(std::vector<std::shared_ptr<model::Position>>& trades_, const std::string& action_);
     void handleExecutions(std::vector<std::shared_ptr<model::Execution>>& execs_, const std::string& action_);
     void handleOrders(std::vector<std::shared_ptr<model::Order>>& orders_, const std::string& action_);
+    void callback() { _callback(); }
 
 protected:
     template<typename T>
@@ -188,8 +193,8 @@ protected:
     void updateKey(const web::json::array& values_, std::vector<std::string>& key_);
 
 public:
-    ~MarketDataInterface() {};
-    MarketDataInterface(const std::shared_ptr<Config>& config_);
+    ~MarketDataInterface() = default;
+    explicit MarketDataInterface(const std::shared_ptr<Config>& config_);
     std::shared_ptr<Event> read();
     const std::unordered_map<std::string, OrderPtr>& getOrders() const;
     const std::queue<ExecPtr>& getExecutions() const;

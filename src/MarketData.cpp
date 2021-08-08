@@ -117,6 +117,7 @@ void MarketData::init() {
                 } else if (msgJson.has_field("cancelTime")) {
                     LOGWARN("CancelAfter success: " << stringVal);
                 }
+                callback();
             });
 
     _wsClient->set_close_handler(
@@ -333,8 +334,12 @@ const std::shared_ptr<model::Instrument>& MarketDataInterface::instrument() cons
 
 MarketDataInterface::MarketDataInterface(const std::shared_ptr<Config>& config_)
 :   _instrumentApi(nullptr)
-,   _symbol(config_->get("symbol")) {
+,   _symbol(config_->get("symbol"))
+,   _callback([]() {}){
+}
 
+void MarketDataInterface::setCallback(const std::function<void()> &callback) {
+    _callback = callback;
 }
 
 std::string getPositionKey(const std::shared_ptr<model::Position> &pos_) {

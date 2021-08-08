@@ -73,8 +73,9 @@ std::shared_ptr<model::Execution> canTrade(const std::shared_ptr<model::Order>& 
         return nullptr;
         // order is filled, do nothing
     } else if ((side == "Buy" ? tradePx <= orderPx : tradePx >= orderPx)) {
-        LOGINFO(AixLog::Color::GREEN << "TestEnv::IN>> Tradable order found: " << AixLog::Color::GREEN << order_->toJson().serialize()
-                << AixLog::Color::GREEN << LOG_VAR(trade_->toJson().serialize()) << AixLog::Color::none);
+        LOGDEBUG(AixLog::Color::GREEN << "Tradable order found: "
+                << LOG_NVP("Order", order_->toJson().serialize())
+                << LOG_NVP("Trade", trade_->toJson().serialize()) << AixLog::Color::none);
         auto fillQty = std::min(orderQty, tradeQty);
         auto exec = std::make_shared<model::Execution>();
         auto leavesQty = order_->getLeavesQty() - fillQty;
@@ -82,6 +83,7 @@ std::shared_ptr<model::Execution> canTrade(const std::shared_ptr<model::Order>& 
         exec->setSymbol(order_->getSymbol());
         exec->setSide(side);
         exec->setOrderID(order_->getOrderID());
+        exec->setClOrdID(order_->getClOrdID());
         exec->setAccount(1.0);
         exec->setLastPx(tradePx);
         exec->setLastQty(fillQty);
@@ -89,7 +91,7 @@ std::shared_ptr<model::Execution> canTrade(const std::shared_ptr<model::Order>& 
         exec->setCumQty(order_->getCumQty()+fillQty);
         exec->setLeavesQty(leavesQty);
         exec->setExecType("Trade");
-
+        exec->setOrderQty(order_->getOrderQty());
         if (almost_equal(leavesQty, 0.0)) {
             order_->setOrdStatus("Filled");
         } else {
@@ -98,6 +100,8 @@ std::shared_ptr<model::Execution> canTrade(const std::shared_ptr<model::Order>& 
         auto cumQty = order_->getCumQty() + fillQty;
         order_->setLeavesQty(leavesQty);
         order_->setCumQty(cumQty);
+        LOGDEBUG(AixLog::Color::GREEN << LOG_NVP("Order", order_->toJson().serialize()) << AixLog::Color::none);
+
         return exec;
     } else {
         return nullptr;
@@ -111,9 +115,9 @@ void TestEnv::playback(const std::string& tradeFile_, const std::string& quoteFi
     tradeFile.open(tradeFile_);
     quoteFile.open(quoteFile_);
     if (not tradeFile.is_open())
-        FAIL() << LOG_VAR(tradeFile_) << " does not exist.";
+        FAIL() << "File " << LOG_VAR(tradeFile_) << " does not exist.";
     if (not quoteFile.is_open())
-        FAIL() << LOG_VAR(quoteFile_) << " does not exist.";
+        FAIL() << "File " << LOG_VAR(quoteFile_) << " does not exist.";
     bool stop = false;
     auto quote = getEvent<model::Quote>(quoteFile);
     auto trade = getEvent<model::Trade>(tradeFile);
@@ -147,12 +151,26 @@ void TestEnv::playback(const std::string& tradeFile_, const std::string& quoteFi
                     exec->setTimestamp(order.second->getTimestamp());
                     // put resultant execution into marketData.
                     _context->orderApi()->addExecToPosition(exec);
-                    LOGDEBUG(AixLog::Color::GREEN << "TestEnv: Sending Execution=" << AixLog::Color::GREEN << exec->toJson().serialize() << AixLog::Color::none);
-                    LOGINFO(AixLog::Color::GREEN << "TestEnv: Position is: " << AixLog::Color::GREEN
+                    LOGINFO(AixLog::Color::GREEN
+                        << "OnTrade: "
+                        << LOG_NVP("ClOrdID", exec->getClOrdID())
+                        << LOG_NVP("OrderID", exec->getOrderID())
+                        << LOG_NVP("OrderQty", exec->getOrderQty())
+                        << LOG_NVP("Price", exec->getPrice())
+                        << LOG_NVP("LastQty", exec->getLastQty())
+                        << LOG_NVP("LastPx", exec->getLastPx())
+                        << LOG_NVP("CumQty", order.second->getCumQty())
+                        << LOG_NVP("LeavesQty", order.second->getLeavesQty())
+                        << LOG_NVP("OrdStatus", order.second->getOrdStatus())
+                        << AixLog::Color::none);
+                    LOGINFO(AixLog::Color::GREEN
+                        << "New Position: "
                         << LOG_NVP("CurrentCost", _position->getCurrentCost())
                         << LOG_NVP("Size", _position->getCurrentQty())
                         << LOG_NVP("Time", _position->getTimestamp().to_string())
                         << AixLog::Color::none);
+
+                    // put the position, order and execution into market data.
                     *_context->marketData() << exec;
                     *_context->marketData() << order.second;
                     *_context->marketData() << _context->orderApi()->getPosition();
@@ -163,7 +181,6 @@ void TestEnv::playback(const std::string& tradeFile_, const std::string& quoteFi
                     positionWriter.write(_context->orderApi()->getPosition());
                 }
             }
-            *_context->marketData() << trade;
             _context->strategy()->evaluate();
 
             trade = getEvent<model::Trade>(tradeFile);

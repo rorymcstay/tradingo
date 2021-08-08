@@ -162,6 +162,7 @@ void Context<TMarketData, TOrderApi>::initStrategy() {
     _strategy = strategy;
 
     _strategy->init(_config);
+    _marketData->setCallback([this]() { _strategy->evaluate(); });
 
 }
 

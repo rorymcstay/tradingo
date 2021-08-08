@@ -74,7 +74,7 @@ const std::shared_ptr<Allocation>& Allocations::get(price_t price_) {
 void Allocations::update(const std::shared_ptr<model::Execution> &exec_) {
     auto execType = exec_->getExecType();
     auto alloc = get(exec_->getPrice());
-    if (execType == "New") {
+    if (execType == "New" || execType == "Replaced") {
         // do nothing - order placed
     } else if (execType == "Trade" || execType == "Canceled") {
         if (exec_->getSide() == "Buy") {

@@ -36,7 +36,7 @@ class TestEnv
     std::shared_ptr<model::Position> _position;
 public:
     const std::shared_ptr<TStrategy>& strategy() const { return _context->strategy(); }
-    explicit TestEnv(std::initializer_list<std::pair<std::string,std::string>>);
+    TestEnv(std::initializer_list<std::pair<std::string, std::string>>);
 
     void playback(const std::string& tradeFile_, const std::string& quoteFile_);
 

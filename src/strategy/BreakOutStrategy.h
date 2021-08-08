@@ -25,6 +25,7 @@ class BreakOutStrategy final : public Strategy<TORDApi> {
 
     SMA_T _smaLow;
     SMA_T _smaHigh;
+    std::string _previousDirection;
 
 public:
     ~BreakOutStrategy();
@@ -96,11 +97,11 @@ void BreakOutStrategy<TORDApi>::onBBO(const std::shared_ptr<Event> &event_) {
         qtyToTrade = getQtyToTrade("Buy");
         price = bidPrice;
         side = "Buy";
+
     } else if (_smaLow.is_ready() && _smaHigh.is_ready()) {
         qtyToTrade = getQtyToTrade("Sell");
         price = askPrice;
         side = "Sell";
-        StrategyApi::allocations()->addAllocation(askPrice, qtyToTrade, "Sell");
     }
     if (almost_equal(qtyToTrade, 0.0)) {
         LOGDEBUG("No quantity to trade");
@@ -108,7 +109,13 @@ void BreakOutStrategy<TORDApi>::onBBO(const std::shared_ptr<Event> &event_) {
     } else {
         LOGINFO(LOG_NVP("Signal", side) << LOG_VAR(_shortTermAvg) << LOG_VAR(_longTermAvg)
                                         << LOG_VAR(qtyToTrade) << LOG_VAR(price));
+        if (_previousDirection != side) {
+            StrategyApi::allocations()->cancel([this](const std::shared_ptr<Allocation>& alloc_) {
+                return !alloc_->getSide().empty() && alloc_->getSide() == _previousDirection;
+            });
+        }
         StrategyApi::allocations()->addAllocation(price, qtyToTrade, side);
+        _previousDirection = side;
     }
 }
 
@@ -123,7 +130,8 @@ BreakOutStrategy<TORDApi>::BreakOutStrategy(std::shared_ptr<MarketDataInterface>
 ,   _shortTermAvg()
 ,   _longTermAvg()
 ,   _longExpose()
-,   _shortExpose() {
+,   _shortExpose()
+,   _previousDirection(""){
 }
 
 template<typename TORDApi>
