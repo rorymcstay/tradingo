@@ -12,7 +12,7 @@ TEST(BreakOutStrategy, test_playback) {
         {"startingAmount", "1000"},
         {"referencePrice", "35000"},
         {"shortTermWindow", "10000"},
-        {"longTermWindow", "80000"},
+        {"longTermWindow", "50000"},
         {"logLevel", "info"},
         {"storage", "/home/rory/replays/"}
     });
