@@ -11,6 +11,7 @@ TEST(BreakOutStrategy, test_playback) {
         {"factoryMethod", "RegisterBreakOutStrategy"},
         {"libraryLocation", "/usr/lib"},
         {"startingAmount", "1000"},
+        {"displaySize", "200"},
         {"referencePrice", "35000"},
         {"shortTermWindow", "10000"},
         {"longTermWindow", "50000"},
