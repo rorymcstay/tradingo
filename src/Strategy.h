@@ -70,6 +70,7 @@ Strategy<TOrdApi>::Strategy(std::shared_ptr<MarketDataInterface> md_, std::share
 
 template<typename TOrdApi>
 void Strategy<TOrdApi>::evaluate() {
+    LOGDEBUG(AixLog::Color::YELLOW << "======== START Evaluate ========" << AixLog::Color::none);
     auto event = _marketData->read();
     if (!event) {
         return;
@@ -88,6 +89,7 @@ void Strategy<TOrdApi>::evaluate() {
     if (allocations()->modified()) {
         placeAllocations();
     }
+    LOGDEBUG(AixLog::Color::YELLOW << "======== FINISH Evaluate ========" << AixLog::Color::none);
 }
 
 template<typename TOrdApi>
@@ -183,8 +185,8 @@ void Strategy<TOrdApi>::placeAllocations() {
             } else if (allocation->isCancel()) {
                 LOGINFO("Cancelling: " << LOG_VAR(order->getClOrdID()) << LOG_VAR(order->getPrice())
                                        << LOG_VAR(order->getOrderQty()));
-                order->setOrdStatus("PendingCancel");
-                order->setOrderQty(0);
+                currentOrder->setOrdStatus("PendingCancel");
+                currentOrder->setOrderQty(0);
                 _cancels.push_back(order);
             } else if (allocation->isNew()) {
                 LOGWARN("Order present but new allocation.");
@@ -210,7 +212,9 @@ void Strategy<TOrdApi>::placeAllocations() {
     for (auto& toSend : _cancels) {
         if (!_cancels.empty()) {
             try {
-                _orderEngine->order_cancel(boost::none, toSend->getOrigClOrdID(), std::string("Allocation removed")).then(
+                _orderEngine->order_cancel(boost::none,
+                                           toSend->origClOrdIDIsSet() ? toSend->getOrigClOrdID() : toSend->getClOrdID(),
+                                           std::string("Allocation removed")).then(
                     [this, &toSend](const pplx::task<std::vector<std::shared_ptr<model::Order>>> &orders_) {
                         this->updateFromTask(orders_);
                     });
@@ -258,7 +262,7 @@ void Strategy<TOrdApi>::placeAllocations() {
             });
         } catch (api::ApiException &ex_) {
             LOGERROR("Error placing new orders " << ex_.getContent()->rdbuf() << LOG_VAR(ex_.what()));
-            _allocations->cancel([](const std::shared_ptr<Allocation>& alloc_) {return alloc_->isNew();});
+            _allocations->cancel([](const std::shared_ptr<Allocation>& alloc_) { return alloc_->isNew() || alloc_->isChangingSide(); });
         }
     }
 
@@ -268,7 +272,6 @@ void Strategy<TOrdApi>::placeAllocations() {
     _cancels.clear();
     _newOrders.clear();
     _amends.clear();
-    //std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
 }
 
@@ -286,13 +289,18 @@ std::shared_ptr<model::Order> Strategy<TOrdApi>::createOrder(const std::shared_p
 template<typename TOrdApi>
 void Strategy<TOrdApi>::updateFromTask(const pplx::task<std::vector<std::shared_ptr<model::Order>>>& task_) {
     for (auto& order : task_.get()) {
-        auto index = _allocations->allocIndex(order->getPrice());
+        long index = _allocations->allocIndex(order->getPrice());
         LOGINFO("Success: " << LOG_NVP("price", order->getPrice())
                 << LOG_NVP("ordStatus", order->getOrdStatus())
                 << LOG_NVP("orderQty", order->getOrderQty())
                 << LOG_NVP("leavesQty",order->getLeavesQty())
                 << LOG_NVP("cumQty", order->getCumQty()));
         _orders[index] = order;
+
+        if (order->getOrdStatus() == "Canceled") {
+            long priceIndex = _allocations->allocIndex(order->getPrice());
+            _orders.erase(priceIndex);
+        }
     }
 }
 

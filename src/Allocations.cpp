@@ -119,9 +119,12 @@ void Allocations::cancel(const std::function<bool(const std::shared_ptr<Allocati
 void Allocations::cancelOrders(const std::function<bool(const std::shared_ptr<Allocation>&)>& predicate_) {
 
     std::for_each(_data.begin(), _data.end(), [predicate_](const std::shared_ptr<Allocation>& alloc_ ) {
-        if (predicate_(alloc_))
-            LOGINFO("Allocations::cancel: Cancelling allocationDelta " << LOG_VAR(alloc_->getPrice()));
         alloc_->setTargetDelta(-alloc_->getSize());
+        if (predicate_(alloc_))
+            LOGINFO("Allocations::cancelOrders: Cancelling allocation orders "
+                            << LOG_NVP("Price",alloc_->getPrice())
+                            << LOG_NVP("Side", alloc_->getSide())
+                            << LOG_NVP("Size", alloc_->getSize()));
     });
     _modified = true;
 }

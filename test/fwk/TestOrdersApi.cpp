@@ -58,7 +58,8 @@ TestOrdersApi::order_amendBulk(boost::optional<utility::string_t> orders) {
         set_order_timestamp(order);
         _orders.erase(order->getOrigClOrdID());
         validateOrder(order);
-        order->setOrdStatus("New");
+        order->setOrdStatus("Replaced");
+        _allEvents.push(order);
         _orderAmends.emplace(order);
         outOrders.push_back(order);
     }
@@ -78,6 +79,7 @@ TestOrdersApi::order_cancel(boost::optional<utility::string_t> orderID,
     } else {
         _orders[clOrdID.value()]->setOrdStatus("Canceled");
         _orders[clOrdID.value()]->setOrderQty(0.0);
+        _orders[clOrdID.value()]->setLeavesQty(0.0);
         set_order_timestamp(_orders[clOrdID.value()]);
         //validateOrder(_orders[orderID.value()]);
         ordersRet.push_back(_orders[clOrdID.value()]);
@@ -282,7 +284,6 @@ void TestOrdersApi::operator>>(std::vector<std::shared_ptr<model::ModelBase>>& o
         auto top = _allEvents.front();
         auto val = top->toJson();
         LOGINFO(AixLog::Color::GREEN << "TestOrdersApi::OUT>> " << AixLog::Color::GREEN << val.serialize() << AixLog::Color::none);
-        val.as_object()["timestamp"] = web::json::value(_time.to_string());
         top->fromJson(val);
         outVec.push_back(top);
         _allEvents.pop();
@@ -293,7 +294,7 @@ void TestOrdersApi::operator>>(BatchWriter& outVec) {
     while (!_allEvents.empty()){
         auto top = _allEvents.front();
         auto val = top->toJson();
-        val.as_object()["timestamp"] = web::json::value(_time.to_string());
+        //val.as_object()["timestamp"] = web::json::value(_time.to_string());
         LOGDEBUG(AixLog::Color::GREEN << "TestOrdersApi::OUT>> " << AixLog::Color::GREEN << val.serialize() << AixLog::Color::none);
         top->fromJson(val);
         outVec.write(top);
