@@ -110,7 +110,7 @@ void BreakOutStrategy<TORDApi>::onBBO(const std::shared_ptr<Event> &event_) {
         LOGINFO(LOG_NVP("Signal", side) << LOG_VAR(_shortTermAvg) << LOG_VAR(_longTermAvg)
                                         << LOG_VAR(qtyToTrade) << LOG_VAR(price));
         if (_previousDirection != side) {
-            StrategyApi::allocations()->cancel([this](const std::shared_ptr<Allocation>& alloc_) {
+            StrategyApi::allocations()->cancelOrders([this](const std::shared_ptr<Allocation>& alloc_) {
                 return !alloc_->getSide().empty() && alloc_->getSide() == _previousDirection;
             });
         }

@@ -11,8 +11,8 @@
 #define __FILENAME__ (__builtin_strrchr(__FILE__, '/') ? __builtin_strrchr(__FILE__, '/') + 1 : __FILE__)
 #define LOGINFO(msg_)  LOG(INFO) << "\t" << msg_ << " |" <<  __FILENAME__ << ":" << __LINE__ << '\n'
 #define LOGDEBUG(msg_) LOG(DEBUG) << "\t" << msg_ << " |" <<  __FILENAME__ << ":" << __LINE__ << '\n'
-#define LOGWARN(msg_)  LOG(INFO) << "\t" << msg_ << " |" <<  __FILENAME__ <<  ":" << __LINE__ << '\n'
-#define LOGERROR(msg_) LOG(INFO) << "\t" << msg_ << " |" <<  __FILENAME__ << ":" << __LINE__ << '\n'
+#define LOGWARN(msg_)  LOG(WARNING) << "\t" << msg_ << " |" <<  __FILENAME__ <<  ":" << __LINE__ << '\n'
+#define LOGERROR(msg_) LOG(ERROR) << "\t" << AixLog::Color::red << msg_ << AixLog::Color::none << " |" <<  __FILENAME__ << ":" << __LINE__ << '\n'
 
 #define LOG_VAR(var_) #var_ << "='" << var_ << "', "
 #define LOG_NVP(name_, var_) name_ << "=" << var_ << " "

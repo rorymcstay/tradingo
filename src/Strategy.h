@@ -141,7 +141,6 @@ void Strategy<TOrdApi>::placeAllocations() {
 
         std::shared_ptr<model::Order> order = createOrder(allocation);
         size_t priceIndex = _allocations->allocIndex(order->getPrice());
-        // TODO: Move the creation of orders into seperate function
         auto& currentOrder = _orders[priceIndex];
         if (currentOrder) {
             LOGINFO("Price level is occupied " << LOG_VAR(order->getPrice())
@@ -156,14 +155,19 @@ void Strategy<TOrdApi>::placeAllocations() {
             // we have an order at this price level
             if (allocation->isChangingSide()) {
                 LOGINFO("Chaging sides");
+                currentOrder->setOrdStatus("PendingCancel");
+                currentOrder->setOrderQty(0.0);
+                /*
                 auto cancel = createOrder(allocation);
                 // cancel will be for opposite side
                 cancel->setSide("Buy" == allocation->getSide() ? "Sell" : "Buy");
                 cancel->setOrderQty(0);
                 cancel->setOrderID(currentOrder->getOrderID());
                 cancel->setOrigClOrdID(order->getOrigClOrdID());
-                _cancels.push_back(cancel);
+                 */
+                _cancels.push_back(currentOrder);
                 order->setOrderID("");
+                order->unsetOrigClOrdID();
                 _newOrders.push_back(order);
 
             } else if (allocation->isAmendDown()) {
@@ -256,7 +260,6 @@ void Strategy<TOrdApi>::placeAllocations() {
             LOGERROR("Error placing new orders " << ex_.getContent()->rdbuf() << LOG_VAR(ex_.what()));
             _allocations->cancel([](const std::shared_ptr<Allocation>& alloc_) {return alloc_->isNew();});
         }
-
     }
 
     LOGINFO("Allocations have been reflected. " << LOG_NVP("amend", _amends.size())

@@ -116,6 +116,16 @@ void Allocations::cancel(const std::function<bool(const std::shared_ptr<Allocati
     setUnmodified();
 }
 
+void Allocations::cancelOrders(const std::function<bool(const std::shared_ptr<Allocation>&)>& predicate_) {
+
+    std::for_each(_data.begin(), _data.end(), [predicate_](const std::shared_ptr<Allocation>& alloc_ ) {
+        if (predicate_(alloc_))
+            LOGINFO("Allocations::cancel: Cancelling allocationDelta " << LOG_VAR(alloc_->getPrice()));
+        alloc_->setTargetDelta(-alloc_->getSize());
+    });
+    _modified = true;
+}
+
 qty_t Allocations::roundLotSize(qty_t size_) {
     if (size_ <= _lotSize)
         return 0.0;

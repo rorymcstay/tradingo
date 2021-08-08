@@ -42,6 +42,7 @@ public:
     void rest(const std::function<bool(const std::shared_ptr<Allocation>&)>& predicate_);
     void cancel(const std::function<bool(const std::shared_ptr<Allocation>& )>& predicate_);
 
+    void cancelOrders(const std::function<bool(const std::shared_ptr<Allocation> &)> &predicate_);
 };
 
 
