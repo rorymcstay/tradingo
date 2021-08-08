@@ -12,8 +12,8 @@ TEST(BreakOutStrategy, test_playback) {
         {"libraryLocation", "/usr/lib"},
         {"startingAmount", "1000"},
         {"referencePrice", "35000"},
-        {"shortTermWindow", "1000"},
-        {"longTermWindow", "100000"},
+        {"shortTermWindow", "10000"},
+        {"longTermWindow", "50000"},
         {"logLevel", "info"},
         {"storage", "./"}
     });
