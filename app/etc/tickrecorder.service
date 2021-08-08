@@ -5,10 +5,10 @@ Description=Tick Recorder
 WantedBy=multi-user.target
 
 [Service]
-ExecStart=/bin/bash @CMAKE_INSTALL_PREFIX@/scripts/tickrecorder.sh
+ExecStart=/bin/bash /usr/scripts/tickrecorder.sh
 Type=simple
-User=rory
-Group=rory
+User=root
+Group=root
 WorkingDirectory=/home/rory
 Restart=on-failure
 
