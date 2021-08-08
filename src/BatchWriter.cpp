@@ -36,6 +36,8 @@ BatchWriter::BatchWriter(std::string tableName_, std::string symbol_, std::strin
 ,   _fileLocation(_storage + "/" +_dateString + "/" + _tableName + "_"+ _symbol +".json")
 {
     _batch.reserve(_batchSize);
+    _filehandle.open(_fileLocation, std::ios::app);
+    _filehandle << '\n';
 }
 
 void BatchWriter::write(std::shared_ptr<model::ModelBase> item_) {
