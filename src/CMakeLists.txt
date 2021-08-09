@@ -11,6 +11,8 @@ include_directories(${Boost_INCLUDE_DIR})
 include_directories(${OPENSSL_INCLUDE_DIR})
 include_directories(${CPPLOGGER_INCLUDES})
 
+include_directories(${CMAKE_CURRENT_SOURCE_DIR})
+
 add_library(trading_funcs SHARED
         Event.cpp
         MarketData.cpp
@@ -26,8 +28,10 @@ add_library(trading_funcs SHARED
         Allocation.cpp
         Allocations.cpp
         HeartBeat.cpp
+		Signal.cpp
 
-        # Signal.cpp
+		signal/MovingAverageCrossOver.cpp
+
         #${CPPLOGGER_HEADER}
         )
 

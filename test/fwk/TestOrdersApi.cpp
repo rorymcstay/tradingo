@@ -290,7 +290,7 @@ void TestOrdersApi::operator>>(std::vector<std::shared_ptr<model::ModelBase>>& o
     }
 }
 
-void TestOrdersApi::operator>>(BatchWriter& outVec) {
+void TestOrdersApi::operator>>(TestOrdersApi::Writer & outVec) {
     while (!_allEvents.empty()){
         auto top = _allEvents.front();
         auto val = top->toJson();

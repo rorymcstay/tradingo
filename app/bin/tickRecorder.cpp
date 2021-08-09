@@ -16,7 +16,10 @@ using namespace io::swagger::client;
 namespace ws = web::websockets;
 namespace po = boost::program_options;
 
+using ModelBatchWriter = BatchWriter<std::shared_ptr<model::ModelBase>>;
+
 int main(int argc, char **argv) {
+
 
     po::options_description desc("Allowed options");
     desc.add_options()
@@ -45,8 +48,8 @@ int main(int argc, char **argv) {
     LOGINFO("Starting tick recording with " << LOG_VAR(symbol) << LOG_VAR(storage));
 
     // table writers
-    auto trades = std::make_shared<BatchWriter>("trades", symbol, storage, 100);
-    auto quotes = std::make_shared<BatchWriter>("quotes", symbol, storage, 1000);
+    auto trades = std::make_shared<ModelBatchWriter>("trades", symbol, storage, 100);
+    auto quotes = std::make_shared<ModelBatchWriter>("quotes", symbol, storage, 1000);
 
     while (marketData)
     {

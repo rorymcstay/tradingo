@@ -12,6 +12,8 @@ template <class input_t = uint16_t, class sum_t = uint32_t>
 class SimpleMovingAverage {
     long count;
 public:
+    using input_type = input_t;
+    using size_t = uint8_t;
     input_t operator()(input_t input);
     SimpleMovingAverage() = default;
 

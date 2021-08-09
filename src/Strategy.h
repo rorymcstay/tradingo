@@ -31,6 +31,9 @@ class Strategy {
 
     std::shared_ptr<Allocations>           _allocations;
     std::unordered_map<long, OrderPtr> _orders;
+    // TODO use vector instead
+    std::vector<std::shared_ptr<Signal>> _signals;
+
 
     virtual void onExecution(const std::shared_ptr<Event>& event_) = 0;
     virtual void onTrade(const std::shared_ptr<Event>& event_) = 0;
@@ -53,6 +56,10 @@ protected:
     std::string _symbol;
     price_t _balance;
 
+    void addSignal(const std::shared_ptr<Signal>& signal_) {
+        _signals.push_back(signal_);
+    }
+
 public:
     std::shared_ptr<model::Instrument> instrument() const { return _marketData ? _marketData->instrument() : nullptr; }
 
@@ -73,6 +80,9 @@ template<typename TOrdApi>
 void Strategy<TOrdApi>::evaluate() {
     LOGDEBUG(AixLog::Color::YELLOW << "======== START Evaluate ========" << AixLog::Color::none);
     auto event = _marketData->read();
+    std::for_each(_signals.begin(), _signals.end(), [event](const std::shared_ptr<Signal>& signal_) {
+        signal_->update(signal_);
+    });
     if (!event) {
         return;
     }
@@ -122,6 +132,10 @@ void Strategy<TOrdApi>::init(const std::shared_ptr<Config>& config_) {
     LOGINFO("Initialising allocations with " << LOG_VAR(referencePrice) << LOG_VAR(tickSize));
     _allocations = std::make_shared<Allocations>(referencePrice, tickSize, lotSize);
 
+    std::for_each(_signals.begin(), _signals.end(), [config_](const std::shared_ptr<Signal>& signal_) {
+        LOGINFO("Initialising signal " << LOG_NVP("signal", signal_->name()));
+        signal_->init(config_);
+    });
 }
 
 template<typename TOrdApi>

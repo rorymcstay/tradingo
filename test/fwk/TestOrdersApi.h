@@ -28,6 +28,7 @@ using namespace io::swagger::client;
 
 class TestOrdersApi {
 private:
+
     /// reference to all orders placed during test, keyed by ClOrdID.
     std::map<std::string, std::shared_ptr<model::Order>> _orders;
     std::queue<std::shared_ptr<model::Order>> _orderAmends;
@@ -39,6 +40,7 @@ private:
     std::shared_ptr<model::Position> _position;
     std::shared_ptr<Config> _config;
 public:
+    using Writer = BatchWriter<std::shared_ptr<model::ModelBase>>;
     const std::shared_ptr<model::Position> &getPosition() const;
 
     void setPosition(const std::shared_ptr<model::Position> &position);
@@ -137,7 +139,7 @@ public:
 public:
     void operator >> (const std::string& outEvent_);
     void operator >> (std::vector<std::shared_ptr<model::ModelBase>>& outBuffer_);
-    void operator >> (BatchWriter& outBuffer_);
+    void operator >> (Writer& outBuffer_);
 
     void operator << (const utility::datetime& time_);
 

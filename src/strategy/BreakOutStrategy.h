@@ -6,6 +6,7 @@
 #define TRADINGO_BREAKOUTSTRATEGY_H
 
 #include "SimpleMovingAverage.h"
+#include "signal/MovingAverageCrossOver.h"
 #include "Strategy.h"
 #include "Event.h"
 
@@ -26,6 +27,7 @@ class BreakOutStrategy final : public Strategy<TORDApi> {
 
     SMA_T _smaLow;
     SMA_T _smaHigh;
+
     std::string _previousDirection;
 
 public:
@@ -46,7 +48,6 @@ public:
 template<typename TORDApi>
 void BreakOutStrategy<TORDApi>::init(const std::shared_ptr<Config>& config_) {
     // initialise base class
-    StrategyApi::init(config_);
 
     _buyThreshold = std::atof(config_->get("buyThreshold", "0.0").c_str());
     _shortExpose = std::atof(config_->get("shortExpose", "0.0").c_str());
@@ -58,6 +59,12 @@ void BreakOutStrategy<TORDApi>::init(const std::shared_ptr<Config>& config_) {
     auto longTermWindow = std::stoi(config_->get("longTermWindow"));
     _smaLow = SMA_T(shortTermWindow,shortTermWindow*primePercent);
     _smaHigh = SMA_T(longTermWindow, longTermWindow*primePercent);
+
+    StrategyApi::addSignal(std::make_shared<MovingAverageCrossOver>());
+
+    StrategyApi::init(config_);
+
+
     LOGINFO("Breakout strategy is initialised with " << LOG_VAR(shortTermWindow) << LOG_VAR(longTermWindow) << LOG_VAR(primePercent) << LOG_NVP("buyThreshold", _buyThreshold));
 }
 
@@ -138,6 +145,7 @@ BreakOutStrategy<TORDApi>::BreakOutStrategy(std::shared_ptr<MarketDataInterface>
 ,   _longExpose()
 ,   _shortExpose()
 ,   _previousDirection(""){
+
 }
 
 template<typename TORDApi>
