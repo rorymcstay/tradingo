@@ -20,5 +20,10 @@ void Signal::update(std::shared_ptr<Event> md_) {
 
 void Signal::init(const std::shared_ptr<Config> &config_) {
     _config = config_;
-    _batchWriter = std::make_shared<BatchWriter<std::string>>("moving_average_crossover", config_->get("symbol"), config_->get("storage"), 1000);
+    auto storage = config_->get("storage", "");
+    if (storage.empty())
+        storage = "/tmp/";
+    _batchWriter = std::make_shared<BatchWriter<std::string>>("moving_average_crossover",  config_->get("symbol")
+            , storage, 1000);
+
 }

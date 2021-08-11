@@ -30,7 +30,10 @@ std::string &Params::at(const std::string &key_) {
 web::json::value Params::asJson() const {
     web::json::value retVal;
     for (auto& pair : _data) {
-        // number like
+        auto key = pair.first;
+        key[0] = tolower(key[0]);
+
+        // TODO Mandatory params
         if (pair.first.find("Size") != std::string::npos
             or pair.first.find("Qty") != std::string::npos
             or pair.first.find("Price") != std::string::npos
@@ -41,11 +44,11 @@ web::json::value Params::asJson() const {
             or pair.first.find("grossValue") != std::string::npos
             or pair.first.find("Px") != std::string::npos) {
             // cast to double
-            retVal[pair.first] = web::json::value(std::atof(pair.second.c_str()));
-            retVal[pair.first].as_double();
+            retVal[key] = web::json::value(std::atof(pair.second.c_str()));
+            retVal[key].as_double();
         } else {
             // take it as string
-            retVal[pair.first] = web::json::value(pair.second);
+            retVal[key] = web::json::value(pair.second);
         }
     }
     // add timestamp if it is missing
