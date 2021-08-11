@@ -1,15 +1,16 @@
 message(STATUS "Configuring test strategy library")
-add_library(test_trading_strategies SHARED TestStrategies.cpp)
+
+FILE(GLOB Sources TestStrategies.cpp ../../src/signal/*.cpp)
+add_library(test_trading_strategies SHARED ${Sources})
+
+include_directories(../)
+include_directories(../../src/signal ../../src/strategy)
+
 target_link_libraries(test_trading_strategies test_trading_funcs
         CppRestSwaggerClient
-        boost_system
-        ${OPENSSL_CRYPTO_LIBRARY}
-        pthread)
-include_directories(../../src/strategy/)
-include_directories(../)
+        )
 
 install(TARGETS
         test_trading_strategies
         RUNTIME DESTINATION bin
-        LIBRARY DESTINATION lib
-        )
+        LIBRARY DESTINATION lib)

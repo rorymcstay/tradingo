@@ -126,8 +126,8 @@ void TestEnv::playback(const std::string& tradeFile_, const std::string& quoteFi
     bool hasTrades = true;
 
     std::vector<std::shared_ptr<model::ModelBase>> outBuffer;
-    auto batchWriter = BatchWriter("replay_orders", _context->config()->get("symbol"), _context->config()->get("storage"), 5);
-    auto positionWriter = BatchWriter("replay_positions", _context->config()->get("symbol"), _context->config()->get("storage"), 5);
+    auto batchWriter = TestOrdersApi::Writer("replay_orders", _context->config()->get("symbol"), _context->config()->get("storage"), 5);
+    auto positionWriter = TestOrdersApi::Writer("replay_positions", _context->config()->get("symbol"), _context->config()->get("storage"), 5);
 
     while (not stop) {
         if (!hasTrades or trade->getTimestamp() >= quote->getTimestamp()) {

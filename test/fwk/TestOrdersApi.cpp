@@ -180,6 +180,7 @@ TestOrdersApi::order_newBulk(boost::optional<utility::string_t> orders) {
         throw std::runtime_error(ss.str());                                                    \
     }
 
+#define PVAR(order, name_)  #name_ "="  << (order)->get##name_() << " "
 void TestOrdersApi::operator>>(const std::string &outEvent_) {
     auto eventType = getEventTypeFromString(outEvent_);
     if (eventType == "NONE") {
@@ -188,17 +189,53 @@ void TestOrdersApi::operator>>(const std::string &outEvent_) {
             std::stringstream failMessage;
             failMessage << "ORDER_NEW:\n";
             while (!_newOrders.empty()) {
-                failMessage << message(_newOrders.front()) << "\n";
+                auto order = _newOrders.front();
+                failMessage << "ORDER_NEW "
+                            << PVAR(order, Price)
+                            << PVAR(order, OrderQty)
+                            << PVAR(order, CumQty)
+                            << PVAR(order, LeavesQty)
+                            << PVAR(order, OrderID)
+                            << PVAR(order, ClOrdID)
+                            << PVAR(order, OrigClOrdID)
+                            << PVAR(order, OrdStatus)
+                            << PVAR(order, Side)
+
+                        << "\n";
                 _newOrders.pop();
             }
             failMessage << "ORDER_AMEND:\n";
             while (!_orderAmends.empty()) {
-                failMessage << message(_orderAmends.front()) << "\n";
+                auto order = _orderAmends.front();
+                failMessage << "ORDER_AMEND "
+                            << PVAR(order, Price)
+                            << PVAR(order, OrderQty)
+                            << PVAR(order, CumQty)
+                            << PVAR(order, LeavesQty)
+                            << PVAR(order, OrderID)
+                            << PVAR(order, ClOrdID)
+                            << PVAR(order, OrigClOrdID)
+                            << PVAR(order, OrdStatus)
+                            << PVAR(order, Side)
+
+                        << "\n";
                 _orderAmends.pop();
             }
             failMessage << "ORDER_CANCEL:\n";
             while (!_orderCancels.empty()) {
-                failMessage << message(_orderCancels.front()) << "\n";
+                auto order = _orderCancels.front();
+                failMessage << "ORDER_AMEND "
+                            << PVAR(order, Price)
+                            << PVAR(order, OrderQty)
+                            << PVAR(order, CumQty)
+                            << PVAR(order, LeavesQty)
+                            << PVAR(order, OrderID)
+                            << PVAR(order, ClOrdID)
+                            << PVAR(order, OrigClOrdID)
+                            << PVAR(order, OrdStatus)
+                            << PVAR(order, Side)
+
+                        << "\n";
                 _orderCancels.pop();
             }
             throw std::runtime_error("There are events still pending!\n"+failMessage.str());
@@ -290,7 +327,7 @@ void TestOrdersApi::operator>>(std::vector<std::shared_ptr<model::ModelBase>>& o
     }
 }
 
-void TestOrdersApi::operator>>(BatchWriter& outVec) {
+void TestOrdersApi::operator>>(TestOrdersApi::Writer & outVec) {
     while (!_allEvents.empty()){
         auto top = _allEvents.front();
         auto val = top->toJson();

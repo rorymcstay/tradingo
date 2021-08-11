@@ -1,4 +1,4 @@
-FILE(GLOB Sources *.cpp)
+FILE(GLOB Sources *.cpp ../signal/*.cpp)
 add_library(trading_strategies SHARED Strategies.cpp ${Sources})
 
 target_link_libraries(trading_strategies trading_funcs)

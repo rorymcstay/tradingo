@@ -6,6 +6,7 @@
 #define TRADINGO_BREAKOUTSTRATEGY_H
 
 #include "SimpleMovingAverage.h"
+#include "signal/MovingAverageCrossOver.h"
 #include "Strategy.h"
 #include "Event.h"
 
@@ -16,16 +17,12 @@ class BreakOutStrategy final : public Strategy<TORDApi> {
 
     using StrategyApi = Strategy<TORDApi>;
 
-    price_t _longTermAvg;
-    price_t _shortTermAvg;
     qty_t _shortExpose;
     qty_t _longExpose;
     qty_t _displaySize;
 
     price_t _buyThreshold;
 
-    SMA_T _smaLow;
-    SMA_T _smaHigh;
     std::string _previousDirection;
 
 public:
@@ -46,7 +43,6 @@ public:
 template<typename TORDApi>
 void BreakOutStrategy<TORDApi>::init(const std::shared_ptr<Config>& config_) {
     // initialise base class
-    StrategyApi::init(config_);
 
     _buyThreshold = std::atof(config_->get("buyThreshold", "0.0").c_str());
     _shortExpose = std::atof(config_->get("shortExpose", "0.0").c_str());
@@ -56,8 +52,12 @@ void BreakOutStrategy<TORDApi>::init(const std::shared_ptr<Config>& config_) {
     auto primePercent = std::atof(config_->get("primePercent", "1.0").c_str());
     auto shortTermWindow = std::stoi(config_->get("shortTermWindow"));
     auto longTermWindow = std::stoi(config_->get("longTermWindow"));
-    _smaLow = SMA_T(shortTermWindow,shortTermWindow*primePercent);
-    _smaHigh = SMA_T(longTermWindow, longTermWindow*primePercent);
+
+    StrategyApi::addSignal(std::make_shared<MovingAverageCrossOver>(shortTermWindow, longTermWindow));
+
+    StrategyApi::init(config_);
+
+
     LOGINFO("Breakout strategy is initialised with " << LOG_VAR(shortTermWindow) << LOG_VAR(longTermWindow) << LOG_VAR(primePercent) << LOG_NVP("buyThreshold", _buyThreshold));
 }
 
@@ -88,21 +88,19 @@ void BreakOutStrategy<TORDApi>::onBBO(const std::shared_ptr<Event> &event_) {
     auto quote = event_->getQuote();
     auto askPrice = quote->getAskPrice();
     auto bidPrice = quote->getBidPrice();
-    auto midPoint = (askPrice+bidPrice)/2;
-    _shortTermAvg = _smaLow(midPoint);
-    _longTermAvg = _smaHigh(midPoint);
     // TODO if signal is good if (_signal["name"]->is_good())
     std::string side = "Not ready";
     qty_t qtyToTrade;
     price_t price;
-    if ((_smaLow.is_ready() && _smaHigh.is_ready())
-         && _shortTermAvg - _longTermAvg > _buyThreshold) {
+
+    bool isReady = StrategyApi::getSignal("moving_average_crossover")->isReady();
+    auto signalValue = isReady ? StrategyApi::getSignal("moving_average_crossover")->read() : -1 ;
+    if (isReady && signalValue > 0) {  // _shortTermAvg - _longTermAvg > _buyThreshold
         // short term average is higher than longterm, buy
         qtyToTrade = getQtyToTrade("Buy");
         price = bidPrice;
         side = "Buy";
-
-    } else if (_smaLow.is_ready() && _smaHigh.is_ready()) {
+    } else if (isReady) {
         qtyToTrade = getQtyToTrade("Sell");
         price = askPrice;
         side = "Sell";
@@ -113,7 +111,7 @@ void BreakOutStrategy<TORDApi>::onBBO(const std::shared_ptr<Event> &event_) {
     } else {
         //qtyToTrade *= 0.10;
         //qtyToTrade = std::max(100.0, qtyToTrade);
-        LOGINFO(LOG_NVP("Signal", side) << LOG_VAR(_shortTermAvg) << LOG_VAR(_longTermAvg)
+        LOGINFO(LOG_NVP("Signal", side) << LOG_VAR(signalValue)
                                         << LOG_VAR(qtyToTrade) << LOG_VAR(price));
         if (_previousDirection != side) {
             StrategyApi::allocations()->cancelOrders([this](const std::shared_ptr<Allocation>& alloc_) {
@@ -133,11 +131,10 @@ BreakOutStrategy<TORDApi>::~BreakOutStrategy() {
 template<typename TORDApi>
 BreakOutStrategy<TORDApi>::BreakOutStrategy(std::shared_ptr<MarketDataInterface> mdPtr_,  std::shared_ptr<TORDApi> od_)
 :   StrategyApi(mdPtr_, od_)
-,   _shortTermAvg()
-,   _longTermAvg()
 ,   _longExpose()
 ,   _shortExpose()
 ,   _previousDirection(""){
+
 }
 
 template<typename TORDApi>
