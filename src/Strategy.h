@@ -13,6 +13,7 @@
 #include "Utils.h"
 #include "Allocation.h"
 #include "model/Instrument.h"
+#include "Signal.h"
 #include "Allocations.h"
 
 
@@ -20,6 +21,7 @@ template<typename TOrdApi>
 class Strategy {
 
     using OrderPtr = std::shared_ptr<model::Order>;
+
 
     std::shared_ptr<MarketDataInterface> _marketData;
     std::shared_ptr<TOrdApi>  _orderEngine;
@@ -31,8 +33,8 @@ class Strategy {
 
     std::shared_ptr<Allocations>           _allocations;
     std::unordered_map<long, OrderPtr> _orders;
-    // TODO use vector instead
-    std::vector<std::shared_ptr<Signal>> _signals;
+    // TODO use map instead
+    std::unordered_map<std::string, std::shared_ptr<Signal>> _signals;
 
 
     virtual void onExecution(const std::shared_ptr<Event>& event_) = 0;
@@ -50,6 +52,12 @@ public:
     virtual bool shouldEval();
     const std::shared_ptr<Allocations>& allocations() { return _allocations; }
     std::shared_ptr<MarketDataInterface> getMD() const { return _marketData; }
+    void forEachSignal(std::function<void(const Signal::Map::value_type&)> function_) {
+        std::for_each(_signals.begin(), _signals.end(),function_);
+    }
+    Signal::Ptr getSignal(const std::string& name) {
+        return _signals[name];
+    }
 
 protected:
     // allocation api
@@ -57,7 +65,7 @@ protected:
     price_t _balance;
 
     void addSignal(const std::shared_ptr<Signal>& signal_) {
-        _signals.push_back(signal_);
+        _signals.emplace(signal_->name(), signal_);
     }
 
 public:
@@ -80,12 +88,12 @@ template<typename TOrdApi>
 void Strategy<TOrdApi>::evaluate() {
     LOGDEBUG(AixLog::Color::YELLOW << "======== START Evaluate ========" << AixLog::Color::none);
     auto event = _marketData->read();
-    std::for_each(_signals.begin(), _signals.end(), [event](const std::shared_ptr<Signal>& signal_) {
-        signal_->update(signal_);
-    });
     if (!event) {
         return;
     }
+    forEachSignal([event](const std::pair<std::string,std::shared_ptr<Signal>>& signal) {
+            signal.second->update(event);
+    });
     // call one of three handlers.
     if (event->eventType() == EventType::BBO) {
         auto quote = event->getQuote();
@@ -96,6 +104,7 @@ void Strategy<TOrdApi>::evaluate() {
         _allocations->update(event->getExec());
         auto exec = event->getExec();
         if (exec->getExecType() == "Trade") {
+            // TODO calculate/update balance private method.
             _balance += (1/ exec->getLastPx() * exec->getLastQty() * ((exec->getSide() == "Buy") ? -1 : 1));
         }
         onExecution(event);
@@ -132,9 +141,9 @@ void Strategy<TOrdApi>::init(const std::shared_ptr<Config>& config_) {
     LOGINFO("Initialising allocations with " << LOG_VAR(referencePrice) << LOG_VAR(tickSize));
     _allocations = std::make_shared<Allocations>(referencePrice, tickSize, lotSize);
 
-    std::for_each(_signals.begin(), _signals.end(), [config_](const std::shared_ptr<Signal>& signal_) {
-        LOGINFO("Initialising signal " << LOG_NVP("signal", signal_->name()));
-        signal_->init(config_);
+    forEachSignal([config_](const std::pair<std::string,std::shared_ptr<Signal>>& signal) {
+        LOGINFO("Initialising signal " << LOG_NVP("signal", signal.first));
+        signal.second->init(config_);
     });
 }
 

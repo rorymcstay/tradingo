@@ -5,7 +5,11 @@ endif(${GTest_FOUND} EQUAL "FALSE")
 
 link_directories(${CPPREST_ROOT}/lib)
 
-FILE(GLOB SourcesToTest ../src/*.cpp)
+FILE(GLOB SourcesToTest ../src/*.cpp
+        ../src/strategy/*.cpp
+        ../signal/*.cpp)
+
+message(STATUS "Sources=${SourcesToTest}")
 
 add_library(test_trading_funcs
         ${SourcesToTest}
@@ -50,7 +54,8 @@ include_directories(${CPPLOGGER_INCLUDES})
 target_link_libraries(test_trading_funcs
         #${CPPREST_LIBRARY}
         pthread
-        #trading_funcs
+        CppRestSwaggerClient
+        boost_system
         dl
         ${OPENSSL_CRYPTO_LIBRARY}
         )

@@ -28,7 +28,7 @@ TEST(BreakOutStrategy, smoke_test)
 }
 
 TEST(BreakOutStrategy, test_playback) {
-    std::string storage = "/home/rory/tradingo/storage/tickRecorder/2021-07-12";
+    std::string storage = "/home/tradingo/storage/tickRecorder/2021-07-12";
     TestEnv env({
         {"symbol", "XBTUSD"},
         {"clOrdPrefix", "MCST"},

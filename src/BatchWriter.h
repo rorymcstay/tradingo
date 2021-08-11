@@ -85,7 +85,7 @@ void BatchWriter<T>::write_batch() {
     LOGINFO("Writing batch " << LOG_VAR(_tableName) << " to " << LOG_VAR(_fileLocation));
     _filehandle.open(_fileLocation, std::ios::app);
     for (auto& message : _batch) {
-        _filehandle << *message << "\n";
+        _filehandle << message << "\n";
     }
     _filehandle.close();
     _batch.clear();

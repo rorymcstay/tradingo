@@ -29,9 +29,14 @@ protected:
 
 
 
+
 public:
     using Ptr = std::shared_ptr<Signal>;
+    using Map = std::unordered_map<std::string, std::shared_ptr<Signal>>;
+    using Writer = BatchWriter<std::string>;
     explicit Signal(nullptr_t pVoid) : _config(nullptr){};
+    virtual std::string read_as_string() = 0;
+
 
     virtual void init(const std::shared_ptr<Config>& config_);;
     void update(std::shared_ptr<Event> md_);
@@ -45,19 +50,6 @@ public:
 
 
 };
-
-void Signal::update(std::shared_ptr<Event> md_) {
-    if (md_->getTrade())
-        onTrade(md_->getTrade());
-    else if (md_->getExec())
-        onExec(md_->getExec());
-    else if (md_->getQuote())
-        onQuote(md_->getQuote());
-}
-
-void Signal::init(const std::shared_ptr<Config> &config_) {
-    _config = config_;
-}
 
 
 #endif //TRADINGO_SIGNAL_H

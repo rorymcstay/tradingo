@@ -60,7 +60,7 @@ void BreakOutStrategy<TORDApi>::init(const std::shared_ptr<Config>& config_) {
     _smaLow = SMA_T(shortTermWindow,shortTermWindow*primePercent);
     _smaHigh = SMA_T(longTermWindow, longTermWindow*primePercent);
 
-    StrategyApi::addSignal(std::make_shared<MovingAverageCrossOver>());
+    StrategyApi::addSignal(std::make_shared<MovingAverageCrossOver>(shortTermWindow, longTermWindow));
 
     StrategyApi::init(config_);
 
@@ -102,14 +102,15 @@ void BreakOutStrategy<TORDApi>::onBBO(const std::shared_ptr<Event> &event_) {
     std::string side = "Not ready";
     qty_t qtyToTrade;
     price_t price;
-    if ((_smaLow.is_ready() && _smaHigh.is_ready())
-         && _shortTermAvg - _longTermAvg > _buyThreshold) {
+
+    bool isReady = StrategyApi::getSignal("moving_average_crossover")->isReady();
+    auto signalValue = isReady ? StrategyApi::getSignal("moving_average_crossover")->read() : -1 ;
+    if (isReady && signalValue > 0) {  // _shortTermAvg - _longTermAvg > _buyThreshold
         // short term average is higher than longterm, buy
         qtyToTrade = getQtyToTrade("Buy");
         price = bidPrice;
         side = "Buy";
-
-    } else if (_smaLow.is_ready() && _smaHigh.is_ready()) {
+    } else if (isReady) {
         qtyToTrade = getQtyToTrade("Sell");
         price = askPrice;
         side = "Sell";
