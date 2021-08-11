@@ -33,6 +33,6 @@ void MovingAverageCrossOver::init(const std::shared_ptr<Config>& config_) {
 
 std::string MovingAverageCrossOver::read_as_string() {
     std::stringstream out;
-    out << _shortTermVal << ',' << _longTermVal << _time.to_string();
+    out << _shortTermVal << ',' << _longTermVal << ',' << _time.to_string(utility::datetime::ISO_8601);
     return out.str();
 }
