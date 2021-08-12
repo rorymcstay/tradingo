@@ -23,7 +23,9 @@ void Signal::init(const std::shared_ptr<Config> &config_) {
     auto storage = config_->get("storage", "");
     if (storage.empty())
         storage = "/tmp/";
-    _batchWriter = std::make_shared<BatchWriter<std::string>>("moving_average_crossover",  config_->get("symbol")
-            , storage, 1000);
-
+    auto printer = [](const std::string& it_) { return it_; };
+    _batchWriter = std::make_shared<BatchWriter<std::string>>(
+            "moving_average_crossover",
+            config_->get("symbol"),
+            storage, 1000, printer);
 }

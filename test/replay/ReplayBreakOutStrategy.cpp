@@ -15,7 +15,7 @@ TEST(BreakOutStrategy, test_playback) {
         {"shortTermWindow", "10000"},
         {"longTermWindow", "50000"},
         {"logLevel", "info"},
-        {"storage", "/home/rory/replays/"}
+        {"storage", "/home/tradingo/replays/"}
     });
     env.playback("trades_XBTUSD.json", "quotes_XBTUSD.json");
 }

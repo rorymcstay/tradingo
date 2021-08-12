@@ -48,8 +48,11 @@ int main(int argc, char **argv) {
     LOGINFO("Starting tick recording with " << LOG_VAR(symbol) << LOG_VAR(storage));
 
     // table writers
-    auto trades = std::make_shared<ModelBatchWriter>("trades", symbol, storage, 100);
-    auto quotes = std::make_shared<ModelBatchWriter>("quotes", symbol, storage, 1000);
+    auto printer = [](const std::shared_ptr<model::ModelBase>& order_) {
+        return order_->toJson().serialize();
+    };
+    auto trades = std::make_shared<ModelBatchWriter>("trades", symbol, storage, 100, printer);
+    auto quotes = std::make_shared<ModelBatchWriter>("quotes", symbol, storage, 1000, printer);
 
     while (marketData)
     {

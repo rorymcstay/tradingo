@@ -19,6 +19,7 @@
 #include <filesystem>
 #include "Utils.h"
 
+
 using namespace io::swagger::client;
 
 template<typename Item>
@@ -32,13 +33,16 @@ class BatchWriter
     std::string _symbol;
     std::string _storage;
     std::string _fileLocation;
+    std::function<std::string(const Item&)> _print;
 
     void update_file_location();
 
 public:
-    BatchWriter(std::string tableName_, std::string symbol_, std::string storage_, int batchSize_);
+    BatchWriter(std::string tableName_, std::string symbol_, std::string storage_, int batchSize_,
+                std::function<std::string(const Item&)> print_);
     void write(Item item_);
     void write_batch();
+    const std::string& location() { return _fileLocation; }
 
 };
 
@@ -57,7 +61,7 @@ void BatchWriter<T>::update_file_location() {
 }
 
 template<typename T>
-BatchWriter<T>::BatchWriter(std::string tableName_, std::string symbol_, std::string storage_, int batchSize_)
+BatchWriter<T>::BatchWriter(std::string tableName_, std::string symbol_, std::string storage_, int batchSize_, std::function<std::string(const T&)> print_)
         :   _batchSize(batchSize_)
         ,   _filehandle()
         ,   _batch()
@@ -66,6 +70,7 @@ BatchWriter<T>::BatchWriter(std::string tableName_, std::string symbol_, std::st
         ,   _symbol(std::move(symbol_))
         ,   _storage(std::move(storage_))
         ,   _fileLocation(_storage + "/" +_dateString + "/" + _tableName + "_"+ _symbol +".json")
+        ,   _print(print_)
 {
     _batch.reserve(_batchSize);
     _filehandle.open(_fileLocation, std::ios::app);
@@ -85,7 +90,7 @@ void BatchWriter<T>::write_batch() {
     LOGINFO("Writing batch " << LOG_VAR(_tableName) << " to " << LOG_VAR(_fileLocation));
     _filehandle.open(_fileLocation, std::ios::app);
     for (auto& message : _batch) {
-        _filehandle << message << "\n";
+        _filehandle << _print(message) << "\n";
     }
     _filehandle.close();
     _batch.clear();
@@ -95,5 +100,6 @@ void BatchWriter<T>::write_batch() {
 
 std::ostream& operator << (std::ostream& ss_, const model::ModelBase& modelBase);
 
+std::ostream& operator<<(std::ostream &ss_, const std::shared_ptr<model::ModelBase>& modelBase);
 
 #endif //TRADING_BOT_BATCHWRITER_H

@@ -9,8 +9,6 @@ FILE(GLOB SourcesToTest ../src/*.cpp
         ../src/strategy/*.cpp
         ../signal/*.cpp)
 
-message(STATUS "Sources=${SourcesToTest}")
-
 add_library(test_trading_funcs
         ${SourcesToTest}
 
@@ -29,6 +27,7 @@ add_executable(testTradingo
 
         test_api_OrderApi.cpp
         TestSimpleMovingAverage.cpp
+        TestBatchWriter.cpp
         TestAllocations.cpp
         TestStrategy.cpp
         TestMarketData.cpp
@@ -38,7 +37,7 @@ add_executable(testTradingo
 
 add_executable(replayTradingo
         replay/ReplayBreakOutStrategy.cpp
-        test_main.cpp)
+        replay/test_main.cpp)
 
 
 
@@ -65,6 +64,7 @@ target_link_libraries(testTradingo
         ${OPENSSL_CRYPTO_LIBRARY}
         CppRestSwaggerClient
         boost_system
+        boost_filesystem
         pthread
         )
 target_link_libraries(replayTradingo
@@ -74,6 +74,7 @@ target_link_libraries(replayTradingo
         CppRestSwaggerClient
         boost_system
         pthread
+        boost_program_options
         )
 
 

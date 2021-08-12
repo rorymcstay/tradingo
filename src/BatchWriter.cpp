@@ -4,7 +4,7 @@
 
 #include "BatchWriter.h"
 
-std::ostream &operator<<(std::ostream &ss_, const model::ModelBase &modelBase) {
-    ss_ << modelBase.toJson().serialize();
+std::ostream &operator<<(std::ostream &ss_, const std::shared_ptr<model::ModelBase> &modelBase) {
+    ss_ << modelBase->toJson().serialize();
     return ss_;
 }
