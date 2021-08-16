@@ -42,12 +42,12 @@ int main(int argc, char **argv) {
     {"shortTermWindow", "10000"},
     {"longTermWindow", "50000"},
     {"logLevel", "info"},
-    {"storage", "/home/tradingo/replays/"}}));
-    auto dft = (defaults);
+    {"storage", "./"}}));
     *defaults += (*defaults);
     auto env = TestEnv(defaults);
-    env.playback("trades_XBTUSD.json", "quotes_XBTUSD.json");
-
+    auto trade = defaults->get("storage") + "/trades_XBTUSD.json";
+    auto quotes = defaults->get("storage") + "/quotes_XBTUSD.json";
+    env.playback(trade, quotes);
 }
 
 

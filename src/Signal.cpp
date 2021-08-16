@@ -28,5 +28,5 @@ void Signal::init(const std::shared_ptr<Config> &config_) {
     _batchWriter = std::make_shared<BatchWriter<std::string>>(
             "moving_average_crossover",
             config_->get("symbol"),
-            storage, 1000, printer);
+            storage, 100000, printer);
 }
