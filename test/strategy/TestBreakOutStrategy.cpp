@@ -37,8 +37,8 @@ TEST(BreakOutStrategy, test_playback) {
         {"referencePrice", "35000"},
         {"shortTermWindow", "100"},
         {"longTermWindow", "1000"},
-        {"logLevel", "info"},
-	{"logFileLocation", "/home/rory/tradingo/replay/RegisterBreakOutStrategy-" GIT_REV "-2021-07-12"}
+        {"logLevel", "info"}
+	//{"logFileLocation", "/home/rory/tradingo/replay/RegisterBreakOutStrategy-" GIT_REV "-2021-07-12"}
     });
-    env.playback(storage+"/trades_XBTUSD.json", storage+"quotes_XBTUSD.json");
+    //env.playback(storage+"/trades_XBTUSD.json", storage+"quotes_XBTUSD.json");
 }

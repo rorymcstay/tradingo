@@ -15,7 +15,8 @@ void Signal::update(std::shared_ptr<Event> md_) {
     else {
         return;
     }
-    _batchWriter->write(read_as_string());
+    if (isReady())
+        _batchWriter->write(read_as_string());
 }
 
 void Signal::init(const std::shared_ptr<Config> &config_) {

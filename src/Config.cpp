@@ -73,3 +73,12 @@ std::string Config::get(const std::string &name_, const std::string &default_) {
         return _data[name_];
     }
 }
+
+void Config::operator+=(const Config &config_) {
+    for (auto& kvp : config_._data) {
+        if (_data.find(kvp.first) != _data.end())
+            LOGWARN("Overriding orignal value " << LOG_NVP(kvp.first, _data[kvp.first])
+                    << " with " << LOG_VAR(kvp.second));
+        _data[kvp.first] = kvp.second;
+    }
+}

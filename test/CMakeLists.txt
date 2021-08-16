@@ -18,7 +18,7 @@ add_library(test_trading_funcs
         fwk/TestUtils.cpp
         fwk/TestEnv.cpp
         fwk/Params.cpp
-        )
+        TestConfig.cpp fwk/TempStorage.cpp fwk/TempStorage.h)
 
 add_executable(testTradingo
 

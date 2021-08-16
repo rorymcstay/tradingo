@@ -45,11 +45,11 @@ struct OrderManager {
 
 };
 
-TEST(OrderApi, order_newBulk) {
+TEST(OrderApi, DISABLED_order_newBulk) {
 
     OrderManager om {};
 
-    std::string orders = R"([{"clOrdID":"MCST0","orderID":"","orderQty":50,"price":33709.5,"side":"Buy","symbol":"XBTUSD"},{"clOrdID":"MCST1","orderID":"","orderQty":50,"price":33710,"side":"Sell","symbol":"XBTUSD"}])";
+    std::string orders = R"([{"clOrdID":"MCST0","orderID":"","orderQty":100,"price":33709.5,"side":"Buy","symbol":"XBTUSD"},{"clOrdID":"MCST1","orderID":"","orderQty":50,"price":33710,"side":"Sell","symbol":"XBTUSD"}])";
     auto newOrders = om.orderApi->order_newBulk(orders).then(
             [](const std::vector<std::shared_ptr<model::Order>> &orders_) {
                 for (const auto& order : orders_) {
