@@ -6,6 +6,7 @@
 #include <boost/program_options.hpp>
 #include "Utils.h"
 #include "Config.h"
+#include "fwk/TestEnv.h"
 
 namespace po = boost::program_options;
 
@@ -32,10 +33,21 @@ int main(int argc, char **argv) {
         symbol = config->get("symbol");
         LOGINFO("Using config " << vm.at("config").as<std::string>());
     }
+    auto defaults = std::make_shared<Config>(std::initializer_list<std::pair<std::string,std::string>>({{"symbol", "XBTUSD"},
+    {"clOrdPrefix", "MCST"},
+    {"factoryMethod", "RegisterBreakOutStrategy"},
+    {"startingAmount", "1000"},
+    {"displaySize", "200"},
+    {"referencePrice", "35000"},
+    {"shortTermWindow", "10000"},
+    {"longTermWindow", "50000"},
+    {"logLevel", "info"},
+    {"storage", "/home/tradingo/replays/"}}));
+    auto dft = (defaults);
+    *defaults += (*defaults);
+    auto env = TestEnv(defaults);
+    env.playback("trades_XBTUSD.json", "quotes_XBTUSD.json");
 
-
-    ::testing::InitGoogleTest(&argc, argv);
-    return RUN_ALL_TESTS();
 }
 
 

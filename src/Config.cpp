@@ -75,6 +75,8 @@ std::string Config::get(const std::string &name_, const std::string &default_) {
 }
 
 void Config::operator+=(const Config &config_) {
+    if (config_.empty())
+        return;
     for (auto& kvp : config_._data) {
         if (_data.find(kvp.first) != _data.end())
             LOGWARN("Overriding orignal value " << LOG_NVP(kvp.first, _data[kvp.first])

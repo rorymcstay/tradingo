@@ -36,12 +36,12 @@ add_executable(testTradingo
         )
 
 add_executable(replayTradingo
-        replay/ReplayBreakOutStrategy.cpp
         replay/test_main.cpp)
 
 
 
 include_directories(${PROJECT_SOURCE_DIR}/src/)
+include_directories(${PROJECT_SOURCE_DIR}/test/)
 include_directories(${BITMEX_INCLUDE})
 include_directories(${GTEST_INCLUDE_DIRS})
 include_directories(${OPENSSL_INCLUDE_DIR})

@@ -37,6 +37,9 @@ class TestEnv
 public:
     const std::shared_ptr<TStrategy>& strategy() const { return _context->strategy(); }
     TestEnv(std::initializer_list<std::pair<std::string, std::string>>);
+    TestEnv(const std::shared_ptr<Config>& config_);
+
+    void init();
 
     void playback(const std::string& tradeFile_, const std::string& quoteFile_);
 

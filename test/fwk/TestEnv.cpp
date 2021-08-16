@@ -8,26 +8,7 @@ TestEnv::TestEnv(std::initializer_list<std::pair<std::string,std::string>> confi
 :   _config(std::make_shared<Config>(config_))
 ,   _position(std::make_shared<model::Position>())
 {
-    _config->set("libraryLocation", LIBRARY_LOCATION"/libtest_trading_strategies.so");
-    _config->set("baseUrl", "https://localhost:8888/api/v1");
-    _config->set("apiKey", "dummy");
-    _config->set("apiSecret", "dummy");
-    _config->set("connectionString", "https://localhost:8888/realtime");
-    _config->set("clOrdPrefix", "MCST");
-    _config->set("httpEnabled", "False");
-    _config->set("tickSize", "0.5");
-    _config->set("lotSize", "100");
-    if (_config->get("logLevel", "").empty())
-        _config->set("logLevel", "debug");
-    _config->set("cloidSeed", "0");
-    _context = std::make_shared<Context<TestMarketData, OrderApi>>(_config);
-    _context->init();
-    _context->initStrategy();
-
-    _position->setSymbol(_config->get("symbol"));
-    _context->orderApi()->setPosition(_position);
-    _context->marketData()->addPosition(_position);
-    _context->orderApi()->init(_config);
+    init();
 }
 
 void TestEnv::operator<<(const std::string &value_) {
@@ -116,10 +97,16 @@ void TestEnv::playback(const std::string& tradeFile_, const std::string& quoteFi
     std::ifstream quoteFile;
     tradeFile.open(tradeFile_);
     quoteFile.open(quoteFile_);
-    if (not tradeFile.is_open())
-        FAIL() << "File " << LOG_VAR(tradeFile_) << " does not exist.";
-    if (not quoteFile.is_open())
-        FAIL() << "File " << LOG_VAR(quoteFile_) << " does not exist.";
+    if (not tradeFile.is_open()) {
+        std::stringstream msg;
+        msg << "File " << LOG_VAR(tradeFile_) << " does not exist.";
+        throw std::runtime_error(msg.str());
+    }
+    if (not quoteFile.is_open()) {
+        std::stringstream msg;
+        msg << "File " << LOG_VAR(tradeFile_) << " does not exist.";
+        throw std::runtime_error(msg.str());
+    }
     bool stop = false;
     auto quote = getEvent<model::Quote>(quoteFile);
     auto trade = getEvent<model::Trade>(tradeFile);
@@ -201,4 +188,34 @@ void TestEnv::playback(const std::string& tradeFile_, const std::string& quoteFi
 
     }
     batchWriter.write_batch();
+}
+
+void TestEnv::init() {
+    _config->set("libraryLocation", LIBRARY_LOCATION"/libtest_trading_strategies.so");
+    _config->set("baseUrl", "https://localhost:8888/api/v1");
+    _config->set("apiKey", "dummy");
+    _config->set("apiSecret", "dummy");
+    _config->set("connectionString", "https://localhost:8888/realtime");
+    _config->set("clOrdPrefix", "MCST");
+    _config->set("httpEnabled", "False");
+    _config->set("tickSize", "0.5");
+    _config->set("lotSize", "100");
+    if (_config->get("logLevel", "").empty())
+        _config->set("logLevel", "debug");
+    _config->set("cloidSeed", "0");
+    _context = std::make_shared<Context<TestMarketData, OrderApi>>(_config);
+    _context->init();
+    _context->initStrategy();
+
+    _position->setSymbol(_config->get("symbol"));
+    _context->orderApi()->setPosition(_position);
+    _context->marketData()->addPosition(_position);
+    _context->orderApi()->init(_config);
+
+}
+
+TestEnv::TestEnv(const std::shared_ptr<Config> &config_)
+:   _config(config_)
+,   _position(std::make_shared<model::Position>()) {
+    init();
 }

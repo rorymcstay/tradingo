@@ -21,6 +21,7 @@ public:
     std::string get(const std::string& name_, const std::string& default_);
     void set(const std::string& key_, const std::string& val_);
     void operator+=(const Config& config_);
+    bool empty() const { return _data.empty(); }
 };
 
 
