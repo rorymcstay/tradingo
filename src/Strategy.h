@@ -33,7 +33,6 @@ class Strategy {
 
     std::shared_ptr<Allocations>           _allocations;
     std::unordered_map<long, OrderPtr> _orders;
-    // TODO use map instead
     std::unordered_map<std::string, std::shared_ptr<Signal>> _signals;
 
 
@@ -96,7 +95,6 @@ void Strategy<TOrdApi>::evaluate() {
     });
     // call one of three handlers.
     if (event->eventType() == EventType::BBO) {
-        auto quote = event->getQuote();
         onBBO(event);
     } else if (event->eventType() == EventType::TradeUpdate) {
         onTrade(event);
