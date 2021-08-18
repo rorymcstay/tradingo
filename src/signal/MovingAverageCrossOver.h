@@ -25,7 +25,7 @@ public:
     void onQuote(const std::shared_ptr<model::Quote>& quote_) override;
     long read();
     bool isReady() override;
-    void init(const std::shared_ptr<Config>& config_) override;
+    void init(const std::shared_ptr<Config>& config_, std::shared_ptr<MarketDataInterface> md_) override;
 
     std::string read_as_string() override;
 

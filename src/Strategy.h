@@ -6,15 +6,16 @@
 #define TRADINGO_STRATEGY_H
 
 #include <model/Order.h>
+#include <model/Instrument.h>
 
 #include "MarketData.h"
 #include "OrderInterface.h"
 #include "Config.h"
 #include "Utils.h"
 #include "Allocation.h"
-#include "model/Instrument.h"
 #include "Signal.h"
 #include "Allocations.h"
+#include "CallbackTimer.h"
 
 
 template<typename TOrdApi>
@@ -25,6 +26,7 @@ class Strategy {
 
     std::shared_ptr<MarketDataInterface> _marketData;
     std::shared_ptr<TOrdApi>  _orderEngine;
+    CallbackTimer _timer;
 
 
     std::string _clOrdIdPrefix;
@@ -58,6 +60,7 @@ public:
         return _signals[name];
     }
 
+
 protected:
     // allocation api
     std::string _symbol;
@@ -65,6 +68,7 @@ protected:
 
     void addSignal(const std::shared_ptr<Signal>& signal_) {
         _signals.emplace(signal_->name(), signal_);
+        signal_->init(_config, _marketData);
     }
 
 public:
@@ -90,9 +94,6 @@ void Strategy<TOrdApi>::evaluate() {
     if (!event) {
         return;
     }
-    forEachSignal([event](const std::pair<std::string,std::shared_ptr<Signal>>& signal) {
-            signal.second->update(event);
-    });
     // call one of three handlers.
     if (event->eventType() == EventType::BBO) {
         onBBO(event);
@@ -139,10 +140,6 @@ void Strategy<TOrdApi>::init(const std::shared_ptr<Config>& config_) {
     LOGINFO("Initialising allocations with " << LOG_VAR(referencePrice) << LOG_VAR(tickSize));
     _allocations = std::make_shared<Allocations>(referencePrice, tickSize, lotSize);
 
-    forEachSignal([config_](const std::pair<std::string,std::shared_ptr<Signal>>& signal) {
-        LOGINFO("Initialising signal " << LOG_NVP("signal", signal.first));
-        signal.second->init(config_);
-    });
 }
 
 template<typename TOrdApi>

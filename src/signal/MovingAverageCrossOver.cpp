@@ -5,7 +5,7 @@
 #include "MovingAverageCrossOver.h"
 
 MovingAverageCrossOver::MovingAverageCrossOver(SMA_T::size_t short_, SMA_T::size_t long_)
-        : Signal(nullptr),  _shortTerm(short_, 1.0)
+        : Signal(),  _shortTerm(short_, 1.0)
         , _longTerm(long_, 1.0)  {
 
     _name = "moving_average_crossover";
@@ -28,8 +28,8 @@ bool MovingAverageCrossOver::isReady() {
     return _longTerm.is_ready() && _shortTerm.is_ready();
 }
 
-void MovingAverageCrossOver::init(const std::shared_ptr<Config>& config_) {
-    Signal::init(config_);
+void MovingAverageCrossOver::init(const std::shared_ptr<Config>& config_, std::shared_ptr<MarketDataInterface> md_) {
+    Signal::init(config_, md_);
 }
 
 std::string MovingAverageCrossOver::read_as_string() {

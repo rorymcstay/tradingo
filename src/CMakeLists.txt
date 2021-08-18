@@ -29,6 +29,7 @@ add_library(trading_funcs SHARED
         Allocations.cpp
         HeartBeat.cpp
 		Signal.cpp
+		CallbackTimer.cpp
 
 		signal/MovingAverageCrossOver.cpp
 

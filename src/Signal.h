@@ -15,6 +15,8 @@
 #include "Config.h"
 #include "Event.h"
 #include "BatchWriter.h"
+#include "CallbackTimer.h"
+#include "MarketData.h"
 
 
 using namespace io::swagger::client;
@@ -27,6 +29,9 @@ protected:
 
     std::shared_ptr<BatchWriter<std::string>> _batchWriter;
 
+    CallbackTimer _timer;
+    std::shared_ptr<MarketDataInterface> _marketData;
+
 
 
 
@@ -34,12 +39,12 @@ public:
     using Ptr = std::shared_ptr<Signal>;
     using Map = std::unordered_map<std::string, std::shared_ptr<Signal>>;
     using Writer = BatchWriter<std::string>;
-    explicit Signal(nullptr_t pVoid) : _config(nullptr){};
+    explicit Signal() : _config(nullptr), _marketData(nullptr), _timer() {};
     virtual std::string read_as_string() = 0;
 
 
-    virtual void init(const std::shared_ptr<Config>& config_);;
-    void update(std::shared_ptr<Event> md_);
+    virtual void init(const std::shared_ptr<Config>& config_, std::shared_ptr<MarketDataInterface> marketData_);;
+    void update();
     virtual void onTrade(const std::shared_ptr<model::Trade>& trade_) {};
     virtual void onQuote(const std::shared_ptr<model::Quote>& quote_) {};
     virtual void onExec(const std::shared_ptr<model::Execution>& exec_) {};

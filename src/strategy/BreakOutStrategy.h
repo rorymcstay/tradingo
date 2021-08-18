@@ -43,6 +43,8 @@ public:
 template<typename TORDApi>
 void BreakOutStrategy<TORDApi>::init(const std::shared_ptr<Config>& config_) {
     // initialise base class
+    // TODO move to constructor
+    StrategyApi::init(config_);
 
     _buyThreshold = std::atof(config_->get("buyThreshold", "0.0").c_str());
     _shortExpose = std::atof(config_->get("shortExpose", "0.0").c_str());
@@ -55,7 +57,6 @@ void BreakOutStrategy<TORDApi>::init(const std::shared_ptr<Config>& config_) {
 
     StrategyApi::addSignal(std::make_shared<MovingAverageCrossOver>(shortTermWindow, longTermWindow));
 
-    StrategyApi::init(config_);
 
 
     LOGINFO("Breakout strategy is initialised with " << LOG_VAR(shortTermWindow) << LOG_VAR(longTermWindow) << LOG_VAR(primePercent) << LOG_NVP("buyThreshold", _buyThreshold));
