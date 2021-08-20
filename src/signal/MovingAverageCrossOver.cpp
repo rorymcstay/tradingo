@@ -7,9 +7,7 @@
 MovingAverageCrossOver::MovingAverageCrossOver(SMA_T::size_t short_, SMA_T::size_t long_)
         : Signal(),  _shortTerm(short_, 1.0)
         , _longTerm(long_, 1.0)  {
-
     _name = "moving_average_crossover";
-
 }
 
 
@@ -17,7 +15,6 @@ void MovingAverageCrossOver::onQuote(const std::shared_ptr<model::Quote> &quote_
     // TODO check if bid or ask has changed.
     _shortTermVal = _shortTerm((quote_->getAskPrice()+quote_->getBidPrice())/2.0);
     _longTermVal = _longTerm((quote_->getAskPrice()+quote_->getBidPrice())/2.0);
-    _time = quote_->getTimestamp();
 }
 
 long MovingAverageCrossOver::read() {

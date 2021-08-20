@@ -18,7 +18,6 @@ class MovingAverageCrossOver : public Signal {
     long _shortTermVal;
     long _longTermVal;
     SMA_T _longTerm;
-    utility::datetime _time;
 
 public:
     MovingAverageCrossOver(SMA_T::size_t short_, SMA_T::size_t long_);

@@ -6,14 +6,25 @@
 #include "Config.h"
 
 void Signal::update() {
+
     /*
     if (_marketData->trade())
         onTrade(_marketData->trade());
     else if (_marketData->exec())
         onExec(_marketData->exec());
     */
-    if (_marketData->quote()) {
-        onQuote(_marketData->quote());
+    if (_marketData && _marketData->quote()) {
+        // TODO here should check the time in replay mode
+        auto quote = _marketData->quote();
+#ifdef REPLAY_MODE
+        if (quote->getTimestamp() - _time > _timer.interval()) {
+            onQuote(quote);
+            _time = quote->getTimestamp();
+        }
+#else
+        onQuote(quote);
+#endif
+
     } else {
 
     }

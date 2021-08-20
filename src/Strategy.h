@@ -26,7 +26,6 @@ class Strategy {
 
     std::shared_ptr<MarketDataInterface> _marketData;
     std::shared_ptr<TOrdApi>  _orderEngine;
-    CallbackTimer _timer;
 
 
     std::string _clOrdIdPrefix;

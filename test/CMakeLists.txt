@@ -67,6 +67,8 @@ target_link_libraries(testTradingo
         boost_filesystem
         pthread
         )
+
+target_compile_definitions(replayTradingo PUBLIC REPLAY_MODE)
 target_link_libraries(replayTradingo
         test_trading_funcs
         ${GTEST_LIBRARY}

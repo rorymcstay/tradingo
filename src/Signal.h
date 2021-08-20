@@ -31,9 +31,7 @@ protected:
 
     CallbackTimer _timer;
     std::shared_ptr<MarketDataInterface> _marketData;
-
-
-
+    utility::datetime _time;
 
 public:
     using Ptr = std::shared_ptr<Signal>;

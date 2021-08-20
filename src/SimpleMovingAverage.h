@@ -17,11 +17,11 @@ public:
     input_t operator()(input_t input);
     SimpleMovingAverage() = default;
 
-    SimpleMovingAverage(uint8_t N_, long primedCount_)
+    SimpleMovingAverage(uint8_t N_, double primedCount_)
     :   N(N_)
     ,   previousInputs(new input_t[N_]{})
     ,   primed(false)
-    ,   primedCount(primedCount_)
+    ,   primedCount(primedCount_*N_)
     ,   count(0){}
 
 private:

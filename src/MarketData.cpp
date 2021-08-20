@@ -211,7 +211,6 @@ void MarketDataInterface::setInstrumentApi(const std::shared_ptr<api::Instrument
 
 template<typename T>
 void MarketDataInterface::update(const std::vector<std::shared_ptr<T>> &data_) {
-    std::lock_guard<decltype(_mutex)> lock(_mutex);
     for (const auto& row : data_) {
         _eventBuffer.push(std::make_shared<Event>(row));
     }
@@ -236,11 +235,13 @@ void MarketDataInterface::removePositions(const std::vector<std::shared_ptr<mode
 }
 
 void MarketDataInterface::handleQuotes(const std::vector<std::shared_ptr<model::Quote>>& quotes_, const std::string &action_) {
+    std::lock_guard<decltype(_mutex)> lock(_mutex);
     _quote = quotes_[0];
     update(quotes_);
 }
 
 void MarketDataInterface::handleTrades(std::vector<std::shared_ptr<model::Trade>>& trades_, const std::string &action_) {
+    std::lock_guard<decltype(_mutex)> lock(_mutex);
     update(trades_);
 }
 
@@ -269,6 +270,7 @@ void MarketDataInterface::handleExecutions(std::vector<std::shared_ptr<model::Ex
         for (auto& ex : execs_)
             _executions.push(ex);
     }
+    std::lock_guard<decltype(_mutex)> lock(_mutex);
     update(execs_);
 }
 

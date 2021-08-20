@@ -39,9 +39,10 @@ int main(int argc, char **argv) {
     {"startingAmount", "1000"},
     {"displaySize", "200"},
     {"referencePrice", "35000"},
-    {"shortTermWindow", "10000"},
-    {"longTermWindow", "50000"},
+    {"shortTermWindow", "1000"},
+    {"longTermWindow", "8000"},
     {"logLevel", "info"},
+    {"moving_average_crossover-interval", "1000"},
     {"storage", "./"}}));
     *defaults += (*defaults);
     auto env = TestEnv(defaults);
