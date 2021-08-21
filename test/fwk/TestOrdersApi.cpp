@@ -367,12 +367,28 @@ bool TestOrdersApi::hasMatchingOrder(const std::shared_ptr<model::Trade>& trade_
 }
 
 void TestOrdersApi::addExecToPosition(const std::shared_ptr<model::Execution>& exec_) {
+    LOGINFO(AixLog::Color::GREEN
+                    << "OnTrade: "
+                    << LOG_NVP("ClOrdID", exec_->getClOrdID())
+                    << LOG_NVP("OrderID", exec_->getOrderID())
+                    << LOG_NVP("Side", exec_.second->getSide())
+                    << LOG_NVP("OrderQty", exec_->getOrderQty())
+                    << LOG_NVP("Price", exec_->getPrice())
+                    << LOG_NVP("LastQty", exec_->getLastQty())
+                    << LOG_NVP("LastPx", exec_->getLastPx())
+                    << AixLog::Color::none);
 
     qty_t newPosition = _position->getCurrentQty() + ((exec_->getSide() == "Buy") ? exec_->getLastQty() : -exec_->getLastQty());
     qty_t newCost = _position->getCurrentCost() + ((1/exec_->getPrice() * exec_->getLastQty())*(exec_->getSide()=="Buy" ? 1 : -1));
     _position->setCurrentQty(newPosition);
     _position->setCurrentCost(newCost);
     _position->setTimestamp(exec_->getTimestamp());
+    LOGINFO(AixLog::Color::GREEN
+                    << "New Position: "
+                    << LOG_NVP("CurrentCost", _position->getCurrentCost())
+                    << LOG_NVP("Size", _position->getCurrentQty())
+                    << LOG_NVP("Time", _position->getTimestamp().to_string())
+                    << AixLog::Color::none);
 }
 
 const std::shared_ptr<model::Position> &TestOrdersApi::getPosition() const {

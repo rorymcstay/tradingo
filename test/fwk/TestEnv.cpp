@@ -126,11 +126,14 @@ void TestEnv::playback(const std::string& tradeFile_, const std::string& quoteFi
         if (!hasTrades or trade->getTimestamp() >= quote->getTimestamp()) {
             // trades are ahead of quotes, send the quote
             auto time = quote->getTimestamp();
+            // dispatch_event(time, quote, nullptr, nullptr)
+            {
             *_context->orderApi() << time; //  >> std::vector
             *_context->marketData() << quote;
             _context->strategy()->evaluate();
+            }
+            // set the quote for next iteration.
             quote = getEvent<model::Quote>(quoteFile);
-
             // record replay actions to a file.
             *_context->orderApi() >> batchWriter;
 
@@ -145,32 +148,21 @@ void TestEnv::playback(const std::string& tradeFile_, const std::string& quoteFi
                     _context->orderApi()->set_order_timestamp(order.second);
                     exec->setTimestamp(order.second->getTimestamp());
                     // put resultant execution into marketData.
-                    _context->orderApi()->addExecToPosition(exec);
-                    LOGINFO(AixLog::Color::GREEN
-                        << "OnTrade: "
-                        << LOG_NVP("ClOrdID", exec->getClOrdID())
-                        << LOG_NVP("OrderID", exec->getOrderID())
+                    LOGINFO(LOG_NVP("OrderID", order.second->getOrderID())
+                        << AixLog::Color::GREEN
                         << LOG_NVP("Side", order.second->getSide())
-                        << LOG_NVP("OrderQty", exec->getOrderQty())
-                        << LOG_NVP("Price", exec->getPrice())
-                        << LOG_NVP("LastQty", exec->getLastQty())
-                        << LOG_NVP("LastPx", exec->getLastPx())
                         << LOG_NVP("CumQty", order.second->getCumQty())
                         << LOG_NVP("LeavesQty", order.second->getLeavesQty())
                         << LOG_NVP("OrdStatus", order.second->getOrdStatus())
                         << AixLog::Color::none);
-                    LOGINFO(AixLog::Color::GREEN
-                        << "New Position: "
-                        << LOG_NVP("CurrentCost", _position->getCurrentCost())
-                        << LOG_NVP("Size", _position->getCurrentQty())
-                        << LOG_NVP("Time", _position->getTimestamp().to_string())
-                        << AixLog::Color::none);
-
                     // put the position, order and execution into market data.
-                    *_context->marketData() << exec;
-                    *_context->marketData() << order.second;
-                    *_context->marketData() << _context->orderApi()->getPosition();
-
+                    // dispatch (time, quote)
+                    {
+                        _context->orderApi()->addExecToPosition(exec);
+                        *_context->marketData() << exec;
+                        *_context->marketData() << order.second;
+                        *_context->marketData() << _context->orderApi()->getPosition();
+                    }
                     if (exec->getOrdStatus() == "Filled") {
                         LOGDEBUG("Filled order");
                     }
