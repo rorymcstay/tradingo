@@ -129,7 +129,7 @@ void TestEnv::playback(const std::string& tradeFile_, const std::string& quoteFi
             // trades are ahead of quotes, send the quote
             auto time = quote->getTimestamp();
 
-            dispatch(time, quote, nullptr, nullptr)
+            dispatch(time, quote, nullptr, nullptr);
             // set the quote for next iteration.
             quote = getEvent<model::Quote>(quoteFile);
             // record replay actions to a file.
