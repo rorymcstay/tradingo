@@ -16,7 +16,9 @@ void Signal::update() {
     if (_marketData && _marketData->quote()) {
         // TODO here should check the time in replay mode
         auto quote = _marketData->quote();
-#ifdef REPLAY_MODE
+
+#if defined(REPLAY_MODE) || !defined(__REPLAY_MODE_GUARD) // toggle REPLAY_MODE in replay live/fast
+
         if (quote->getTimestamp() - _time > _timer.interval()) {
             onQuote(quote);
             _time = quote->getTimestamp();

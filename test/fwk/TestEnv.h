@@ -24,6 +24,10 @@
 
 using namespace io::swagger::client;
 
+struct Dispatch {
+    utility::datetime mkt_time;
+    utility::datetime actual_time;
+};
 
 
 class TestEnv
@@ -34,6 +38,8 @@ class TestEnv
     std::shared_ptr<Config> _config;
     std::shared_ptr<Context<TestMarketData, OrderApi>> _context;
     std::shared_ptr<model::Position> _position;
+    Dispatch _lastDispatch; // first is time, second is mkttime
+    bool _realtime;
 public:
     const std::shared_ptr<TStrategy>& strategy() const { return _context->strategy(); }
     TestEnv(std::initializer_list<std::pair<std::string, std::string>>);
@@ -42,6 +48,9 @@ public:
     void init();
 
     void playback(const std::string& tradeFile_, const std::string& quoteFile_);
+
+    void dispatch(utility::datetime time, const std::shared_ptr<model::Quote>& quote,
+                  const std::shared_ptr<model::Execution> exec_, const std::shared_ptr<model::Order> order_);
 
     void operator << (const std::string& value_);
     void operator >> (const std::string& value_);

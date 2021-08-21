@@ -7,6 +7,8 @@
 TestEnv::TestEnv(std::initializer_list<std::pair<std::string,std::string>> config_)
 :   _config(std::make_shared<Config>(config_))
 ,   _position(std::make_shared<model::Position>())
+,   _lastDispatch()
+,   _realtime(false)
 {
     init();
 }
@@ -121,17 +123,13 @@ void TestEnv::playback(const std::string& tradeFile_, const std::string& quoteFi
                                              _context->config()->get("storage"), 5, printer);
     auto positionWriter = TestOrdersApi::Writer("replay_positions", _context->config()->get("symbol"),
                                                 _context->config()->get("storage"), 5, printer);
-
+    _lastDispatch.mkt_time = quote->getTimestamp();
     while (not stop) {
         if (!hasTrades or trade->getTimestamp() >= quote->getTimestamp()) {
             // trades are ahead of quotes, send the quote
             auto time = quote->getTimestamp();
-            // dispatch_event(time, quote, nullptr, nullptr)
-            {
-            *_context->orderApi() << time; //  >> std::vector
-            *_context->marketData() << quote;
-            _context->strategy()->evaluate();
-            }
+
+            dispatch(time, quote, nullptr, nullptr)
             // set the quote for next iteration.
             quote = getEvent<model::Quote>(quoteFile);
             // record replay actions to a file.
@@ -155,14 +153,7 @@ void TestEnv::playback(const std::string& tradeFile_, const std::string& quoteFi
                         << LOG_NVP("LeavesQty", order.second->getLeavesQty())
                         << LOG_NVP("OrdStatus", order.second->getOrdStatus())
                         << AixLog::Color::none);
-                    // put the position, order and execution into market data.
-                    // dispatch (time, quote)
-                    {
-                        _context->orderApi()->addExecToPosition(exec);
-                        *_context->marketData() << exec;
-                        *_context->marketData() << order.second;
-                        *_context->marketData() << _context->orderApi()->getPosition();
-                    }
+                    dispatch(exec->getTimestamp(), nullptr, exec, order.second);
                     if (exec->getOrdStatus() == "Filled") {
                         LOGDEBUG("Filled order");
                     }
@@ -192,6 +183,9 @@ void TestEnv::init() {
     _config->set("httpEnabled", "False");
     _config->set("tickSize", "0.5");
     _config->set("lotSize", "100");
+    if (_config->get("realtime", "true") == "true") {
+        _realtime = true;
+    }
     if (_config->get("logLevel", "").empty())
         _config->set("logLevel", "debug");
     _config->set("cloidSeed", "0");
@@ -210,4 +204,28 @@ TestEnv::TestEnv(const std::shared_ptr<Config> &config_)
 :   _config(config_)
 ,   _position(std::make_shared<model::Position>()) {
     init();
+}
+
+void TestEnv::dispatch(utility::datetime time_, const std::shared_ptr<model::Quote> &quote_,
+                       const std::shared_ptr<model::Execution> exec_, const std::shared_ptr<model::Order> order_) {
+#ifndef REPLAY_MODE
+    auto now = utility::datetime::utc_now();
+    auto mktTimeDiff = _lastDispatch.mkt_time - time_;
+    auto timeSinceLastDispatch = _lastDispatch.actual_time - now;
+    LOGDEBUG(LOG_VAR(mktTimeDiff) << LOG_VAR(timeSinceLastDispatch));
+    if (timeSinceLastDispatch < mktTimeDiff /*the amount of time passed, is less than in the market*/) {
+        LOGDEBUG(LOG_NVP("sleep_for", mktTimeDiff-timeSinceLastDispatch));
+        std::this_thread::sleep_for(std::chrono::milliseconds(mktTimeDiff-timeSinceLastDispatch));
+    }
+#endif
+    if (quote_) {
+        *_context->orderApi() << time_; //  >> std::vector
+        *_context->marketData() << quote_;
+        _context->strategy()->evaluate();
+    } else if (exec_ and order_) {
+        _context->orderApi()->addExecToPosition(exec_);
+        *_context->marketData() << exec_;
+        *_context->marketData() << order_;
+        *_context->marketData() << _context->orderApi()->getPosition();
+    }
 }

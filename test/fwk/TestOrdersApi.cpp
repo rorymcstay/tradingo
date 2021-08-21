@@ -371,7 +371,7 @@ void TestOrdersApi::addExecToPosition(const std::shared_ptr<model::Execution>& e
                     << "OnTrade: "
                     << LOG_NVP("ClOrdID", exec_->getClOrdID())
                     << LOG_NVP("OrderID", exec_->getOrderID())
-                    << LOG_NVP("Side", exec_.second->getSide())
+                    << LOG_NVP("Side", exec_->getSide())
                     << LOG_NVP("OrderQty", exec_->getOrderQty())
                     << LOG_NVP("Price", exec_->getPrice())
                     << LOG_NVP("LastQty", exec_->getLastQty())
