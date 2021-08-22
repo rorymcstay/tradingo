@@ -101,5 +101,4 @@ void BatchWriter<T>::write_batch() {
 std::ostream& operator << (std::ostream& ss_, const model::ModelBase& modelBase);
 
 std::ostream& operator<<(std::ostream &ss_, const std::shared_ptr<model::ModelBase>& modelBase);
-
-#endif //TRADING_BOT_BATCHWRITER_H
+#endif

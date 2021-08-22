@@ -9,6 +9,7 @@ TestEnv::TestEnv(std::initializer_list<std::pair<std::string,std::string>> confi
 ,   _position(std::make_shared<model::Position>())
 ,   _lastDispatch()
 ,   _realtime(false)
+,   _events(0)
 {
     init();
 }
@@ -16,6 +17,12 @@ TestEnv::TestEnv(std::initializer_list<std::pair<std::string,std::string>> confi
 void TestEnv::operator<<(const std::string &value_) {
     try {
         *_context->marketData() << value_;
+        if (_realtime) {
+            sleep(_context->marketData()->time());
+            _lastDispatch.actual_time = utility::datetime::utc_now();
+            _lastDispatch.mkt_time = _context->marketData()->time();
+        }
+        _events++;
         _context->strategy()->evaluate();
         // TODO make TestException class
     } catch (std::exception& ex) {
@@ -208,16 +215,11 @@ TestEnv::TestEnv(const std::shared_ptr<Config> &config_)
 
 void TestEnv::dispatch(utility::datetime time_, const std::shared_ptr<model::Quote> &quote_,
                        const std::shared_ptr<model::Execution> exec_, const std::shared_ptr<model::Order> order_) {
+    _events++;
 #ifndef REPLAY_MODE
-    auto now = utility::datetime::utc_now();
-    auto mktTimeDiff = _lastDispatch.mkt_time - time_;
-    auto timeSinceLastDispatch = _lastDispatch.actual_time - now;
-    LOGDEBUG(LOG_VAR(mktTimeDiff) << LOG_VAR(timeSinceLastDispatch));
-    if (timeSinceLastDispatch < mktTimeDiff /*the amount of time passed, is less than in the market*/) {
-        LOGDEBUG(LOG_NVP("sleep_for", mktTimeDiff-timeSinceLastDispatch));
-        std::this_thread::sleep_for(std::chrono::milliseconds(mktTimeDiff-timeSinceLastDispatch));
-    }
+    sleep(time_);
 #endif
+    _lastDispatch.actual_time = utility::datetime::utc_now();
     if (quote_) {
         *_context->orderApi() << time_; //  >> std::vector
         *_context->marketData() << quote_;
@@ -228,4 +230,24 @@ void TestEnv::dispatch(utility::datetime time_, const std::shared_ptr<model::Quo
         *_context->marketData() << order_;
         *_context->marketData() << _context->orderApi()->getPosition();
     }
+}
+
+void TestEnv::sleep(const utility::datetime& time_) const {
+    if (_events == 0) {
+        return;
+    }
+    auto now = utility::datetime::utc_now();
+    auto mktTimeDiff =  time_ - _lastDispatch.mkt_time;
+    auto timeSinceLastDispatch = now - _lastDispatch.actual_time;
+    LOGDEBUG(LOG_NVP("TimeNow",now.to_string(utility::datetime::ISO_8601))
+        << LOG_NVP("MktTime",time_.to_string(utility::datetime::ISO_8601)));
+    LOGDEBUG(LOG_NVP("LastDispatch",_lastDispatch.actual_time.to_string(utility::datetime::ISO_8601))
+        << LOG_NVP("LastDispatchMktTime",_lastDispatch.mkt_time.to_string(utility::datetime::ISO_8601)));
+    LOGDEBUG(LOG_VAR(mktTimeDiff) << LOG_VAR(timeSinceLastDispatch));
+    if (timeSinceLastDispatch < mktTimeDiff /*the amount of time passed, is less than in the market*/) {
+        auto sleep_for = mktTimeDiff-timeSinceLastDispatch;
+        LOGDEBUG(LOG_VAR(sleep_for));
+        std::this_thread::sleep_for(std::chrono::seconds (mktTimeDiff-timeSinceLastDispatch));
+    }
+
 }

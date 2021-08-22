@@ -40,6 +40,7 @@ class TestEnv
     std::shared_ptr<model::Position> _position;
     Dispatch _lastDispatch; // first is time, second is mkttime
     bool _realtime;
+    long _events;
 public:
     const std::shared_ptr<TStrategy>& strategy() const { return _context->strategy(); }
     TestEnv(std::initializer_list<std::pair<std::string, std::string>>);
@@ -54,6 +55,7 @@ public:
 
     void operator << (const std::string& value_);
     void operator >> (const std::string& value_);
+    void sleep(const utility::datetime& time_) const;
 };
 
 

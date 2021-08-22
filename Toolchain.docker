@@ -26,6 +26,7 @@ RUN apt-get update \
       rsync \
       tar \
       python \
+      less \
   && apt-get clean
 
 RUN apt-get install -y \

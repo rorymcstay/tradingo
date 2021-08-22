@@ -4,6 +4,12 @@
 
 #include "TestMarketData.h"
 
+template<typename T>
+void set_time(const T& modelBase_, utility::datetime& time_) {
+    if (modelBase_->timestampIsSet())
+        time_ = modelBase_->getTimestamp();
+}
+
 void TestMarketData::operator<<(const std::string &marketDataString) {
 
     auto params = Params(marketDataString);
@@ -15,10 +21,12 @@ void TestMarketData::operator<<(const std::string &marketDataString) {
         auto execution = fromJson<model::Execution>(json);
         std::vector<decltype(execution)> execs =  {execution};
         handleExecutions(execs, "insert");
+        set_time(execution, _time);
     } else if (type == "QUOTE") {
         auto quote = fromJson<model::Quote>(json);
         std::vector<decltype(quote)> qts = {quote};
         handleQuotes(qts, "insert");
+        set_time(quote, _time);
     } else if (type == "TRADE") {
         auto trade = fromJson<model::Trade>(json);
         std::vector<decltype(trade)> trades = {trade};
@@ -33,14 +41,17 @@ void TestMarketData::operator<<(const std::string &marketDataString) {
             action = "insert";
         }
         handlePositions(positions, action);
+        set_time(position, _time);
     } else {
         throw std::runtime_error("Must specify update type, one off POSITION, TRADE, QUOTE, EXECUTION");
     }
+
 }
 
 TestMarketData::TestMarketData(const std::shared_ptr<Config>& ptr)
 : MarketDataInterface(ptr)
-, _config(ptr){
+, _config(ptr)
+, _time(utility::datetime::utc_now()){
 
 }
 

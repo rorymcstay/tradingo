@@ -13,11 +13,13 @@
 
 class TestMarketData : public MarketDataInterface {
     std::shared_ptr<Config> _config;
+    utility::datetime _time;
 
 public:
     explicit TestMarketData(const std::shared_ptr<Config>& ptr);
     void init();
     void subscribe() {}
+    utility::datetime time() const { return _time; }
 
     void addPosition(const std::shared_ptr<model::Position>& position_) {
         _positions[position_->getSymbol()] = position_;
