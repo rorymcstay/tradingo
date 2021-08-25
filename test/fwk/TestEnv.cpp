@@ -221,10 +221,12 @@ void TestEnv::dispatch(utility::datetime time_, const std::shared_ptr<model::Quo
 #endif
     _lastDispatch.actual_time = utility::datetime::utc_now();
     if (quote_) {
+        LOGDEBUG(AixLog::Color::blue << "quote: " << LOG_NVP("time",time_.to_string(utility::datetime::ISO_8601)) << AixLog::Color::none);
         *_context->orderApi() << time_; //  >> std::vector
         *_context->marketData() << quote_;
         _context->strategy()->evaluate();
     } else if (exec_ and order_) {
+        LOGDEBUG(AixLog::Color::blue << "order event: " << LOG_NVP("time",time_.to_string(utility::datetime::ISO_8601)) << AixLog::Color::none);
         _context->orderApi()->addExecToPosition(exec_);
         *_context->marketData() << exec_;
         *_context->marketData() << order_;

@@ -43,6 +43,7 @@ int main(int argc, char **argv) {
     {"longTermWindow", "8000"},
     {"logLevel", "info"},
     {"moving_average_crossover-interval", "1000"},
+    {"logLevel", "debug"},
     {"storage", "./"}}));
     *defaults += (*defaults);
     auto env = TestEnv(defaults);

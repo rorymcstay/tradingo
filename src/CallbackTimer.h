@@ -24,7 +24,7 @@ public:
         _execute = true;
         _interval = interval;
 
-#ifndef REPLAY_MODE
+#ifdef REPLAY_MODE
         auto to_sleep = interval/10;
         LOGWARN("Replay Mode is activated, " << LOG_VAR(to_sleep));
 #else

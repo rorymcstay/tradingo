@@ -177,7 +177,9 @@ protected:
     void handlePositions(std::vector<std::shared_ptr<model::Position>>& trades_, const std::string& action_);
     void handleExecutions(std::vector<std::shared_ptr<model::Execution>>& execs_, const std::string& action_);
     void handleOrders(std::vector<std::shared_ptr<model::Order>>& orders_, const std::string& action_);
-    void callback() { _callback(); }
+    void callback() {
+        _callback();
+    }
 
 protected:
     template<typename T>

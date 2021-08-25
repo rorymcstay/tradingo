@@ -36,6 +36,7 @@ add_library(trading_funcs SHARED
         #${CPPLOGGER_HEADER}
         )
 
+# this should always be true and overrides REPLAY_MODE on non test libraries
 target_compile_definitions(trading_funcs PUBLIC __REPLAY_MODE_GUARD)
 target_link_libraries(trading_funcs
         CppRestSwaggerClient

@@ -6,8 +6,10 @@
 
 template<typename T>
 void set_time(const T& modelBase_, utility::datetime& time_) {
-    if (modelBase_->timestampIsSet())
+    if (modelBase_->timestampIsSet()) {
+        LOGDEBUG("Setting market data time: " << time_.to_string(utility::datetime::ISO_8601));
         time_ = modelBase_->getTimestamp();
+    }
 }
 
 void TestMarketData::operator<<(const std::string &marketDataString) {
@@ -21,11 +23,13 @@ void TestMarketData::operator<<(const std::string &marketDataString) {
         auto execution = fromJson<model::Execution>(json);
         std::vector<decltype(execution)> execs =  {execution};
         handleExecutions(execs, "insert");
+        std::lock_guard<decltype(MarketDataInterface::_mutex)> lock(MarketDataInterface::_mutex);
         set_time(execution, _time);
     } else if (type == "QUOTE") {
         auto quote = fromJson<model::Quote>(json);
         std::vector<decltype(quote)> qts = {quote};
         handleQuotes(qts, "insert");
+        std::lock_guard<decltype(MarketDataInterface::_mutex)> lock(MarketDataInterface::_mutex);
         set_time(quote, _time);
     } else if (type == "TRADE") {
         auto trade = fromJson<model::Trade>(json);
@@ -41,6 +45,7 @@ void TestMarketData::operator<<(const std::string &marketDataString) {
             action = "insert";
         }
         handlePositions(positions, action);
+        std::lock_guard<decltype(MarketDataInterface::_mutex)> lock(MarketDataInterface::_mutex);
         set_time(position, _time);
     } else {
         throw std::runtime_error("Must specify update type, one off POSITION, TRADE, QUOTE, EXECUTION");
@@ -68,6 +73,7 @@ void TestMarketData::init() {
 void TestMarketData::operator<<(const std::shared_ptr<model::Quote> &quote_) {
     std::vector<std::shared_ptr<model::Quote>> quotes = {quote_};
     MarketDataInterface::handleQuotes(quotes, "INSERT");
+    set_time(quote_, _time);
     callback();
 }
 
