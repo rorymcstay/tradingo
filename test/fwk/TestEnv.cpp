@@ -224,6 +224,7 @@ void TestEnv::dispatch(utility::datetime time_, const std::shared_ptr<model::Quo
         LOGDEBUG(AixLog::Color::blue << "quote: " << LOG_NVP("time",time_.to_string(utility::datetime::ISO_8601)) << AixLog::Color::none);
         *_context->orderApi() << time_; //  >> std::vector
         *_context->marketData() << quote_;
+        _context->strategy()->updateSignals();
         _context->strategy()->evaluate();
     } else if (exec_ and order_) {
         LOGDEBUG(AixLog::Color::blue << "order event: " << LOG_NVP("time",time_.to_string(utility::datetime::ISO_8601)) << AixLog::Color::none);
@@ -241,12 +242,13 @@ void TestEnv::sleep(const utility::datetime& time_) const {
     auto now = utility::datetime::utc_now();
     auto mktTimeDiff =  time_ - _lastDispatch.mkt_time;
     auto timeSinceLastDispatch = now - _lastDispatch.actual_time;
-    LOGDEBUG(LOG_NVP("TimeNow",now.to_string(utility::datetime::ISO_8601))
-        << LOG_NVP("MktTime",time_.to_string(utility::datetime::ISO_8601)));
-    LOGDEBUG(LOG_NVP("LastDispatch",_lastDispatch.actual_time.to_string(utility::datetime::ISO_8601))
-        << LOG_NVP("LastDispatchMktTime",_lastDispatch.mkt_time.to_string(utility::datetime::ISO_8601)));
-    LOGDEBUG(LOG_VAR(mktTimeDiff) << LOG_VAR(timeSinceLastDispatch));
+
     if (timeSinceLastDispatch < mktTimeDiff /*the amount of time passed, is less than in the market*/) {
+        LOGDEBUG(LOG_NVP("TimeNow",now.to_string(utility::datetime::ISO_8601))
+                         << LOG_NVP("MktTime",time_.to_string(utility::datetime::ISO_8601)));
+        LOGDEBUG(LOG_NVP("LastDispatch",_lastDispatch.actual_time.to_string(utility::datetime::ISO_8601))
+                         << LOG_NVP("LastDispatchMktTime",_lastDispatch.mkt_time.to_string(utility::datetime::ISO_8601)));
+        LOGDEBUG(LOG_VAR(mktTimeDiff) << LOG_VAR(timeSinceLastDispatch));
         auto sleep_for = mktTimeDiff-timeSinceLastDispatch;
         LOGDEBUG(LOG_VAR(sleep_for));
         std::this_thread::sleep_for(std::chrono::seconds (mktTimeDiff-timeSinceLastDispatch));

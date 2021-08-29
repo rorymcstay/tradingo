@@ -9,6 +9,8 @@
 #include <chrono>
 #include <future>
 #include <cstdio>
+#include <thread>
+#include <pthread.h>
 
 #include "Utils.h"
 
@@ -23,6 +25,8 @@ public:
     void start(int interval, std::function<void(void)> func) {
         _execute = true;
         _interval = interval;
+        auto thread_name = "callback_"+std::to_string(_interval);
+       pthread_setname_np(pthread_self(), thread_name.c_str());
 
 #ifdef REPLAY_MODE
         auto to_sleep = interval/10;

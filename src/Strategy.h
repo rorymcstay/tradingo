@@ -55,6 +55,7 @@ public:
     void forEachSignal(std::function<void(const Signal::Map::value_type&)> function_) {
         std::for_each(_signals.begin(), _signals.end(),function_);
     }
+    void updateSignals();
     Signal::Ptr getSignal(const std::string& name) {
         return _signals[name];
     }
@@ -325,6 +326,11 @@ void Strategy<TOrdApi>::updateFromTask(const pplx::task<std::vector<std::shared_
             _orders.erase(priceIndex);
         }
     }
+}
+
+template<typename TOrdApi>
+void Strategy<TOrdApi>::updateSignals() {
+    forEachSignal([](const Signal::Map::value_type& signal_) { signal_.second->update(); });
 }
 
 

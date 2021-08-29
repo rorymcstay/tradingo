@@ -6,7 +6,6 @@
 #define TRADING_BOT_BATCHWRITER_H
 
 #include <iomanip>
-#include <thread>
 #include <mutex>
 #include <ModelBase.h>
 

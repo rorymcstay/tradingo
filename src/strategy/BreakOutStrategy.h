@@ -106,6 +106,9 @@ void BreakOutStrategy<TORDApi>::onBBO(const std::shared_ptr<Event> &event_) {
         price = askPrice;
         side = "Sell";
     }
+    else {
+        LOGDEBUG("Signal is not ready.");
+    }
     if (almost_equal(qtyToTrade, 0.0)) {
         LOGDEBUG("No quantity to trade");
         return;

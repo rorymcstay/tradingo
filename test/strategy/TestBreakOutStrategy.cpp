@@ -14,10 +14,14 @@ TEST(BreakOutStrategy, smoke_test)
         {"startingAmount", "1000"},
         {"referencePrice", "100"},
         {"shortTermWindow", "1"},
-        {"longTermWindow", "2"}
+        {"longTermWindow", "2"},
+        {"moving_average_crossover-interval", "10"},
+        {"callback-signals", "true"}
     });
 
     env << "QUOTE askPrice=100.0 askSize=100.0 bidPrice=99.0 bidSize=1000.0 symbol=XBTUSD" LN;
+    env << "QUOTE askPrice=100.0 askSize=100.0 bidPrice=99.0 bidSize=1000.0 symbol=XBTUSD" LN;
+    env << "QUOTE askPrice=101.0 askSize=100.0 bidPrice=100.0 bidSize=1000.0 symbol=XBTUSD" LN;
     env << "QUOTE askPrice=101.0 askSize=100.0 bidPrice=100.0 bidSize=1000.0 symbol=XBTUSD" LN;
     env >> "ORDER_NEW ordStatus=New orderQty=100 price=99 side=Buy symbol=XBTUSD orderID=1 clOrdID=MCST0 Side=Buy" LN;
     env >> "ORDER_NEW Price=100 OrderQty=100 CumQty=0 LeavesQty=100 Symbol=XBTUSD OrderID=4 ClOrdID=MCST1 OrdStatus=New Side=Buy" LN;

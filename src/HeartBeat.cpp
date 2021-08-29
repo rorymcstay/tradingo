@@ -5,6 +5,7 @@
 #include "HeartBeat.h"
 
 #include <utility>
+#include <pthread.h>
 #include "Utils.h"
 
 void HeartBeat::startTimer(long cycle_) {
@@ -29,6 +30,7 @@ void HeartBeat::sendPing() {
 void HeartBeat::init(const std::function<void()>& timeoutCallback_) {
 
     auto timedPong = [this, timeoutCallback_]() {
+        pthread_setname_np(pthread_self(), "heartbeat");
         long cycle;
         while (not _stop) {
             cycle = _cycle;

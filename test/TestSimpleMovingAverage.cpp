@@ -6,7 +6,7 @@
 #include "SimpleMovingAverage.h"
 
 TEST(SimpleMovingAverageTest, smoke_test) {
-    auto sma = SimpleMovingAverage<double,double>(10, 10);
+    auto sma = SimpleMovingAverage<double,double>(10, 1);
 
     sma(5);
     ASSERT_FALSE(sma.is_ready());
@@ -20,6 +20,8 @@ TEST(SimpleMovingAverageTest, smoke_test) {
     sma(5);
     std::cout << sma(5) << "\n";
     ASSERT_EQ(sma(5), 5);
+    std::cout << sma(5) << "\n";
+    std::cout << sma(5) << "\n";
     ASSERT_TRUE(sma.is_ready());
 
 }
