@@ -34,7 +34,9 @@ class Strategy {
 
     std::shared_ptr<Allocations>           _allocations;
     std::unordered_map<long, OrderPtr> _orders;
-    std::unordered_map<std::string, std::shared_ptr<Signal>> _signals;
+    std::unordered_map<std::string, std::shared_ptr<Signal>> _timed_signals;
+    std::unordered_map<std::string, std::shared_ptr<Signal>> _callback_signals;
+
 
 
     virtual void onExecution(const std::shared_ptr<Event>& event_) = 0;
@@ -52,12 +54,17 @@ public:
     virtual bool shouldEval();
     const std::shared_ptr<Allocations>& allocations() { return _allocations; }
     std::shared_ptr<MarketDataInterface> getMD() const { return _marketData; }
-    void forEachSignal(std::function<void(const Signal::Map::value_type&)> function_) {
-        std::for_each(_signals.begin(), _signals.end(),function_);
+    void forEachSignal(std::function<void(const Signal::Map::value_type&)> function_, bool callbacks=true) {
+        if (callbacks) {
+            std::for_each(_callback_signals.begin(), _callback_signals.end(), function_);
+        } else {
+            std::for_each(_timed_signals.begin(), _timed_signals.end(), function_);
+        }
+
     }
     void updateSignals();
     Signal::Ptr getSignal(const std::string& name) {
-        return _signals[name];
+        return _timed_signals[name];
     }
 
 
@@ -66,10 +73,7 @@ protected:
     std::string _symbol;
     price_t _balance;
 
-    void addSignal(const std::shared_ptr<Signal>& signal_) {
-        _signals.emplace(signal_->name(), signal_);
-        signal_->init(_config, _marketData);
-    }
+    void addSignal(const std::shared_ptr<Signal>& signal_);
 
 public:
     std::shared_ptr<model::Instrument> instrument() const { return _marketData ? _marketData->instrument() : nullptr; }
@@ -331,6 +335,17 @@ void Strategy<TOrdApi>::updateFromTask(const pplx::task<std::vector<std::shared_
 template<typename TOrdApi>
 void Strategy<TOrdApi>::updateSignals() {
     forEachSignal([](const Signal::Map::value_type& signal_) { signal_.second->update(); });
+}
+
+template<typename TOrdApi>
+void Strategy<TOrdApi>::addSignal(const std::shared_ptr<Signal> &signal_) {
+    signal_->init(_config, _marketData);
+    // signals are either globally callback to disable timer thread during tests.
+    if (signal_->callback() or _config->get("signal-callback", "false") == "true") {
+        _callback_signals.emplace(signal_->name(), signal_);
+    } else {
+        _timed_signals.emplace(signal_->name(), signal_);
+    }
 }
 
 

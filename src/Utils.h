@@ -6,7 +6,7 @@
 #include <chrono>
 
 #include "aixlog.hpp"
-
+#include <ModelBase.h>
 
 #define __FILENAME__ (__builtin_strrchr(__FILE__, '/') ? __builtin_strrchr(__FILE__, '/') + 1 : __FILE__)
 #define LOGINFO(msg_)  LOG(INFO) << "\t" << msg_ << " |" <<  __FILENAME__ << ":" << __LINE__ << '\n'
@@ -119,3 +119,5 @@ bool less_equal(T num1, T num2)
 {
     return almost_equal(num1, num2) or num1 < num2;
 }
+
+long time_diff(utility::datetime time1_, utility::datetime time2_, const std::string& interval_="milliseconds");

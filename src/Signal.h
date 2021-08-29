@@ -32,12 +32,13 @@ protected:
     CallbackTimer _timer;
     std::shared_ptr<MarketDataInterface> _marketData;
     utility::datetime _time;
+    bool _callback;
 
 public:
     using Ptr = std::shared_ptr<Signal>;
     using Map = std::unordered_map<std::string, std::shared_ptr<Signal>>;
     using Writer = BatchWriter<std::string>;
-    explicit Signal() : _config(nullptr), _marketData(nullptr), _timer() {};
+    explicit Signal() : _config(nullptr), _marketData(nullptr), _timer(), _callback(false) {};
     virtual std::string read_as_string() = 0;
 
 
@@ -50,6 +51,7 @@ public:
     virtual bool isReady() = 0;
 
     const std::string& name() const { return _name; }
+    const bool callback() const { return _callback; }
 
 
 };

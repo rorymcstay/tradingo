@@ -317,7 +317,7 @@ const std::unordered_map<std::string, MarketDataInterface::PositionPtr> &MarketD
 
 void MarketDataInterface::updateSignals(const std::shared_ptr<Event>& event_) {
     /*
-    for (auto& signal : _signals) {
+    for (auto& signal : _timed_signals) {
         signal.second->update(event_);
     }*/
 }

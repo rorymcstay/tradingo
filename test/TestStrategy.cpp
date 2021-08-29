@@ -121,8 +121,10 @@ TEST(Strategy, test_time_control) {
 }
 
 TEST(Strategy, time_diff) {
-    auto time = utility::datetime::from_string("2021-07-09T01:38:28.992Z", utility::datetime::ISO_8601);
-    auto time_p1 = utility::datetime::from_string("2021-07-09T01:38:28.999Z", utility::datetime::ISO_8601);
+    auto time = utility::datetime::from_string("2021-07-09T01:38:28.992000Z", utility::datetime::ISO_8601);
+    auto time_p1 = utility::datetime::from_string("2021-07-09T01:38:28.999000Z", utility::datetime::ISO_8601);
     LOGINFO(LOG_VAR(time.to_string()) << LOG_VAR(time_p1.to_string()));
-    LOGINFO(LOG_NVP("TimeDiff", time_p1 - time));
+    double diff = time_diff(time, time_p1, "milliseconds");
+    LOGINFO(LOG_NVP("TimeDiff", diff));
+    ASSERT_EQ(diff, 7);
 }

@@ -38,6 +38,7 @@ int main(int argc, char **argv) {
         {"longTermWindow", "8000"},
         {"logLevel", "info"},
         {"moving_average_crossover-interval", "1000"},
+        {"signal-callback", "1000"},
         {"logLevel", "debug"},
         {"storage", "./"}}));
     if (vm.contains("config")) {

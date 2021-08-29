@@ -190,6 +190,7 @@ void TestEnv::init() {
     _config->set("httpEnabled", "False");
     _config->set("tickSize", "0.5");
     _config->set("lotSize", "100");
+    _config->set("callback-signals", "true");
     if (_config->get("realtime", "true") == "true") {
         _realtime = true;
     }
@@ -215,10 +216,12 @@ TestEnv::TestEnv(const std::shared_ptr<Config> &config_)
 
 void TestEnv::dispatch(utility::datetime time_, const std::shared_ptr<model::Quote> &quote_,
                        const std::shared_ptr<model::Execution> exec_, const std::shared_ptr<model::Order> order_) {
-    _events++;
+
 #ifndef REPLAY_MODE
+    // default behaviour is to sleep
     sleep(time_);
 #endif
+    _events++;
     _lastDispatch.actual_time = utility::datetime::utc_now();
     if (quote_) {
         LOGDEBUG(AixLog::Color::blue << "quote: " << LOG_NVP("time",time_.to_string(utility::datetime::ISO_8601)) << AixLog::Color::none);
@@ -240,8 +243,9 @@ void TestEnv::sleep(const utility::datetime& time_) const {
         return;
     }
     auto now = utility::datetime::utc_now();
-    auto mktTimeDiff =  time_ - _lastDispatch.mkt_time;
-    auto timeSinceLastDispatch = now - _lastDispatch.actual_time;
+    auto mktTimeDiff = time_diff(time_, _lastDispatch.mkt_time);
+
+    auto timeSinceLastDispatch = time_diff(now, _lastDispatch.actual_time);
 
     if (timeSinceLastDispatch < mktTimeDiff /*the amount of time passed, is less than in the market*/) {
         LOGDEBUG(LOG_NVP("TimeNow",now.to_string(utility::datetime::ISO_8601))
@@ -251,7 +255,7 @@ void TestEnv::sleep(const utility::datetime& time_) const {
         LOGDEBUG(LOG_VAR(mktTimeDiff) << LOG_VAR(timeSinceLastDispatch));
         auto sleep_for = mktTimeDiff-timeSinceLastDispatch;
         LOGDEBUG(LOG_VAR(sleep_for));
-        std::this_thread::sleep_for(std::chrono::seconds (mktTimeDiff-timeSinceLastDispatch));
+        std::this_thread::sleep_for(std::chrono::milliseconds(mktTimeDiff-timeSinceLastDispatch));
     }
 
 }

@@ -146,7 +146,7 @@ public:
 
 private:
     std::priority_queue<std::shared_ptr<Event>, std::vector<std::shared_ptr<Event>>, QueueArrange> _eventBuffer;
-    //std::unordered_map<std::string, std::shared_ptr<Signal>> _signals;
+    //std::unordered_map<std::string, std::shared_ptr<Signal>> _timed_signals;
 private:
     void updateSignals(const std::shared_ptr<Event>& event_);
 public:
