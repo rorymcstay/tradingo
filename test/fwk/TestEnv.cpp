@@ -65,7 +65,7 @@ std::shared_ptr<model::Execution> canTrade(const std::shared_ptr<model::Order>& 
         return nullptr;
         // order is filled, do nothing
     } else if ((side == "Buy" ? tradePx <= orderPx : tradePx >= orderPx)) {
-        LOGDEBUG(AixLog::Color::GREEN << "Tradable order found: "
+        LOGDEBUG(AixLog::Color::GREEN << "Tradeable order found: "
                 << LOG_NVP("Order", order_->toJson().serialize())
                 << LOG_NVP("Trade", trade_->toJson().serialize()) << AixLog::Color::none);
         auto fillQty = std::min(orderQty, tradeQty);
@@ -191,7 +191,7 @@ void TestEnv::init() {
     _config->set("tickSize", "0.5");
     _config->set("lotSize", "100");
     _config->set("callback-signals", "true");
-    if (_config->get("realtime", "true") == "true") {
+    if (_config->get("realtime", "false") == "true") {
         _realtime = true;
     }
     if (_config->get("logLevel", "").empty())
@@ -210,20 +210,22 @@ void TestEnv::init() {
 
 TestEnv::TestEnv(const std::shared_ptr<Config> &config_)
 :   _config(config_)
-,   _position(std::make_shared<model::Position>()) {
+,   _position(std::make_shared<model::Position>())
+,   _realtime(false){
     init();
 }
 
 void TestEnv::dispatch(utility::datetime time_, const std::shared_ptr<model::Quote> &quote_,
                        const std::shared_ptr<model::Execution> exec_, const std::shared_ptr<model::Order> order_) {
 
-#ifndef REPLAY_MODE
-    // default behaviour is to sleep
-    sleep(time_);
-#endif
+    // default behaviour is not to sleep
+    if (_realtime) {
+        sleep(time_);
+    }
     _events++;
     _lastDispatch.actual_time = utility::datetime::utc_now();
     if (quote_) {
+        _lastDispatch.mkt_time = quote_->getTimestamp();
         LOGDEBUG(AixLog::Color::blue << "quote: " << LOG_NVP("time",time_.to_string(utility::datetime::ISO_8601)) << AixLog::Color::none);
         *_context->orderApi() << time_; //  >> std::vector
         *_context->marketData() << quote_;
@@ -243,6 +245,10 @@ void TestEnv::sleep(const utility::datetime& time_) const {
         return;
     }
     auto now = utility::datetime::utc_now();
+    if (not _lastDispatch.actual_time.is_initialized()) {
+        LOGWARN("last dispatch time is uninitialised, will not sleep.");
+        return;
+    }
     auto mktTimeDiff = time_diff(time_, _lastDispatch.mkt_time);
 
     auto timeSinceLastDispatch = time_diff(now, _lastDispatch.actual_time);

@@ -39,7 +39,7 @@ int main(int argc, char **argv) {
         {"logLevel", "info"},
         {"moving_average_crossover-interval", "1000"},
         {"signal-callback", "1000"},
-        {"logLevel", "debug"},
+        {"logLevel", "info"},
         {"storage", "./"}}));
     if (vm.contains("config")) {
         auto config = std::make_shared<Config>(vm.at("config").as<std::string>());

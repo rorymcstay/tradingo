@@ -63,9 +63,7 @@ public:
 
     }
     void updateSignals();
-    Signal::Ptr getSignal(const std::string& name) {
-        return _timed_signals[name];
-    }
+    Signal::Ptr getSignal(const std::string& name);
 
 
 protected:
@@ -166,7 +164,7 @@ void Strategy<TOrdApi>::placeAllocations() {
         if (almost_equal(allocation->getTargetDelta(), 0.0)) {
             continue;
         }
-        LOGINFO("Processing allocation " << LOG_NVP("targetDelta",allocation->getTargetDelta())
+        LOGDEBUG("Processing allocation " << LOG_NVP("targetDelta",allocation->getTargetDelta())
                 << LOG_NVP("currentSize", allocation->getSize()) << LOG_NVP("price",allocation->getPrice()));
 
         std::shared_ptr<model::Order> order = createOrder(allocation);
@@ -346,6 +344,17 @@ void Strategy<TOrdApi>::addSignal(const std::shared_ptr<Signal> &signal_) {
     } else {
         _timed_signals.emplace(signal_->name(), signal_);
     }
+}
+
+template<typename TOrdApi>
+Signal::Ptr Strategy<TOrdApi>::getSignal(const std::string &name) {
+    if (_timed_signals.find(name) != _timed_signals.end()) {
+        return _timed_signals[name];
+    }
+    if (_callback_signals.find(name) != _callback_signals.end()) {
+        return _callback_signals[name];
+    }
+    return nullptr;
 }
 
 
