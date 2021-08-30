@@ -20,7 +20,10 @@ void Signal::update() {
 #if defined(REPLAY_MODE) || !defined(__REPLAY_MODE_GUARD) // toggle REPLAY_MODE in replay live/fast
 
         if (not _callback) {
-            auto mkt_time_past = time_diff(quote->getTimestamp(), _time);
+            auto mkt_time_past = _timer.interval();
+            if (_time.is_initialized()) {
+                mkt_time_past = time_diff(quote->getTimestamp(), _time);
+            }
             LOGDEBUG("Market time past " << LOG_VAR(mkt_time_past) << LOG_VAR(_timer.interval()));
             if (mkt_time_past >= _timer.interval()) {
                 LOGDEBUG("Time to update " << _timer.interval());
@@ -56,10 +59,10 @@ void Signal::init(const std::shared_ptr<Config> &config_, std::shared_ptr<Market
         _callback = true;
         // we use callback instead.
         LOGINFO("callback signal initialised." << LOG_VAR(_name));
-    } else {
+    } else if (_config->get("signal-callback", "false") == "false") {
         LOGINFO("Using callback timer for signal."
             << LOG_VAR(_name) << LOG_VAR(evalInterval));
         _timer.start(evalInterval, [this] { update(); });
     }
-
 }
+

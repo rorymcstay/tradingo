@@ -69,6 +69,7 @@ target_link_libraries(testTradingo
         )
 
 if(${REPLAY_MODE})
+    message(STATUS "Replay mode is active")
     # REPLAY_MODE changes the following
     # TestEnv::replay(quote, trade) will
     # 1. manipulate the Signal class so that it wakes up on the market time
