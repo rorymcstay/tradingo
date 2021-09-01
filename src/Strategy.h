@@ -96,6 +96,7 @@ void Strategy<TOrdApi>::evaluate() {
     if (!event) {
         return;
     }
+    updateSignals();
     // call one of three handlers.
     if (event->eventType() == EventType::BBO) {
         onBBO(event);

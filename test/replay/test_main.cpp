@@ -8,6 +8,8 @@
 #include "Config.h"
 #include "fwk/TestEnv.h"
 
+#include "Utils.h"
+
 namespace po = boost::program_options;
 
 
@@ -39,7 +41,7 @@ int main(int argc, char **argv) {
         {"logLevel", "info"},
         {"moving_average_crossover-interval", "1000"},
         {"signal-callback", "1000"},
-        {"logLevel", "info"},
+        {"logLevel", "debug"},
         {"storage", "./"}}));
     if (vm.contains("config")) {
         auto config = std::make_shared<Config>(vm.at("config").as<std::string>());
@@ -52,6 +54,7 @@ int main(int argc, char **argv) {
     auto trade = defaults->get("tickStorage") + "/trades_XBTUSD.json";
     auto quotes = defaults->get("tickStorage") + "/quotes_XBTUSD.json";
     env.playback(trade, quotes);
+    LOGINFO("Replaye Finished");
 }
 
 

@@ -43,6 +43,7 @@ install(TARGETS
 install(FILES
 	etc/config/tickRecorder.cfg
 	etc/config/tradingo.cfg
+    etc/config/replayTradingo.cfg
 	DESTINATION etc/config COMPONENT app-config)
 
 install(FILES

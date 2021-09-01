@@ -22,25 +22,20 @@ public:
     ,   _interval(0)
     {}
 
+    void set_interval(int interval_) { _interval = interval_; }
+
     void start(int interval, std::function<void(void)> func) {
         _execute = true;
         _interval = interval;
         auto thread_name = "callback_"+std::to_string(_interval);
        pthread_setname_np(pthread_self(), thread_name.c_str());
 
-#ifdef REPLAY_MODE
-        auto to_sleep = interval/10;
-        LOGWARN("Replay Mode is activated, " << LOG_VAR(to_sleep));
-#else
-        auto to_sleep = interval;
-        LOGWARN("Replay Mode is deactivated, " << LOG_VAR(to_sleep));
-
-#endif
-        std::thread([this, func, to_sleep]() {
+        LOGWARN("Callback timer is starting" << LOG_VAR(interval));
+        std::thread([this, func, interval]() {
             while (_execute) {
                 func();
                 std::this_thread::sleep_for(
-                        std::chrono::milliseconds(to_sleep));
+                        std::chrono::milliseconds(interval));
             }
         }).detach();
     }

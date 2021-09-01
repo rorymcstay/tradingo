@@ -29,3 +29,12 @@ In replay mode, must be used
 signal-callback=true
 realtime=true
 
+rory@ldtradingoapp:~/src/tradingo/build$ replay_tradingo_on() {  export DATESTR=$1; envsubst < /usr/etc/config/replayTradingo.cfg  > /tmp/replay.cfg; cat /tmp/replay.cfg; replayTradingo --config /tmp/replay.cfg &> /tmp/log/replay_$1.log; }
+rory@ldtradingoapp:~/src/tradingo/build$ for date in $(ls /data/tickRecorder/storage); do replay_tradingo_on $date; done
+
+# Replay Modes
+Cmake option `-DREPLAY_MODE=1` enables time control in `Signal`. It may be paired with the following configuration items for a signal `<name>`.
+
+* `<name>-callback`: 
+* `override-signal-callback`:
+* `realtime`: 
