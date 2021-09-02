@@ -39,7 +39,7 @@ void TestEnv::operator>>(const std::string &value_) {
 }
 
 template<typename T>
-std::shared_ptr<T> getEvent(std::ifstream& fileHandle_) {
+std::shared_ptr<T> getEvent(std::ifstream &fileHandle_) {
     std::string str;
     auto quote = std::make_shared<T>();
     if (not std::getline(fileHandle_, str))

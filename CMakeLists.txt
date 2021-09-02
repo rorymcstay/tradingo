@@ -3,7 +3,6 @@ project(Tradingo)
 set(VERSION "1.0.1")
 
 # Get the latest abbreviated commit hash of the working branch
-
 include(gitVersion.cmake)
 
 set(CMAKE_CXX_STANDARD 20)
@@ -27,4 +26,3 @@ set(CPACK_PACKAGE_CONTACT "Rory McStay")
 set(CPACK_PACKAGE_VENDOR "rorymcstay.com")
 set(CPACK_PACKAGE_FILE_NAME "${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-${CPACK_PACKAGE_RELEASE}.${CMAKE_SYSTEM_PROCESSOR}")
 include(CPack)
-

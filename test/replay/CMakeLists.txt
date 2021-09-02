@@ -1,0 +1,11 @@
+add_executable(replayTradingo
+        test_main.cpp)
+target_link_libraries(replayTradingo
+        test_trading_funcs
+        ${GTEST_LIBRARY}
+        ${OPENSSL_CRYPTO_LIBRARY}
+        CppRestSwaggerClient
+        boost_system
+        pthread
+        boost_program_options
+        )

@@ -159,11 +159,11 @@ protected:
     std::vector<std::string> _orderKey;
     std::string _symbol;
 
-    cache::ObjectPool<model::Trade, 1000, TradeReleaser> _tradePool;
-    cache::ObjectPool<model::Quote, 1000, QuoteReleaser> _quotePool;
-    cache::ObjectPool<model::Position, 1000, PositionReleaser> _positionPool;
-    cache::ObjectPool<model::Execution, 1000, ExecutionReleaser> _execPool;
-    cache::ObjectPool<model::Order, 1000, OrderReleaser> _orderPool;
+    cache::ObjectPool<model::Trade, 1, TradeReleaser> _tradePool;
+    cache::ObjectPool<model::Quote, 1, QuoteReleaser> _quotePool;
+    cache::ObjectPool<model::Position, 1, PositionReleaser> _positionPool;
+    cache::ObjectPool<model::Execution, 1, ExecutionReleaser> _execPool;
+    cache::ObjectPool<model::Order, 1, OrderReleaser> _orderPool;
 
     std::queue<std::shared_ptr<model::Execution>> _executions;
     std::unordered_map<std::string, std::shared_ptr<model::Position>> _positions;
