@@ -23,8 +23,15 @@ jobs:
     - name:  Install dependencies
       # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
       # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
-      run: sudo apt-get update && sudo apt-get -y install cmake libcpprest-dev libgtest-dev libboost-program-options-dev
-
+      run: |
+        sudo apt-get update && sudo apt-get -y install cmake libcpprest-dev libgtest-dev libboost-program-options-dev \
+          && git clone https://github.com/google/benchmark.git /tmp/src/benchmark \
+          && mkdir -p /tmp/src/benchmark/build \
+          && /bin/sh -c 'cd /tmp/src/benchmark/build && \
+            cmake -DBENCHMARK_DOWNLOAD_DEPENDENCIES=on \
+            -DCMAKE_BUILD_TYPE=Release /tmp/src/benchmark \
+            && sudo make install -j3 '
+    # TODO: install benchmark here.
     - name: Clone thirdparty modules
       run: git submodule init && git submodule update
 

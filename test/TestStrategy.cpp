@@ -9,6 +9,11 @@
 #include "fwk/TestEnv.h"
 #include "Utils.h"
 
+#define DEFAULT_ARGS \
+    {"moving_average_crossover-callback", "fals"}, \
+    {"realtime", "false"},                         \
+    {"override-signal-callback", "true"}
+
 TEST(StrategyApi, smooke)
 {
     TestEnv env({
@@ -18,7 +23,8 @@ TEST(StrategyApi, smooke)
         {"startingAmount", "1000"},
         {"referencePrice", "100"},
         {"shortTermWindow", "100"},
-        {"longTermWindow", "1000"}
+        {"longTermWindow", "1000"},
+        DEFAULT_ARGS
     });
 
     auto strategy = env.strategy();
@@ -47,7 +53,8 @@ TEST(Strategy, changing_sides) {
         {"startingAmount", "1000"},
         {"referencePrice", "100"},
         {"shortTermWindow", "100"},
-        {"longTermWindow", "1000"}
+        {"longTermWindow", "1000"},
+        DEFAULT_ARGS
     });
 
     auto strategy = env.strategy();
@@ -71,8 +78,10 @@ TEST(Strategy, amend_order_more_than_once)
         {"startingAmount", "1000"},
         {"referencePrice", "100"},
         {"shortTermWindow", "100"},
-        {"longTermWindow", "1000"}
-    });
+        {"longTermWindow", "1000"},
+        DEFAULT_ARGS
+
+});
 
     auto strategy = env.strategy();
     strategy->allocations()->addAllocation(10, 100.0);
@@ -98,8 +107,10 @@ TEST(Strategy, test_time_control) {
         {"referencePrice", "100"},
         {"shortTermWindow", "5"},
         {"longTermWindow", "10"},
-        {"realtime", "true"}
-    });
+        {"realtime", "true"},
+        DEFAULT_ARGS
+
+});
 
     auto timebegin = utility::datetime::utc_now();
     env << "QUOTE timestamp=2021-07-09T01:38:24.992Z askPrice=100.0 askSize=100.0 bidPrice=99.0 bidSize=1000.0 symbol=XBTUSD" LN;
@@ -124,7 +135,7 @@ TEST(Strategy, time_diff) {
     auto time = utility::datetime::from_string("2021-07-09T01:38:28.992000Z", utility::datetime::ISO_8601);
     auto time_p1 = utility::datetime::from_string("2021-07-09T01:38:28.999000Z", utility::datetime::ISO_8601);
     LOGINFO(LOG_VAR(time.to_string()) << LOG_VAR(time_p1.to_string()));
-    double diff = time_diff(time, time_p1, "milliseconds");
+    double diff = time_diff(time_p1, time, "milliseconds");
     LOGINFO(LOG_NVP("TimeDiff", diff));
     ASSERT_EQ(diff, 7);
 }
