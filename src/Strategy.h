@@ -340,7 +340,7 @@ template<typename TOrdApi>
 void Strategy<TOrdApi>::addSignal(const std::shared_ptr<Signal> &signal_) {
     signal_->init(_config, _marketData);
     // signals are either globally callback to disable timer thread during tests.
-    if (signal_->callback() or _config->get("signal-callback", "false") == "true") {
+    if (signal_->callback() or _config->get("override-signal-callback", "false") == "true") {
         _callback_signals.emplace(signal_->name(), signal_);
     } else {
         _timed_signals.emplace(signal_->name(), signal_);

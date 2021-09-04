@@ -64,13 +64,13 @@ void Signal::init(const std::shared_ptr<Config> &config_, std::shared_ptr<Market
         // if its a callback siganl, always set as callback.
         _callback = true;
         LOGINFO("strategy callback signal initialised." << LOG_VAR(_name));
-    } else if (_config->get("override-signal-callback", "false") != "false") {
+    } else if (_config->get("override-signal-callback", "false") != "true") {
         // production mode for timer signals.
         _callback = false;
         LOGINFO("Using callback timer for signal."
             << LOG_VAR(_name) << LOG_VAR(evalInterval));
         _timer.start(evalInterval, [this] { update(); });
-    } else if (_config->get("override-signal-callback") == "false") { 
+    } else if (_config->get("override-signal-callback") == "true") {
         _timer.set_interval(evalInterval);
     }
 }
