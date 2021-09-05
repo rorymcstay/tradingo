@@ -22,3 +22,8 @@ target_link_libraries(test_trading_funcs
         boost_system
         dl
         ${OPENSSL_CRYPTO_LIBRARY})
+install(TARGETS
+            test_trading_funcs
+        RUNTIME DESTINATION bin
+        LIBRARY DESTINATION lib
+        )

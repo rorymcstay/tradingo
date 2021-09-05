@@ -9,3 +9,9 @@ target_link_libraries(benchmarkTradingo
         test_trading_funcs
         ${GTEST_LIBRARY}
         benchmark::benchmark_main)
+
+install(TARGETS
+            benchmarkTradingo
+        RUNTIME DESTINATION bin
+        LIBRARY DESTINATION lib
+        )
