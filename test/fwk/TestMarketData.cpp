@@ -106,3 +106,8 @@ void TestMarketData::operator<<(const std::shared_ptr<model::Order> &order_) {
     std::vector<std::shared_ptr<model::Order>> orders = {order_};
     MarketDataInterface::handleOrders(orders, action);
 }
+
+TestMarketData::TestMarketData()
+:   _config(nullptr) {
+
+}

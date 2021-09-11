@@ -25,7 +25,7 @@ bool MovingAverageCrossOver::isReady() {
     return _longTerm.is_ready() && _shortTerm.is_ready();
 }
 
-void MovingAverageCrossOver::init(const std::shared_ptr<Config>& config_, std::shared_ptr<MarketDataInterface> md_) {
+void MovingAverageCrossOver::init(const std::shared_ptr<Config>& config_, const std::shared_ptr<MarketDataInterface>& md_) {
     Signal::init(config_, md_);
 }
 

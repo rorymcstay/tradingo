@@ -48,7 +48,7 @@ void Signal::update() {
         _batchWriter->write(read_as_string());
 }
 
-void Signal::init(const std::shared_ptr<Config> &config_, std::shared_ptr<MarketDataInterface> marketData_) {
+void Signal::init(const std::shared_ptr<Config> &config_, const std::shared_ptr<MarketDataInterface>& marketData_) {
     _config = config_;
     _marketData = marketData_;
     auto storage = config_->get("storage", "");

@@ -42,7 +42,7 @@ public:
     virtual std::string read_as_string() = 0;
 
 
-    virtual void init(const std::shared_ptr<Config>& config_, std::shared_ptr<MarketDataInterface> marketData_);;
+    virtual void init(const std::shared_ptr<Config>& config_, const std::shared_ptr<MarketDataInterface>& marketData_);;
     void update();
     virtual void onTrade(const std::shared_ptr<model::Trade>& trade_) {};
     virtual void onQuote(const std::shared_ptr<model::Quote>& quote_) {};
