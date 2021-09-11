@@ -1,8 +1,16 @@
 version: "3.9"
+
 services:
-  tick-recorder:
+  build: ./
+  tickRecorder:
+    entrypoint: tickRecorder --config /usr/etc/config/tickRecorder
     volumes:
-      - ./data:/data/
+      - ./tmp:/data/tickRecorder/storage/
+  replayTradingo:
+    entrypoint: replayTradingo --config /usr/etc/config/
+    volumes:
+      - ./tmp:/data/tickRecorder/storage/
+      - ./tmp:/data/tickRecorder/storage/
 
 volumes:
   data: {}

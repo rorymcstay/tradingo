@@ -1,2 +1,7 @@
 cmake-build-*
 build
+data
+.github
+.gitignore
+.gitmodules
+compile_commands.json

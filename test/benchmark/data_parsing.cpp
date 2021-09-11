@@ -15,7 +15,7 @@
 static void BM_read_quotes_json(benchmark::State& state) {
     // Perform setup here
     std::ifstream quoteFile;
-    quoteFile.open("data/quotes_XBTUSD.json");
+    quoteFile.open("quotes_XBTUSD.json");
     auto config = std::make_shared<Config>();
 
     for (auto kvp : std::initializer_list<std::pair<std::string, std::string>>({
@@ -29,7 +29,6 @@ static void BM_read_quotes_json(benchmark::State& state) {
     auto signal = std::make_shared<MovingAverageCrossOver>(1000, 8000);
     signal->init(config, marketdata);
     marketdata->setCallback([&](){ signal->update(); });
-    state.
     for (auto _ : state) {
         auto quote = getEvent<model::Quote>(quoteFile);
         *marketdata << quote;
