@@ -17,6 +17,7 @@ class TestMarketData : public MarketDataInterface {
 
 public:
     explicit TestMarketData(const std::shared_ptr<Config>& ptr);
+    TestMarketData();
     void init();
     void subscribe() {}
     utility::datetime time() const { return _time; }

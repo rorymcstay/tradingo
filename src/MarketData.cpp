@@ -334,6 +334,7 @@ const std::shared_ptr<model::Instrument>& MarketDataInterface::instrument() cons
     return _instrument;
 }
 
+
 MarketDataInterface::MarketDataInterface(const std::shared_ptr<Config>& config_)
 :   _instrumentApi(nullptr)
 ,   _symbol(config_->get("symbol"))
@@ -342,6 +343,10 @@ MarketDataInterface::MarketDataInterface(const std::shared_ptr<Config>& config_)
 
 void MarketDataInterface::setCallback(const std::function<void()> &callback) {
     _callback = callback;
+}
+
+MarketDataInterface::MarketDataInterface() {
+
 }
 
 std::string getPositionKey(const std::shared_ptr<model::Position> &pos_) {

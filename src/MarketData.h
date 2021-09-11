@@ -142,7 +142,7 @@ public:
 
     std::function<void()> _callback;
 
-    void setCallback(const std::function<void()> &callback);
+        void setCallback(const std::function<void()> &callback);
 
 private:
     std::priority_queue<std::shared_ptr<Event>, std::vector<std::shared_ptr<Event>>, QueueArrange> _eventBuffer;
@@ -197,6 +197,7 @@ protected:
 public:
     ~MarketDataInterface() = default;
     explicit MarketDataInterface(const std::shared_ptr<Config>& config_);
+    MarketDataInterface();
     std::shared_ptr<Event> read();
     const std::unordered_map<std::string, OrderPtr>& getOrders() const;
     const std::queue<ExecPtr>& getExecutions() const;
