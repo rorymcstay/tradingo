@@ -12,6 +12,7 @@ if(${REPLAY_MODE})
     target_compile_definitions(replayTradingo PUBLIC REPLAY_MODE)
 endif(${REPLAY_MODE})
 
+
 target_link_libraries(replayTradingo
         test_trading_funcs
         ${GTEST_LIBRARY}
@@ -22,7 +23,7 @@ target_link_libraries(replayTradingo
         boost_program_options
         )
 install(TARGETS
-        replayTradingo
+           replayTradingo 
         RUNTIME DESTINATION bin
         LIBRARY DESTINATION lib
         )

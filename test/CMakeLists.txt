@@ -1,20 +1,5 @@
 add_compile_definitions("LIBRARY_LOCATION=\"${CMAKE_INSTALL_PREFIX}/lib\"")
 
-add_executable(testTradingo
-
-        # test files
-        strategy/TestBreakOutStrategy.cpp
-
-        test_api_OrderApi.cpp
-        TestSimpleMovingAverage.cpp
-        TestBatchWriter.cpp
-        TestAllocations.cpp
-        TestStrategy.cpp
-        TestMarketData.cpp
-        test_json.cpp
-        test_main.cpp
-        )
-
 
 find_package(GTest REQUIRED)
 link_directories(${CPPREST_ROOT}/lib)
@@ -29,6 +14,21 @@ add_subdirectory(fwk)
 add_subdirectory(strategy)
 add_subdirectory(benchmark)
 add_subdirectory(replay)
+
+add_executable(testTradingo
+
+        # test files
+        strategy/TestBreakOutStrategy.cpp
+
+        test_api_OrderApi.cpp
+        TestSimpleMovingAverage.cpp
+        TestBatchWriter.cpp
+        TestAllocations.cpp
+        TestStrategy.cpp
+        TestMarketData.cpp
+        test_json.cpp
+        test_main.cpp
+        )
 
 target_link_libraries(testTradingo
         test_trading_funcs

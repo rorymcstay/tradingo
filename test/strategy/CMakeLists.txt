@@ -10,7 +10,7 @@ target_link_libraries(test_trading_strategies test_trading_funcs
         CppRestSwaggerClient
         )
 install(TARGETS
-        test_trading_strategies
+            test_trading_strategies
         RUNTIME DESTINATION bin
         LIBRARY DESTINATION lib
         )
