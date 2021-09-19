@@ -45,13 +45,14 @@ ADD CMakeLists.txt ./CMakeLists.txt
 ADD gitVersion.cmake ./gitVersion.cmake
 
 
-
 RUN mkdir build
 RUN cd build && cmake -DCPPREST_ROOT=/usr/ -DCMAKE_INSTALL_PREFIX=/usr/tradingo/ -DREPLAY_MODE=1 ../
 RUN cd build && make install -j3
 
 FROM alpine-3.14.2
 
+ARG AWS_ACCESS_KEY
+ARG AWS_SECRET_KEY
 COPY --from=builder /usr/tradingo/ /usr/
 RUN apk --no-cache add ca-certificates
 WORKDIR /root/
@@ -62,4 +63,10 @@ RUN install -d -m 0755 -o tradingo -g tradingo /data/tickRecorder/{storage,log}/
 RUN install -d -m 0755 -o tradingo -g tradingo /data/replays/{storage,log}
 RUN install -d -m 0755 -o tradingo -g tradingo /data/benchmarks/{storage,log}
 
-RUN ["tickRecorder --config /usr/etc/config/tickRecorder.cfg"]
+RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64-2.0.30.zip" -o "awscliv2.zip"
+RUN unzip awscliv2.zip
+RUN sudo ./aws/install
+RUN rm awscliv2.zip aws -r
+
+
+RUN ["/usr/local/scripts/replay.sh 2021-09-01"]

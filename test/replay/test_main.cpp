@@ -42,8 +42,11 @@ int main(int argc, char **argv) {
         {"moving_average_crossover-interval", "1000"},
         {"signal-callback", "1000"},
         {"logLevel", "debug"},
+        {"libraryLocation", LIBRARY_LOCATION"/libtest_trading_strategies.so"},
+
         {"storage", "./"}}));
     if (vm.contains("config")) {
+        _config->set("libraryLocation", LIBRARY_LOCATION"/libtest_trading_strategies.so");
         auto config = std::make_shared<Config>(vm.at("config").as<std::string>());
         storage = config->get("storage");
         symbol = config->get("symbol");

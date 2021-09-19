@@ -7,10 +7,10 @@ services:
     volumes:
       - data:/data/tickRecorder/storage/
   replayTradingo:
-    entrypoint: replayTradingo --config /usr/etc/config/
-    volumes:
-      - data:/data/tickRecorder/storage/
-      - data:/data/tickRecorder/storage/
+    entrypoint: /usr/scripts/replay.sh 2021-09-01
+    env_file:
+      - ./.aws
+
 
 volumes:
   data: {}
