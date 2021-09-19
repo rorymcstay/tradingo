@@ -5,12 +5,12 @@ services:
   tickRecorder:
     entrypoint: tickRecorder --config /usr/etc/config/tickRecorder
     volumes:
-      - ./tmp:/data/tickRecorder/storage/
+      - data:/data/tickRecorder/storage/
   replayTradingo:
     entrypoint: replayTradingo --config /usr/etc/config/
     volumes:
-      - ./tmp:/data/tickRecorder/storage/
-      - ./tmp:/data/tickRecorder/storage/
+      - data:/data/tickRecorder/storage/
+      - data:/data/tickRecorder/storage/
 
 volumes:
   data: {}
