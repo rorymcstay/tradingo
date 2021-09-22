@@ -46,14 +46,11 @@ ADD gitVersion.cmake ./gitVersion.cmake
 
 
 RUN mkdir build
-RUN cd build && cmake -DCPPREST_ROOT=/usr/ -DCMAKE_INSTALL_PREFIX=/usr/tradingo/ -DREPLAY_MODE=1 ../
+RUN cd build && cmake -DCPPREST_ROOT=/usr/tradingo -DCMAKE_INSTALL_PREFIX=/usr/tradingo/ -DREPLAY_MODE=1 ../
 RUN cd build && make install -j3
 
-FROM alpine-3.14.2
+FROM alpine:3.13.6
 
-ARG AWS_ACCESS_KEY
-ARG AWS_SECRET_KEY
-COPY --from=builder /usr/tradingo/ /usr/
 RUN apk --no-cache add ca-certificates
 WORKDIR /root/
 COPY --from=builder /go/src/github.com/alexellis/href-counter/app ./
