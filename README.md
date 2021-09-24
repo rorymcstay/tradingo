@@ -1,3 +1,21 @@
+# Tradingo
+
+Tradingo is a bitmex derivatives exchange trading bot. It trades a single symbol. Strategy is inherited and registered
+in the strategies file. It then may be run in the binary specifying the registry method in the config file.
+
+A strategy can register signals, which are implemented by inheriting the Signal class. Signals are either on a timer callback
+and read quotes, or are on a callback on the MarketData to any event.
+
+The strategy has a set of allocations which is a continuous data structure indexed by price. The strategy modifies allocations along this index based on how
+the size, direction and at what level to order at. Active orders are amended should an allocation at a price level change. One price level per order.
+
+Tradingo docker image provides all the functionality including replay, benchmarking and trading. For the former two, data
+is retrived from s3. Replay output files are stashed into s3 after, along with the config.
+
+AWS ECS tasks are defined from the docker-compose.yml file using the `ecs-cli compose` tool. It is parameterised by environment
+variables and a python script spawns ecs taks based on the market data it finds in an s3 bucket.
+
+
 # Issues
 
 

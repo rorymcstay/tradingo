@@ -49,6 +49,7 @@ install(FILES
 install(FILES
     scripts/tickrecorder.sh
     scripts/profile.env
+    scripts/replay.sh
     DESTINATION scripts COMPONENT app-scripts)
 
 if(${INSTALL_SERVICE})

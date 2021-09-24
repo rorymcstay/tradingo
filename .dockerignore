@@ -1,7 +1,11 @@
 cmake-build-*
+20*
 build
 data
 .github
 .gitignore
 .gitmodules
 compile_commands.json
+CMakeCache.txt
+CMakeLists
+thirdparty/googletest
