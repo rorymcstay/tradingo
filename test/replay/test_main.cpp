@@ -42,6 +42,8 @@ int main(int argc, char **argv) {
         {"moving_average_crossover-interval", "1000"},
         {"signal-callback", "1000"},
         {"logLevel", "debug"},
+        {"libraryLocation", LIBRARY_LOCATION"/libtest_trading_strategies.so"},
+
         {"storage", "./"}}));
     if (vm.contains("config")) {
         auto config = std::make_shared<Config>(vm.at("config").as<std::string>());
@@ -54,7 +56,5 @@ int main(int argc, char **argv) {
     auto trade = defaults->get("tickStorage") + "/trades_XBTUSD.json";
     auto quotes = defaults->get("tickStorage") + "/quotes_XBTUSD.json";
     env.playback(trade, quotes);
-    LOGINFO("Replaye Finished");
+    LOGINFO("Replay Finished");
 }
-
-

@@ -50,6 +50,7 @@ install(FILES
     scripts/tickrecorder.sh
     scripts/profile.env
     scripts/sync_with_s3.sh
+    scripts/replay.sh
     DESTINATION scripts COMPONENT app-scripts)
 
 if(${INSTALL_SERVICE})

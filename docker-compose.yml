@@ -1,8 +1,16 @@
-version: "3.9"
+version: "3.0"
+
 services:
-  tick-recorder:
+  build: ./
+  tickRecorder:
+    entrypoint: tickRecorder --config /usr/etc/config/tickRecorder
     volumes:
-      - ./data:/data/
+      - data:/data/tickRecorder/storage/
+  replayTradingo:
+    entrypoint: /usr/scripts/replay.sh 2021-09-01
+    env_file:
+      - ./.aws
+
 
 volumes:
   data: {}

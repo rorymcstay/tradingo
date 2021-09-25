@@ -43,6 +43,7 @@ class TestEnv
     long _events;
 public:
     const std::shared_ptr<TStrategy>& strategy() const { return _context->strategy(); }
+    const std::shared_ptr<Context<TestMarketData, OrderApi>>& context() const { return _context; }
     TestEnv(std::initializer_list<std::pair<std::string, std::string>>);
     TestEnv(const std::shared_ptr<Config>& config_);
 

@@ -1,13 +1,19 @@
 cmake_minimum_required(VERSION 3.16)
 project(Tradingo)
 set(VERSION "1.0.1")
+set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 
 # Get the latest abbreviated commit hash of the working branch
-include(gitVersion.cmake)
+include(gitVersion)
 
 set(CMAKE_CXX_STANDARD 20)
 add_compile_options("-fPIC")
 set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
+
+if(BOOST_ASIO_DISABLE_CONCEPTS)
+    add_definitions(-DBOOST_ASIO_DISABLE_CONCEPTS=1)
+    message(STATUS "Disabled boost asio concepts.")
+endif(BOOST_ASIO_DISABLE_CONCEPTS)
 
 add_subdirectory(thirdparty)
 add_subdirectory(src)
@@ -17,6 +23,8 @@ add_subdirectory(test)
 message(STATUS "CMAKE_INSTALL_PREFIX = ${CMAKE_INSTALL_PREFIX}" )
 
 project (my_project)
+
+
 
 set(CPACK_PACKAGE_VERSION ${VERSION})
 set(CPACK_GENERATOR "RPM")

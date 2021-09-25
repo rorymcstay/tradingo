@@ -181,7 +181,6 @@ void TestEnv::playback(const std::string& tradeFile_, const std::string& quoteFi
 }
 
 void TestEnv::init() {
-    _config->set("libraryLocation", LIBRARY_LOCATION"/libtest_trading_strategies.so");
     _config->set("baseUrl", "https://localhost:8888/api/v1");
     _config->set("apiKey", "dummy");
     _config->set("apiSecret", "dummy");
