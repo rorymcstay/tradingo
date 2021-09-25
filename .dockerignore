@@ -5,6 +5,8 @@ data
 .github
 .gitignore
 .gitmodules
+.cache
+.git
 compile_commands.json
 CMakeCache.txt
 CMakeLists

@@ -1,25 +1,24 @@
 # strategy container dockerfile definiton
 
-FROM alpine:3.14
+FROM ubuntu
 
 RUN apk --no-cache add ca-certificates 
 
 # add toolchain
-RUN apk add \ 
-      g++ \
+RUN apt-get update \
+  && apt-get install -y ssh \
+      build-essential \
       gcc \
+      g++ \
+      gdb \
       cmake \
-      git \
-      make \
-      curl \
-      unzip
+      git
 
 # install thirdparty libs
 RUN apk add \
-  gtest-dev \
-  boost-dev \
-  openssl-dev \
-  zlib-dev
+  libcpprest-dev \
+  libgtest-dev \
+  libboost-all-dev
 
 # install aws-cli
 RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64-2.0.30.zip" -o "awscliv2.zip"
