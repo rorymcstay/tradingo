@@ -65,6 +65,7 @@ RUN cd benchmark \
 
 # build tradingo
 ADD . tradingo
+RUN git clone https://github.com/rorymcstay/tradingo.git /usr/src/tradingo
 RUN cd tradingo \
     && mkdir build.release \
     && cd build.release \
@@ -91,9 +92,12 @@ RUN adduser \
     --uid "$UID" \
     "$USER"
 
-RUN install -d -m 0755 -o tradingo -g tradingo /data/tickRecorder/{storage,log}/
-RUN install -d -m 0755 -o tradingo -g tradingo /data/replays/{storage,log}
-RUN install -d -m 0755 -o tradingo -g tradingo /data/benchmarks/{storage,log}
+RUN install -d -m 0755 -o tradingo -g tradingo /data/tickRecorder/storage
+RUN install -d -m 0755 -o tradingo -g tradingo /data/tickRecorder/log
+RUN install -d -m 0755 -o tradingo -g tradingo /data/replays/storage
+RUN install -d -m 0755 -o tradingo -g tradingo /data/replays/log
+RUN install -d -m 0755 -o tradingo -g tradingo /data/benchmarks/storage
+RUN install -d -m 0755 -o tradingo -g tradingo /data/benchmarks/log
 
 # runtime image
 FROM alpine:3.14
@@ -120,10 +124,17 @@ RUN adduser \
     --uid "$UID" \
     "$USER"
 ARG install_base=/usr/from-src/
-COPY --from=builder /usr/local/* /usr/local/
-COPY --from=builder ${install_base}/cpprest/* /usr/local/
-COPY --from=builder ${install_base}/benchmark/* /usr/local/
-COPY --from=builder ${install_base}/aws-cli/* /usr/local/
+COPY --from=builder /usr/local/lib /usr/local/lib
+COPY --from=builder ${install_base}/cpprest/lib /usr/local/lib
+COPY --from=builder ${install_base}/cpprest/include /usr/local/include
+COPY --from=builder ${install_base}/benchmark/lib /usr/local/lib
+COPY --from=builder ${install_base}/benchmark/include /usr/local/include
+COPY --from=builder ${install_base}/aws-cli/v2/lib /usr/local/lib
+COPY --from=builder ${install_base}/aws-cli/v2/bin /usr/local/bin
+COPY --from=builder ${install_base}/tradingo/lib /usr/local/lib
+COPY --from=builder ${install_base}/tradingo/bin /usr/local/lib
+COPY --from=builder ${install_base}/tradingo/etc /usr/local/etc
+COPY --from=builder ${install_base}/tradingo/scripts /usr/local/scripts
 COPY --from=builder /data/ /data/
 
 #RUN ["/usr/local/scripts/replay.sh 2021-09-01"]
