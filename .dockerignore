@@ -1,6 +1,7 @@
 cmake-build-*
 20*
 build
+build*
 data
 .github
 .gitignore
@@ -9,5 +10,16 @@ data
 .git
 compile_commands.json
 CMakeCache.txt
-CMakeLists
+CMakeFiles
 thirdparty/googletest
+CMakeLists.txt.user
+CMakeCache.txt
+CMakeFiles
+CMakeScripts
+Testing
+Makefile
+cmake_install.cmake
+install_manifest.txt
+compile_commands.json
+CTestTestfile.cmake
+_deps

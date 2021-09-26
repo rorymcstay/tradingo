@@ -21,6 +21,7 @@ target_link_libraries(tradingo
 target_link_libraries(tradingo trading_funcs)
 
 include_directories(${PROJECT_SOURCE_DIR}/src)
+include_directories(${CPPREST_ROOT}/include)
 include_directories(${BITMEX_INCLUDE})
 include_directories(${Boost_INCLUDE_DIR})
 include_directories(${OPENSSL_INCLUDE_DIR})

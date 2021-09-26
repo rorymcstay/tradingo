@@ -5,7 +5,7 @@ Description=Tick Recorder
 WantedBy=multi-user.target
 
 [Service]
-ExecStart=/bin/bash @INSTALL_PREFIX@/scripts/tradingo.sh
+ExecStart=/bin/bash /scripts/tradingo.sh
 Type=simple
 User=rory
 Group=rory

@@ -20,11 +20,11 @@ add_subdirectory(src)
 add_subdirectory(app)
 add_subdirectory(test)
 
+message(STATUS "CPPRESTSDK_INCLUDE_DIR=${CPPREST_ROOT}/include")
+
 message(STATUS "CMAKE_INSTALL_PREFIX = ${CMAKE_INSTALL_PREFIX}" )
 
 project (my_project)
-
-
 
 set(CPACK_PACKAGE_VERSION ${VERSION})
 set(CPACK_GENERATOR "RPM")

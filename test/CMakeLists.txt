@@ -9,6 +9,7 @@ message(STATUS "GTEST_LIBRARY = ${GTEST_LIBRARY}")
 link_directories(${CPPREST_ROOT}/lib)
 
 include_directories("${gtest_SOURCE_DIR}/include")
+include_directories(${CPPREST_ROOT}/include)
 include_directories(${PROJECT_SOURCE_DIR}/src/)
 include_directories(${PROJECT_SOURCE_DIR}/test/)
 include_directories(${BITMEX_INCLUDE})

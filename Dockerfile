@@ -1,8 +1,10 @@
 # strategy container dockerfile definiton
 
-FROM alpine:3.14
+FROM alpine:3.14 as builder
 
 RUN apk --no-cache add ca-certificates 
+
+ARG install_base=/usr/from-src/
 
 # add toolchain
 RUN apk add \ 
@@ -21,10 +23,14 @@ RUN apk add \
   openssl-dev \
   zlib-dev
 
+ARG make_flags
+RUN echo $make_flags
+ENV GNUMAKEFLAGS=${make_flags}
+
 # install aws-cli
 RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64-2.0.30.zip" -o "awscliv2.zip"
 RUN unzip awscliv2.zip
-RUN ./aws/install
+RUN ./aws/install --install-dir ${install_base}/aws-cli
 RUN rm awscliv2.zip aws -r
 
 WORKDIR /usr/src
@@ -40,37 +46,36 @@ RUN cd casablanca \
     && cd build.release \
     && cmake -DCMAKE_BUILD_TYPE=Release \
         -DCMAKE_CXX_FLAGS="-Wno-error=format-truncation" \
+        -DCMAKE_INSTALL_PREFIX=${install_base}/cpprest \
         ../ \
-    && make install -j3
+    && make install -j6
+
+RUN ls /${install_base}/cpprest/lib/
 
 # Install benchmark
 RUN git clone https://github.com/google/benchmark.git /usr/src/benchmark
-RUN mkdir /usr/src/benchmark/build \
-    && /bin/sh -c 'cd /usr/src/benchmark/build \
-    && cmake -DBENCHMARK_DOWNLOAD_DEPENDENCIES=on \
-        -DCMAKE_BUILD_TYPE=Release /usr/src/benchmark \
-    && make install -j3 '
-
-# configure tradingo build area
-WORKDIR /usr/src/tradingo
-
-ADD thirdparty thirdparty
-ADD src src
-ADD test test
-ADD thirdparty thirdparty
-ADD app app
-ADD CMakeLists.txt ./CMakeLists.txt
-ADD cmake cmake
-
-WORKDIR /usr/src/tradingo/build
+RUN cd benchmark \
+    && mkdir build.release \
+    && cd build.release \
+    && cmake -DCMAKE_BUILD_TYPE=Release \
+        -DBENCHMARK_DOWNLOAD_DEPENDENCIES=on \
+        -DCMAKE_INSTALL_PREFIX=${install_base}/benchmark \
+        ../ \
+    && make install -j6
 
 # build tradingo
-RUN cmake -DCPPREST_ROOT=/usr/local \
+ADD . tradingo
+RUN cd tradingo \
+    && mkdir build.release \
+    && cd build.release \
+    && cmake -DCMAKE_BUILD_TYPE=Release \
+        -DCPPREST_ROOT=${install_base}/cpprest \
         -DREPLAY_MODE=1 \
         -DBOOST_ASIO_DISABLE_CONCEPTS=1 \
-        -DCMAKE_INSTALL_PREFIX=/usr/local/tradingo  \
         -Wno-dev ../ \
-    && make install -j3
+        -DCMAKE_INSTALL_PREFIX=${install_base}/tradingo \
+        -DCMAKE_PREFIX_PATH="${install_base}/cpprest;${install_base}/benchmark" \
+    && make install -j6
 
 ENV USER=tradingo
 ENV UID=12345
@@ -90,4 +95,35 @@ RUN install -d -m 0755 -o tradingo -g tradingo /data/tickRecorder/{storage,log}/
 RUN install -d -m 0755 -o tradingo -g tradingo /data/replays/{storage,log}
 RUN install -d -m 0755 -o tradingo -g tradingo /data/benchmarks/{storage,log}
 
-RUN ["/usr/local/scripts/replay.sh 2021-09-01"]
+# runtime image
+FROM alpine:3.14
+
+# aws authentication
+ARG aws_secret_access_key
+ARG aws_access_key_id
+ARG aws_region
+ENV AWS_SECRET_ACCESS_KEY ${aws_secret_access_key}
+ENV AWS_ACCESS_KEY_ID ${aws_access_key_id}
+ENV AWS_REGION ${aws_region}
+
+ENV USER=tradingo
+ENV UID=12345
+ENV GID=23456
+
+RUN addgroup -g $GID tradingo
+RUN adduser \
+    --disabled-password \
+    --gecos "" \
+    --home "$(pwd)" \
+    --ingroup "$USER" \
+    --no-create-home \
+    --uid "$UID" \
+    "$USER"
+ARG install_base=/usr/from-src/
+COPY --from=builder /usr/local/* /usr/local/
+COPY --from=builder ${install_base}/cpprest/* /usr/local/
+COPY --from=builder ${install_base}/benchmark/* /usr/local/
+COPY --from=builder ${install_base}/aws-cli/* /usr/local/
+COPY --from=builder /data/ /data/
+
+#RUN ["/usr/local/scripts/replay.sh 2021-09-01"]
