@@ -14,7 +14,6 @@ RUN apk add \
       git \
       make \
       curl \
-      unzip
 
 # install thirdparty libs
 RUN apk add \
@@ -27,11 +26,7 @@ ARG make_flags
 RUN echo $make_flags
 ENV GNUMAKEFLAGS=${make_flags}
 
-# install aws-cli
-RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64-2.0.30.zip" -o "awscliv2.zip"
-RUN unzip awscliv2.zip
-RUN ./aws/install --install-dir ${install_base}/aws-cli
-RUN rm awscliv2.zip aws -r
+
 
 WORKDIR /usr/src
 
@@ -112,6 +107,9 @@ RUN apk add \
   zlib-dev \
   libstdc++
 
+RUN apk add gettext \
+    unzip
+
 # aws authentication
 ARG aws_secret_access_key
 ARG aws_access_key_id
@@ -119,6 +117,13 @@ ARG aws_region
 ENV AWS_SECRET_ACCESS_KEY ${aws_secret_access_key}
 ENV AWS_ACCESS_KEY_ID ${aws_access_key_id}
 ENV AWS_REGION ${aws_region}
+
+
+# install aws-cli
+RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64-2.0.30.zip" -o "awscliv2.zip"
+RUN unzip awscliv2.zip
+RUN ./aws/install --install-dir ${install_base}/aws-cli
+RUN rm awscliv2.zip aws -r
 
 ENV USER=tradingo
 ENV UID=12345
@@ -139,7 +144,6 @@ COPY --from=builder ${install_base}/cpprest/lib /usr/local/lib
 COPY --from=builder ${install_base}/cpprest/include /usr/local/include
 COPY --from=builder ${install_base}/benchmark/lib /usr/local/lib
 COPY --from=builder ${install_base}/benchmark/include /usr/local/include
-COPY --from=builder ${install_base}/aws-cli/v2/current/bin /usr/local/bin
 COPY --from=builder ${install_base}/tradingo/lib /usr/local/lib
 COPY --from=builder ${install_base}/tradingo/bin /usr/local/bin
 COPY --from=builder ${install_base}/tradingo/etc /usr/local/etc

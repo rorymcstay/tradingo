@@ -1,3 +1,4 @@
+#!/bin/bash
 source "$(dirname ${BASH_SOURCE[0]})/profile.env"
 
 replay_tradingo_on() {

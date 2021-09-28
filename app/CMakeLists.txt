@@ -41,18 +41,21 @@ install(TARGETS
         LIBRARY DESTINATION lib
 	COMPONENT app)
 
-install(FILES
-	etc/config/tickRecorder.cfg
-	etc/config/tradingo.cfg
-    etc/config/replayTradingo.cfg
-	DESTINATION etc/config COMPONENT app-config)
+install(DIRECTORY
+    etc/config DESTINATION etc/config 
+    FILES_MATCHING
+    PATTERN
+    etc/config/*.cfg
+    COMPONENT app PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ
+                    GROUP_EXECUTE GROUP_READ)
 
-install(FILES
-    scripts/tickrecorder.sh
-    scripts/profile.env
-    scripts/sync_with_s3.sh
-    scripts/replay.sh
-    DESTINATION scripts COMPONENT app-scripts)
+install(DIRECTORY
+    scripts DESTINATION scripts
+    FILES_MATCHING
+    PATTERN
+    scripts/*.sh
+    COMPONENT app PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ
+                    GROUP_EXECUTE GROUP_READ)
 
 if(${INSTALL_SERVICE})
     message(STATUS "Installing systemctl service files")
