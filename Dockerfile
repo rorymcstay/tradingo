@@ -48,7 +48,7 @@ RUN cd casablanca \
         -DCMAKE_CXX_FLAGS="-Wno-error=format-truncation" \
         -DCMAKE_INSTALL_PREFIX=${install_base}/cpprest \
         ../ \
-    && make install -j6
+    && make install -j3
 
 RUN ls /${install_base}/cpprest/lib/
 
@@ -61,7 +61,7 @@ RUN cd benchmark \
         -DBENCHMARK_DOWNLOAD_DEPENDENCIES=on \
         -DCMAKE_INSTALL_PREFIX=${install_base}/benchmark \
         ../ \
-    && make install -j6
+    && make install -j3
 
 # build tradingo
 RUN git clone https://github.com/rorymcstay/tradingo.git /usr/src/tradingo
@@ -78,7 +78,7 @@ RUN cd tradingo \
         -DCMAKE_INSTALL_PREFIX=${install_base}/tradingo \
         -DCMAKE_PREFIX_PATH="${install_base}/cpprest;${install_base}/benchmark" \
         ../ \
-    && make install -j6
+    && make install -j3
 
 ENV USER=tradingo
 ENV UID=12345
