@@ -64,8 +64,9 @@ RUN cd benchmark \
     && make install -j6
 
 # build tradingo
-ADD . tradingo
 RUN git clone https://github.com/rorymcstay/tradingo.git /usr/src/tradingo
+RUN cd tradingo \ 
+    && git submodule update --init
 RUN cd tradingo \
     && mkdir build.release \
     && cd build.release \
@@ -73,9 +74,10 @@ RUN cd tradingo \
         -DCPPREST_ROOT=${install_base}/cpprest \
         -DREPLAY_MODE=1 \
         -DBOOST_ASIO_DISABLE_CONCEPTS=1 \
-        -Wno-dev ../ \
+        -Wno-dev \
         -DCMAKE_INSTALL_PREFIX=${install_base}/tradingo \
         -DCMAKE_PREFIX_PATH="${install_base}/cpprest;${install_base}/benchmark" \
+        ../ \
     && make install -j6
 
 ENV USER=tradingo
@@ -101,6 +103,14 @@ RUN install -d -m 0755 -o tradingo -g tradingo /data/benchmarks/log
 
 # runtime image
 FROM alpine:3.14
+
+# install thirdpary libraries
+RUN apk add \
+  gtest-dev \
+  boost-dev \
+  openssl-dev \
+  zlib-dev \
+  libstdc++
 
 # aws authentication
 ARG aws_secret_access_key
@@ -129,10 +139,9 @@ COPY --from=builder ${install_base}/cpprest/lib /usr/local/lib
 COPY --from=builder ${install_base}/cpprest/include /usr/local/include
 COPY --from=builder ${install_base}/benchmark/lib /usr/local/lib
 COPY --from=builder ${install_base}/benchmark/include /usr/local/include
-COPY --from=builder ${install_base}/aws-cli/v2/lib /usr/local/lib
-COPY --from=builder ${install_base}/aws-cli/v2/bin /usr/local/bin
+COPY --from=builder ${install_base}/aws-cli/v2/current/bin /usr/local/bin
 COPY --from=builder ${install_base}/tradingo/lib /usr/local/lib
-COPY --from=builder ${install_base}/tradingo/bin /usr/local/lib
+COPY --from=builder ${install_base}/tradingo/bin /usr/local/bin
 COPY --from=builder ${install_base}/tradingo/etc /usr/local/etc
 COPY --from=builder ${install_base}/tradingo/scripts /usr/local/scripts
 COPY --from=builder /data/ /data/
