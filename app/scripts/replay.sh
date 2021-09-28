@@ -13,6 +13,14 @@ replay_tradingo_on() {
     DATESTR=$1 \
     RUN_ID=$run_id \
     INSTALL_LOCATION=$INSTALL_LOCATION \
+
+    # parameterizable through env vars
+    MOVING_AVG_CALLBACK=${MOVING_AVG_CALLBACK:-false}
+    MOVING_AVG_INTERVAL=${MOVING_AVG_INTERVAL:-1000}
+    MOVING_AVG_SHORT_TERM=${MOVING_AVG_SHORT_TERM:-1000}
+    MOVING_AVG_LONG_TERM=${MOVING_AVG_LONG_TERM:-8000}
+    SYMBOL=${SYMBOL:-XBTUSD}
+
         envsubst < $INSTALL_LOCATION/etc/config/replayTradingo.cfg  \
     > /tmp/replay.cfg
     cat /tmp/replay.cfg
