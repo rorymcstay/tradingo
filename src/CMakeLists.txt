@@ -40,6 +40,7 @@ add_library(trading_funcs SHARED
 target_compile_definitions(trading_funcs PUBLIC __REPLAY_MODE_GUARD)
 target_link_libraries(trading_funcs
         CppRestSwaggerClient
+        cpprest
         boost_system
         pthread
         dl

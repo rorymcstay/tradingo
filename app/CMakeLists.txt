@@ -42,7 +42,7 @@ install(TARGETS
 	COMPONENT app)
 
 install(DIRECTORY
-    etc/config DESTINATION etc/config 
+    etc/config DESTINATION etc/
     FILES_MATCHING
     PATTERN
     etc/config/*.cfg
@@ -50,7 +50,7 @@ install(DIRECTORY
                     GROUP_EXECUTE GROUP_READ)
 
 install(DIRECTORY
-    scripts DESTINATION scripts
+    scripts DESTINATION ${CMAKE_INSTALL_PREFIX}
     FILES_MATCHING
     PATTERN
     scripts/*.sh
