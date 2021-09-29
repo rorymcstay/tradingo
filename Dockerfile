@@ -12,8 +12,8 @@ RUN apk add \
       gcc \
       cmake \
       git \
-      make \
-      curl \
+      make
+
 
 # install thirdparty libs
 RUN apk add \
@@ -108,6 +108,7 @@ RUN apk add \
   libstdc++
 
 RUN apk add gettext \
+    curl \
     unzip
 
 # aws authentication
