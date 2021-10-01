@@ -3,6 +3,8 @@ FILE(GLOB SourcesToTest
         ../../src/strategy/*.cpp
         ../../signal/*.cpp)
 
+link_directories(${CPPREST_ROOT}/lib)
+
 
 add_library(test_trading_funcs
         ${SourcesToTest}

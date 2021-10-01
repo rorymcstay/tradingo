@@ -35,6 +35,7 @@ add_library(trading_funcs SHARED
 
         #${CPPLOGGER_HEADER}
         )
+link_directories(${CPPREST_ROOT}/lib)
 
 # this should always be true and overrides REPLAY_MODE on non test libraries
 target_compile_definitions(trading_funcs PUBLIC __REPLAY_MODE_GUARD)
