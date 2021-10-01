@@ -10,6 +10,8 @@ set(CMAKE_CXX_STANDARD 20)
 add_compile_options("-fPIC")
 set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
 
+set(CPPREST_LIBRARY "${CPPREST_ROOT}/lib/libcpprest.so")
+
 if(BOOST_ASIO_DISABLE_CONCEPTS)
     add_definitions(-DBOOST_ASIO_DISABLE_CONCEPTS=1)
     message(STATUS "Disabled boost asio concepts.")

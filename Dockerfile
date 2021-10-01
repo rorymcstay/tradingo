@@ -83,8 +83,8 @@ RUN adduser \
     --no-create-home \
     --uid "$UID" \
     "$USER"
+
 ARG install_base=/usr/from-src/
-COPY --from=builder /usr/local/lib /usr/local/lib
 COPY --from=builder ${install_base}/cpprest/lib /usr/local/lib
 COPY --from=builder ${install_base}/cpprest/include /usr/local/include
 COPY --from=builder ${install_base}/benchmark/lib /usr/local/lib

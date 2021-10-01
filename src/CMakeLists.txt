@@ -41,7 +41,7 @@ link_directories(${CPPREST_ROOT}/lib)
 target_compile_definitions(trading_funcs PUBLIC __REPLAY_MODE_GUARD)
 target_link_libraries(trading_funcs
         CppRestSwaggerClient
-        cpprest
+        ${CPPREST_LIBRARY}
         boost_system
         pthread
         dl
