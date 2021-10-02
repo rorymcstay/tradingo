@@ -22,7 +22,7 @@ add_subdirectory(strategy)
 add_subdirectory(benchmark)
 add_subdirectory(replay)
 
-add_test(NAME testTradingo COMMAND testTradingo)
+
 
 add_executable(testTradingo
 
@@ -35,10 +35,10 @@ add_executable(testTradingo
         TestAllocations.cpp
         TestStrategy.cpp
         TestMarketData.cpp
-        test_json.cpp
         test_main.cpp
 )
 
+add_test(NAME "tradingo-tests" COMMAND testTradingo)
 target_link_libraries(testTradingo
         test_trading_funcs
         ${GTEST_LIBRARY}

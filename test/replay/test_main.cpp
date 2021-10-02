@@ -8,12 +8,7 @@
 #include "Config.h"
 #include "fwk/TestEnv.h"
 
-#include "Utils.h"
-
 namespace po = boost::program_options;
-
-
-// TODO Add command line interface for config file
 
 int main(int argc, char **argv) {
 
@@ -25,30 +20,11 @@ int main(int argc, char **argv) {
     po::variables_map vm;
     po::store(po::parse_command_line(argc, argv, desc), vm);
     po::notify(vm);
-    std::string storage;
     std::string config;
-    std::string symbol;
 
-    auto defaults = std::make_shared<Config>(std::initializer_list<std::pair<std::string,std::string>>({
-        {"symbol", "XBTUSD"},
-        {"clOrdPrefix", "MCST"},
-        {"factoryMethod", "RegisterBreakOutStrategy"},
-        {"startingAmount", "1000"},
-        {"displaySize", "200"},
-        {"referencePrice", "35000"},
-        {"shortTermWindow", "1000"},
-        {"longTermWindow", "8000"},
-        {"logLevel", "info"},
-        {"moving_average_crossover-interval", "1000"},
-        {"signal-callback", "1000"},
-        {"logLevel", "debug"},
-        {"libraryLocation", LIBRARY_LOCATION"/libtest_trading_strategies.so"},
-
-        {"storage", "./"}}));
+    auto defaults = std::make_shared<Config>(std::initializer_list<std::pair<std::string,std::string>>({DEFAULT_ARGS}));
     if (vm.contains("config")) {
         auto config = std::make_shared<Config>(vm.at("config").as<std::string>());
-        storage = config->get("storage");
-        symbol = config->get("symbol");
         LOGINFO("Using config " << vm.at("config").as<std::string>());
         *defaults += (*config);
     }

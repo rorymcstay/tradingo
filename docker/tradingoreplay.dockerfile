@@ -1,4 +1,4 @@
-FROM tradingo/base:latest as builder
+FROM tradingo/base as builder
 
 # build tradingo
 ARG install_base=/usr/from-src/
