@@ -28,7 +28,8 @@ replay_tradingo_on() {
     cat /tmp/replay.cfg
 
     mkdir -p /tmp/log/tradingo/replay/$run_id
-    replayTradingo --config $REPLAY_STORAGE/replay.cfg &> "/tmp/replay_$1.log"
+    # run the replay
+    replayTradingo --config $REPLAY_STORAGE/replay.cfg
     aws s3 sync "$REPLAY_STORAGE" "s3://$BUCKET_NAME/replays/"
 }
 replay_tradingo_on $1

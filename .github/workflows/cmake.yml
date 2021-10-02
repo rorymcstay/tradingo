@@ -31,7 +31,6 @@ jobs:
             cmake -DBENCHMARK_DOWNLOAD_DEPENDENCIES=on \
             -DCMAKE_BUILD_TYPE=Release /tmp/src/benchmark \
             && sudo make install -j3 '
-    # TODO: install benchmark here.
     - name: Clone thirdparty modules
       run: git submodule init && git submodule update
 
@@ -48,4 +47,3 @@ jobs:
       working-directory: ${{github.workspace}}/build
       # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
       run: ctest -C ${{env.BUILD_TYPE}}
-      
