@@ -52,12 +52,12 @@ install(DIRECTORY
 install(DIRECTORY
     scripts DESTINATION ${CMAKE_INSTALL_PREFIX}
     FILES_MATCHING
-    PATTERN
-    scripts/*.sh
+    PATTERN scripts/*.sh
+    PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ
+        GROUP_EXECUTE GROUP_READ   
     PATTERN
     scripts/*.env
-    PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ
-                    GROUP_EXECUTE GROUP_READ)
+)
 
 if(${INSTALL_SERVICE})
     message(STATUS "Installing systemctl service files")
