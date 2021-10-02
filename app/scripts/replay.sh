@@ -24,11 +24,11 @@ replay_tradingo_on() {
     MOVING_AVG_LONG_TERM=${MOVING_AVG_LONG_TERM:-8000} \
     SYMBOL=${SYMBOL:-XBTUSD} \
         envsubst < $INSTALL_LOCATION/etc/config/replayTradingo.cfg  \
-    > /tmp/replay.cfg
+    > $REPLAY_STORAGE/replay.cfg
     cat /tmp/replay.cfg
 
     mkdir -p /tmp/log/tradingo/replay/$run_id
-    replayTradingo --config /tmp/replay.cfg &> "/tmp/log/replay_$1.log"
+    replayTradingo --config $REPLAY_STORAGE/replay.cfg &> "/tmp/replay_$1.log"
     aws s3 sync "$REPLAY_STORAGE" "s3://$BUCKET_NAME/replays/"
 }
 replay_tradingo_on $1
