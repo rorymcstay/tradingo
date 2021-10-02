@@ -67,7 +67,7 @@ ENV AWS_REGION ${aws_region}
 # install aws-cli
 RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64-2.0.30.zip" -o "awscliv2.zip"
 RUN unzip awscliv2.zip
-RUN ./aws/install --install-dir ${install_base}/aws-cli
+RUN ./aws/install
 RUN rm awscliv2.zip aws -r
 
 ENV USER=tradingo
