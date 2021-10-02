@@ -54,6 +54,8 @@ install(DIRECTORY
     FILES_MATCHING
     PATTERN
     scripts/*.sh
+    PATTERN
+    scripts/*.env
     PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ
                     GROUP_EXECUTE GROUP_READ)
 

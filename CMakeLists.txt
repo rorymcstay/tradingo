@@ -10,7 +10,7 @@ set(CMAKE_CXX_STANDARD 20)
 add_compile_options("-fPIC")
 set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
 
-set(CPPREST_LIBRARY "${CPPREST_ROOT}/lib/libcpprest.so")
+find_library(CPPREST_LIBRARY cpprest)
 
 if(BOOST_ASIO_DISABLE_CONCEPTS)
     add_definitions(-DBOOST_ASIO_DISABLE_CONCEPTS=1)
@@ -22,6 +22,7 @@ add_subdirectory(src)
 add_subdirectory(app)
 add_subdirectory(test)
 
+message(STATUS "CPPRESTSDK_INCLUDE_DIR=${CPPREST_ROOT}/include")
 message(STATUS "CPPRESTSDK_INCLUDE_DIR=${CPPREST_ROOT}/include")
 
 message(STATUS "CMAKE_INSTALL_PREFIX = ${CMAKE_INSTALL_PREFIX}" )

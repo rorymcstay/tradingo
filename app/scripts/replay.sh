@@ -10,11 +10,12 @@ replay_tradingo_on() {
     time_since_midnight="$((now - midnight))"
     run_id=$run_date.$time_since_midnight
 
+    set -x
+    TICK_STORAGE=$TICK_STORAGE
     REPLAY_STORAGE=$REPLAY_STORAGE \
     DATESTR=$1 \
     RUN_ID=$run_id \
     INSTALL_LOCATION=$INSTALL_LOCATION \
-
     # parameterizable through env vars
     MOVING_AVG_CALLBACK=${MOVING_AVG_CALLBACK:-false}
     MOVING_AVG_INTERVAL=${MOVING_AVG_INTERVAL:-1000}
