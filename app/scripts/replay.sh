@@ -25,7 +25,7 @@ replay_tradingo_on() {
     SYMBOL=${SYMBOL:-XBTUSD} \
         envsubst < $INSTALL_LOCATION/etc/config/replayTradingo.cfg  \
     > $REPLAY_STORAGE/replay.cfg
-    cat /tmp/replay.cfg
+    cat $REPLAY_STORAGE/replay.cfg
 
     mkdir -p /tmp/log/tradingo/replay/$run_id
     # run the replay
