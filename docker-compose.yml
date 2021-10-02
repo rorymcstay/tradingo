@@ -1,16 +1,25 @@
 version: "3.0"
 
+x-common-env:
+  &common-env:
+    AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+    AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+    AWS_REGION: ${AWS_REGION}
+
+
 services:
   build: ./
   tickRecorder:
     entrypoint: tickRecorder --config /usr/etc/config/tickRecorder
     volumes:
       - data:/data/tickRecorder/storage/
-  replayTradingo:
-    entrypoint: /usr/scripts/replay.sh 2021-09-01
-    env_file:
-      - ./.aws
+    environemt:
+    <<: *common-env
 
+  replayTradingo:
+    entrypoint: /usr/scripts/replay.sh 2021-09-13
+    environemt:
+    <<: *common-env
 
 volumes:
   data: {}
