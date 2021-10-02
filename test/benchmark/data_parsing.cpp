@@ -18,28 +18,20 @@ static void BM_read_quotes_json(benchmark::State& state) {
     auto config = std::make_shared<Config>();
 
     for (auto kvp : std::initializer_list<std::pair<std::string, std::string>>({
-         {"symbol", "XBTUSD"},
-         {"storage", "/tmp/"},
-         {"tickStorage", "./data"},
-         {"moving_average_crossover-callback", "false"},
-         {"override-signal-callback", "true"},
-         {"moving_average_crossover-interval", "1000"},
-         {"shortTermWindow", "1000"},
-         {"logLevel", "info"},
-         {"referencePrice", "40000"},
-         {"factoryMethod", "RegisterBreakOutStrategy"},
-         {"longTermWindow", "8000"}}
+        DEFAULT_ARGS
+    }
          )
     ) config->set(kvp.first, kvp.second);
-    auto env = TestEnv(config);
 
     std::ifstream quoteFile;
+    auto marketdata = std::make_shared<TestMarketData>(config);
+    auto signal = std::make_shared<MovingAverageCrossOver>(1000, 8000);
+    signal->init(config, marketdata);
+    marketdata->setCallback([&](){ signal->update(); });
     quoteFile.open(config->get("tickStorage")+"/quotes_XBTUSD.json");
     if (!quoteFile.is_open()) {
         throw std::runtime_error("No quotes file found.");
     }
-    auto marketdata = env.context()->marketData();
-    auto signal = env.context()->strategy()->getSignal("moving_average_crossover");
     for (auto _ : state) {
         auto quote = getEvent<model::Quote>(quoteFile);
         *marketdata << quote;

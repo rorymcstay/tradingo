@@ -187,10 +187,9 @@ void TestOrdersApi::operator>>(const std::string &outEvent_) {
         if (!_newOrders.empty() || !_orderCancels.empty() || !_orderAmends.empty()) {
             auto message = [](const std::shared_ptr<model::ModelBase>& ptr_ ) { return ptr_->toJson().serialize(); };
             std::stringstream failMessage;
-            failMessage << "ORDER_NEW:\n";
             while (!_newOrders.empty()) {
                 auto order = _newOrders.front();
-                failMessage << "ORDER_NEW "
+                failMessage << "env >> \"ORDER_NEW "
                             << PVAR(order, Price)
                             << PVAR(order, OrderQty)
                             << PVAR(order, CumQty)
@@ -200,14 +199,14 @@ void TestOrdersApi::operator>>(const std::string &outEvent_) {
                             << PVAR(order, OrigClOrdID)
                             << PVAR(order, OrdStatus)
                             << PVAR(order, Side)
+                            << PVAR(order, Symbol)
 
-                        << "\n";
+                        << "\" LN;\n";
                 _newOrders.pop();
             }
-            failMessage << "ORDER_AMEND:\n";
             while (!_orderAmends.empty()) {
                 auto order = _orderAmends.front();
-                failMessage << "ORDER_AMEND "
+                failMessage << "env >> \"ORDER_AMEND "
                             << PVAR(order, Price)
                             << PVAR(order, OrderQty)
                             << PVAR(order, CumQty)
@@ -217,14 +216,14 @@ void TestOrdersApi::operator>>(const std::string &outEvent_) {
                             << PVAR(order, OrigClOrdID)
                             << PVAR(order, OrdStatus)
                             << PVAR(order, Side)
+                            << PVAR(order, Symbol)
 
-                        << "\n";
+                        << "\" LN;\n";
                 _orderAmends.pop();
             }
-            failMessage << "ORDER_CANCEL:\n";
             while (!_orderCancels.empty()) {
                 auto order = _orderCancels.front();
-                failMessage << "ORDER_AMEND "
+                failMessage << "env >> \"ORDER_CANCEL "
                             << PVAR(order, Price)
                             << PVAR(order, OrderQty)
                             << PVAR(order, CumQty)
@@ -234,8 +233,9 @@ void TestOrdersApi::operator>>(const std::string &outEvent_) {
                             << PVAR(order, OrigClOrdID)
                             << PVAR(order, OrdStatus)
                             << PVAR(order, Side)
+                            << PVAR(order, Symbol)
 
-                        << "\n";
+                        << "\" LN;\n";
                 _orderCancels.pop();
             }
             throw std::runtime_error("There are events still pending!\n"+failMessage.str());
@@ -266,7 +266,6 @@ void TestOrdersApi::operator>>(const std::string &outEvent_) {
         CHECK_VAL(orderAmend->getOrderQty(), expectedOrder->getOrderQty());
         CHECK_VAL(orderAmend->getSymbol(), expectedOrder->getSymbol());
     } else if (eventType == "ORDER_CANCEL") {
-        checkOrderExists(expectedOrder);
         if (_orderCancels.empty()) {
             throw std::runtime_error( "No expectedOrder cancels");
         }

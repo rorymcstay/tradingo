@@ -35,7 +35,6 @@ add_executable(testTradingo
         TestAllocations.cpp
         TestStrategy.cpp
         TestMarketData.cpp
-        test_json.cpp
         test_main.cpp
 )
 

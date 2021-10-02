@@ -29,7 +29,24 @@ struct Dispatch {
     utility::datetime actual_time;
 };
 
-
+#define DEFAULT_ARGS \
+        {"symbol", "XBTUSD"},\
+        {"clOrdPrefix", "MCST"},\
+        {"factoryMethod", "RegisterBreakOutStrategy"},\
+        {"startingAmount", "1000"},\
+        {"displaySize", "200"},\
+        {"referencePrice", "35000"},\
+        {"shortTermWindow", "1000"},\
+        {"longTermWindow", "8000"},\
+        {"moving_average_crossover-interval", "1000"},\
+        {"signal-callback", "1000"},\
+        {"logLevel", "debug"},\
+        {"moving_average_crossover-callback", "false"}, \
+        {"realtime", "false"},                         \
+        {"override-signal-callback", "true"},            \
+        {"libraryLocation", LIBRARY_LOCATION"/libtest_trading_strategies.so" }, \
+        {"storage", "./"},   \
+        {"tickStorage", "./"}
 class TestEnv
 {
     using OrderApi = TestOrdersApi;
