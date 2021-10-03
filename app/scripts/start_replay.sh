@@ -2,6 +2,8 @@
 source "$(dirname ${BASH_SOURCE[0]})/profile.env"
 
 replay_tradingo_on() {
+    # exit on first failure
+    set -e
 
     # params
     DATESTR=$1
@@ -31,7 +33,6 @@ replay_tradingo_on() {
 
     populate_strategy_params $INSTALL_LOCATION/etc/config/strategy/${STRATEGY}.cfg >> $config_file
     cat $config_file
-    mkdir -p /tmp/log/tradingo/replay/$run_id
     # run the replay
     replayTradingo --config $config_file
     aws s3 sync "$REPLAY_STORAGE" "s3://$BUCKET_NAME/replays/"

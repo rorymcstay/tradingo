@@ -2,6 +2,8 @@
 source "$(dirname ${BASH_SOURCE[0]})/profile.env"
 
 start_tradingo() {
+    # exit on first failure
+    set -e
 
     run_date=$(date -I)
     eval "$(date +'today=%F now=%s')"
@@ -9,8 +11,8 @@ start_tradingo() {
     time_since_midnight="$((now - midnight))"
     run_id=$run_date.$time_since_midnight
     STORAGE=${STORAGE:-/data/tradingo}
-    config_file=$STORAGE/${run_id}/tradingo.cfg
     mkdir -p $STORAGE/${run_id}
+    config_file=$STORAGE/${run_id}/tradingo.cfg
 
     # build the config file
     set -x
