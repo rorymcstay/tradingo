@@ -6,4 +6,5 @@ jobs:
     steps:
     - uses: actions/checkout@master
     - name: Build, Tag and Publish
-      run: DOCKER_USERNAME=${{ secrets.DOCKER_USERNAME }} DOCKER_PASSWORD=${{ secrets.DOCKER_PASSWORD }} ./app/scripts/build_tag_upload.sh replay
+      run: DOCKER_USERNAME=${{ secrets.DOCKER_USERNAME }} DOCKER_PASSWORD=${{ secrets.DOCKER_PASSWORD }} ./docker/build_tag_upload.sh replay
+      run: DOCKER_USERNAME=${{ secrets.DOCKER_USERNAME }} DOCKER_PASSWORD=${{ secrets.DOCKER_PASSWORD }} ./docker/build_tag_upload.sh tradingo

@@ -3,6 +3,9 @@ source "$(dirname ${BASH_SOURCE[0]})/profile.env"
 
 replay_tradingo_on() {
 
+    # params
+    DATESTR=$1
+
     mkdir -p "$TICK_STORAGE/$1"
     aws s3 cp "s3://$BUCKET_NAME/tickRecorder/storage/$1/quotes_$SYMBOL.json" "$TICK_STORAGE/$1/"
     aws s3 cp "s3://$BUCKET_NAME/tickRecorder/storage/$1/trades_$SYMBOL.json" "$TICK_STORAGE/$1/"
@@ -15,18 +18,17 @@ replay_tradingo_on() {
     set -x
     TICK_STORAGE=$TICK_STORAGE
     REPLAY_STORAGE=$REPLAY_STORAGE \
-    DATESTR=$1 \
+    DATESTR=$DATESTR \
     RUN_ID=$run_id \
+    LOG_LEVEL=${LOG_LEVEL:-info}
+    REALTIME=${REALTIME:-false}
     INSTALL_LOCATION=$INSTALL_LOCATION \
-    MOVING_AVG_CALLBACK=${MOVING_AVG_CALLBACK:-false} \
-    MOVING_AVG_INTERVAL=${MOVING_AVG_INTERVAL:-1000} \
-    MOVING_AVG_SHORT_TERM=${MOVING_AVG_SHORT_TERM:-1000} \
-    MOVING_AVG_LONG_TERM=${MOVING_AVG_LONG_TERM:-8000} \
-    SYMBOL=${SYMBOL:-XBTUSD} \
         envsubst < $INSTALL_LOCATION/etc/config/replayTradingo.cfg  \
     > $REPLAY_STORAGE/${RUN_ID}.${DATESTR}/replay.cfg
-    cat $REPLAY_STORAGE/${RUN_ID}.${DATESTR}/replay.cfg
 
+
+    populate_strategy_params $INSTALL_LOCATION/etc/config/strategy/${STRATEGY}.cfg >> $config_file
+    cat $REPLAY_STORAGE/${RUN_ID}.${DATESTR}/replay.cfg
     mkdir -p /tmp/log/tradingo/replay/$run_id
     # run the replay
     replayTradingo --config $REPLAY_STORAGE/${RUN_ID}.${DATESTR}/replay.cfg
