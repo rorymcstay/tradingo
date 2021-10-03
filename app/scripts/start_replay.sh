@@ -15,6 +15,7 @@ replay_tradingo_on() {
     time_since_midnight="$((now - midnight))"
     run_id=$run_date.$time_since_midnight
 
+    config_file=$REPLAY_STORAGE/${run_id}.${DATESTR}/replay.cfg
     set -x
     TICK_STORAGE=$TICK_STORAGE
     REPLAY_STORAGE=$REPLAY_STORAGE \
@@ -24,14 +25,14 @@ replay_tradingo_on() {
     REALTIME=${REALTIME:-false}
     INSTALL_LOCATION=$INSTALL_LOCATION \
         envsubst < $INSTALL_LOCATION/etc/config/replayTradingo.cfg  \
-    > $REPLAY_STORAGE/${RUN_ID}.${DATESTR}/replay.cfg
+    > $config_file
 
 
     populate_strategy_params $INSTALL_LOCATION/etc/config/strategy/${STRATEGY}.cfg >> $config_file
-    cat $REPLAY_STORAGE/${RUN_ID}.${DATESTR}/replay.cfg
+    cat $config_file
     mkdir -p /tmp/log/tradingo/replay/$run_id
     # run the replay
-    replayTradingo --config $REPLAY_STORAGE/${RUN_ID}.${DATESTR}/replay.cfg
+    replayTradingo --config $config_file
     aws s3 sync "$REPLAY_STORAGE" "s3://$BUCKET_NAME/replays/"
 }
 replay_tradingo_on $1

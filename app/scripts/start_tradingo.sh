@@ -9,7 +9,7 @@ start_tradingo() {
     time_since_midnight="$((now - midnight))"
     run_id=$run_date.$time_since_midnight
     STORAGE=${STORAGE:-/data/tradingo}
-    config_file=$STORAGE/${RUN_ID}/tradingo.cfg
+    config_file=$STORAGE/${run_id}/tradingo.cfg
 
     # build the config file
     set -x
@@ -22,13 +22,13 @@ start_tradingo() {
     STORAGE=${STORAGE} \
     LOG_LEVEL=${LOG_LEVEL:-info} \
         envsubst < $INSTALL_LOCATION/etc/config/strategy/${STRATEGY}.cfg  \
-    > $config_file 
+    > $config_file
 
     populate_strategy_params $INSTALL_LOCATION/etc/config/strategy/${STRATEGY}.cfg >> $config_file
     cat $config_file
 
     # start tradingo
-    tradingo --config $REPLAY_STORAGE/${RUN_ID}/replay.cfg
+    tradingo --config $config_file
     aws s3 sync "$STORAGE" "s3://$BUCKET_NAME/tradingo/storage"
     aws s3 sync "$LOG_DIR" "s3://$BUCKET_NAME/tradingo/logs"
 }
