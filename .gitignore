@@ -6,6 +6,7 @@ build/
 .cache/
 .aws
 thirdparty/googletest/
+tmp
 CMakeLists.txt.user
 CMakeCache.txt
 CMakeFiles
