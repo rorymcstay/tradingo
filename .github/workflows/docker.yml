@@ -5,6 +5,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@master
-    - name: Build, Tag and Publish
+    - name: Build, Tag and Publish - Replay
       run: DOCKER_USERNAME=${{ secrets.DOCKER_USERNAME }} DOCKER_PASSWORD=${{ secrets.DOCKER_PASSWORD }} ./docker/build_tag_upload.sh replay
+    - name: Build, Tag and Publish - Tradingo
       run: DOCKER_USERNAME=${{ secrets.DOCKER_USERNAME }} DOCKER_PASSWORD=${{ secrets.DOCKER_PASSWORD }} ./docker/build_tag_upload.sh tradingo
