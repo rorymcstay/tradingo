@@ -10,6 +10,7 @@ start_tradingo() {
     run_id=$run_date.$time_since_midnight
     STORAGE=${STORAGE:-/data/tradingo}
     config_file=$STORAGE/${run_id}/tradingo.cfg
+    mkdir -p $STORAGE/${run_id}
 
     # build the config file
     set -x

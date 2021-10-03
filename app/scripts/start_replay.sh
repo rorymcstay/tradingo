@@ -15,6 +15,7 @@ replay_tradingo_on() {
     time_since_midnight="$((now - midnight))"
     run_id=$run_date.$time_since_midnight
 
+    mkdir -p $REPLAY_STORAGE/${run_id}.${DATESTR}
     config_file=$REPLAY_STORAGE/${run_id}.${DATESTR}/replay.cfg
     set -x
     TICK_STORAGE=$TICK_STORAGE
