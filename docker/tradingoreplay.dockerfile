@@ -1,4 +1,4 @@
-FROM tradingo/base as builder
+FROM rmcstay95/tradingo-base as builder
 
 # build tradingo
 ARG install_base=/usr/from-src/
