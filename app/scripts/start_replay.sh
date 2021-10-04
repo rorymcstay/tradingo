@@ -7,8 +7,9 @@ replay_tradingo_on() {
     # exit on first failure
     set -e
 
+    set -x
     # params
-    DATESTR=$1
+    export DATESTR=$1
     if [[ ! $DATESTR ]]; then
         echo "Datestring must not be empty"
         return 1
@@ -23,20 +24,21 @@ replay_tradingo_on() {
     time_since_midnight="$((now - midnight))"
     run_id=$run_date.$time_since_midnight
 
-    mkdir -p $REPLAY_STORAGE/${run_id}.${DATESTR}
-    config_file=$REPLAY_STORAGE/${run_id}.${DATESTR}/replay.cfg
-    set -x
-    TICK_STORAGE=$TICK_STORAGE
-    REPLAY_STORAGE=$REPLAY_STORAGE \
-    DATESTR=$DATESTR \
-    RUN_ID=$run_id \
-    LOG_LEVEL=${LOG_LEVEL:-info}
-    REALTIME=${REALTIME:-false}
-    INSTALL_LOCATION=$INSTALL_LOCATION \
+    mkdir -p $REPLAY_STORAGE/$run_id.${DATESTR}
+    config_file="$REPLAY_STORAGE/$run_id.${DATESTR}/replay.cfg"
+
+    export TICK_STORAGE=$TICK_STORAGE
+    export REPLAY_STORAGE=$REPLAY_STORAGE \
+    export DATESTR=$DATESTR \
+    export RUN_ID=$run_id \
+    export LOG_LEVEL=${LOG_LEVEL:-info}
+    export REALTIME=${REALTIME:-false}
+    export INSTALL_LOCATION=$INSTALL_LOCATION \
         envsubst < $INSTALL_LOCATION/etc/config/replayTradingo.cfg  \
     > $config_file
+    cat $config_file
 
-    populate_strategy_params $INSTALL_LOCATION/etc/config/strategy/${STRATEGY}.cfg >> $config_file
+    echo $(populate_strategy_params $INSTALL_LOCATION/etc/config/strategy/${STRATEGY}.cfg) >> $config_file
     cat $config_file
     # run the replay
     replayTradingo --config $config_file
