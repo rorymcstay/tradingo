@@ -22,8 +22,8 @@ replay_tradingo_on() {
     eval "$(date +'today=%F now=%s')"
     midnight=$(date -d "$today 0" +%s)
     time_since_midnight="$((now - midnight))"
-    run_id=$run_date.$time_since_midnight
 
+    run_id=${RUN_ID:-"$run_date.$time_since_midnight"}
     mkdir -p $REPLAY_STORAGE/$run_id.${DATESTR}
     config_file="$REPLAY_STORAGE/$run_id.${DATESTR}/replay.cfg"
     echo $config_file
