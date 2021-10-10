@@ -58,7 +58,7 @@ void Signal::init(const std::shared_ptr<Config> &config_, const std::shared_ptr<
     _batchWriter = std::make_shared<Signal::Writer>(
             "moving_average_crossover",
             config_->get("symbol"),
-            storage, 100000, printer, /*rotate_=*/false);
+            storage, 100000, printer, false);
     auto evalInterval = std::stoi(_config->get(_name+"-interval", "1000"));
     if (_config->get(_name+"-callback") == "true") {
         // if its a callback siganl, always set as callback.

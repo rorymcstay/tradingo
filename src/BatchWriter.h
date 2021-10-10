@@ -70,7 +70,7 @@ BatchWriter<T>::BatchWriter(std::string tableName_,
                             std::string storage_,
                             int batchSize_,
                             std::function<std::string(const T&)> print_,
-                            bool rotate_=true)
+                            bool rotate_)
         :   _batchSize(batchSize_)
         ,   _filehandle()
         ,   _batch()
@@ -79,7 +79,7 @@ BatchWriter<T>::BatchWriter(std::string tableName_,
         ,   _symbol(std::move(symbol_))
         ,   _storage(std::move(storage_))
         ,   _fileLocation(_storage + "/" +_dateString + "/" + _tableName + "_"+ _symbol +".json")
-        ,   _print(print_),
+        ,   _print(print_)
         ,   _rotate(rotate_)
 {
     _batch.reserve(_batchSize);
