@@ -83,6 +83,7 @@ BatchWriter<T>::BatchWriter(std::string tableName_,
         ,   _rotate(rotate_)
 {
     _batch.reserve(_batchSize);
+    update_file_location();
     _filehandle.open(_fileLocation, std::ios::app);
     _filehandle << '\n';
     _filehandle.close();
