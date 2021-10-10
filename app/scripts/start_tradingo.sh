@@ -3,9 +3,10 @@ source "$(dirname ${BASH_SOURCE[0]})/profile.env"
 
 start_tradingo() {
     # exit on first failure
-    set -e
+
     config_file=$STORAGE/${RUN_ID}/tradingo.cfg
     mkdir -p $STORAGE/$RUN_ID
+
     echo "# Tradingo Start config" > $config_file
     echo "# run_id=${RUN_ID}" >> $config_file
     echo "# tradingo config" >> $config_file
