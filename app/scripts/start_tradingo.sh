@@ -9,7 +9,7 @@ start_tradingo() {
     eval "$(date +'today=%F now=%s')"
     midnight=$(date -d "$today 0" +%s)
     time_since_midnight="$((now - midnight))"
-    run_id=$run_date.$time_since_midnight
+    run_id=${RUN_ID:-$run_date.$time_since_midnight}
     STORAGE=${STORAGE:-/data/tradingo}
     mkdir -p $STORAGE/${run_id}
     config_file=$STORAGE/${run_id}/tradingo.cfg
