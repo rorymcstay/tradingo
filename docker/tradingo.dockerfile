@@ -97,7 +97,6 @@ RUN adduser \
     --uid "$UID" \
     "$USER" \
     \
-RUN echo "* soft core unlimited" > /etc/security/limits.conf
 
 ARG install_base=/usr/from-src/
 COPY --from=builder ${install_base}/cpprest/lib /usr/local/lib
