@@ -4,6 +4,7 @@ source "$(dirname ${BASH_SOURCE[0]})/profile.env"
 start_tradingo() {
     # exit on first failure
 
+    set -e
     config_file=$STORAGE/${RUN_ID}/tradingo.cfg
     mkdir -p $STORAGE/$RUN_ID
 
@@ -21,6 +22,8 @@ start_tradingo() {
     cat $config_file
 
     # start tradingo
+    cd $STORAGE
+    set +e
     tradingo --config $config_file
     aws s3 sync "$STORAGE/" "s3://$BUCKET_NAME/tradingo/"
 }

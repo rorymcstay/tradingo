@@ -37,6 +37,8 @@ replay_tradingo_on() {
     populate_strategy_params $INSTALL_LOCATION/etc/config/strategy/${STRATEGY}.cfg $config_file
     cat $config_file
     # run the replay
+    cd $STORAGE
+    set +e
     replayTradingo --config $config_file
     aws s3 sync "$STORAGE" "s3://$BUCKET_NAME/replays/"
 }
