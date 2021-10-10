@@ -127,9 +127,9 @@ void TestEnv::playback(const std::string& tradeFile_, const std::string& quoteFi
         return order_->toJson().serialize();
     };
     auto batchWriter = TestOrdersApi::Writer("replay_orders", _context->config()->get("symbol"),
-                                             _context->config()->get("storage"), 5, printer);
+                                             _context->config()->get("storage"), 5, printer, /*rotate=*/false);
     auto positionWriter = TestOrdersApi::Writer("replay_positions", _context->config()->get("symbol"),
-                                                _context->config()->get("storage"), 5, printer);
+                                                _context->config()->get("storage"), 5, printer, /*rotate=*/false);
     _lastDispatch.mkt_time = quote->getTimestamp();
     while (not stop) {
         if (!hasTrades or trade->getTimestamp() >= quote->getTimestamp()) {

@@ -55,10 +55,10 @@ void Signal::init(const std::shared_ptr<Config> &config_, const std::shared_ptr<
     if (storage.empty())
         storage = "/tmp/";
     auto printer = [](const std::string& it_) { return it_; };
-    _batchWriter = std::make_shared<BatchWriter<std::string>>(
+    _batchWriter = std::make_shared<Signal::Writer>(
             "moving_average_crossover",
             config_->get("symbol"),
-            storage, 100000, printer);
+            storage, 100000, printer, /*rotate_=*/false);
     auto evalInterval = std::stoi(_config->get(_name+"-interval", "1000"));
     if (_config->get(_name+"-callback") == "true") {
         // if its a callback siganl, always set as callback.
