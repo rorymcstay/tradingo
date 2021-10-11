@@ -5,6 +5,7 @@ build/
 *.json
 .cache/
 .aws
+.env
 thirdparty/googletest/
 tmp
 CMakeLists.txt.user

@@ -4,6 +4,8 @@
 // src
 #include "Config.h"
 #include "MarketData.h"
+#include "Context.h"
+#include "fwk/TestMarketData.h"
 
 // CppRestSwaggerClient
 #include "api/OrderApi.h"
@@ -44,6 +46,18 @@ struct OrderManager {
     }
 
 };
+
+TEST(TestStrategyInterface, smoke_test) {
+
+
+    auto config = std::shared_ptr<Config>();
+    config->set("apiKey", "-rqipjFxM43WSRKdC8keq83K");
+    config->set("apiSecret", "uaCYIiwpwpXNKuVGCBPWE3ThzvyhOzKs6F9mWFzc9LueG3yd");
+    config->set("symbol", "XBTUSD");
+    config->set("baseUrl", "https://testnet.bitmex.com/api/v1/");
+    config->set("connectionString", "wss://testnet.bitmex.com");
+    auto context = std::make_shared<Context<TestMarketData, api::OrderApi>>(config);
+}
 
 TEST(OrderApi, DISABLED_order_newBulk) {
 
@@ -95,8 +109,5 @@ TEST(OrderApi, order_newBulk_throws_ApiException) {
     } catch (web::http::http_exception ex_) {
         LOGINFO("Httpexception!");
     }
-
-
-
     LOGINFO(LOG_VAR(res));
 }

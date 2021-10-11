@@ -52,6 +52,7 @@ public:
     /// load symbol from library file, download instrument from InstrumentApi, and call strategy::init
     void initStrategy();
 
+    /// accessor functions
     const std::shared_ptr<TMarketData>& marketData() const { return _marketData; }
     const std::shared_ptr<TOrderApi>& orderApi() const { return _orderManager; }
     const std::shared_ptr<api::ApiConfiguration>& apiConfig() const { return _apiConfig; }
@@ -102,8 +103,6 @@ Context<TMarketData, TOrderApi>::loadFactoryMethod() {
 
 template<typename TMarketData, typename TOrderApi>
 Context<TMarketData, TOrderApi>::Context(const std::shared_ptr<Config>& config_) {
-
-
 
     _config = config_;
     setupLogger();
