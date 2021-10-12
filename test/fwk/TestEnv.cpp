@@ -196,6 +196,7 @@ void TestEnv::init() {
     if (_config->get("logLevel", "").empty())
         _config->set("logLevel", "debug");
     _config->set("cloidSeed", "0");
+    auto instSvc = std::shared_ptr<InstrumentService>(nullptr);
     _context = std::make_shared<Context<TestMarketData, OrderApi>>(_config);
     _context->init();
     _context->initStrategy();

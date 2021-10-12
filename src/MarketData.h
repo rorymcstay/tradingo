@@ -26,6 +26,7 @@
 #include "HeartBeat.h"
 #include "Allocation.h"
 #include "api/InstrumentApi.h"
+#include "InstrumentService.h"
 //#include "Signal.h"
 
 
@@ -142,16 +143,16 @@ public:
 
     std::function<void()> _callback;
 
-        void setCallback(const std::function<void()> &callback);
+    void setCallback(const std::function<void()> &callback);
 
 private:
     std::priority_queue<std::shared_ptr<Event>, std::vector<std::shared_ptr<Event>>, QueueArrange> _eventBuffer;
     //std::unordered_map<std::string, std::shared_ptr<Signal>> _timed_signals;
+
 private:
     void updateSignals(const std::shared_ptr<Event>& event_);
 public:
     void initSignals(const std::string& cfg_);
-    void setInstrumentApi(const std::shared_ptr<api::InstrumentApi> &instrumentApi);
 
 protected:
     std::mutex _mutex;
@@ -170,7 +171,7 @@ protected:
     std::unordered_map<std::string, std::shared_ptr<model::Order>> _orders;
     std::shared_ptr<model::Quote> _quote;
     std::shared_ptr<model::Instrument> _instrument;
-    std::shared_ptr<api::InstrumentApi> _instrumentApi;
+    std::shared_ptr<InstrumentService> _instSvc;
 
     void handleQuotes(const std::vector<std::shared_ptr<model::Quote>>& quotes_, const std::string& action_);
     void handleTrades(std::vector<std::shared_ptr<model::Trade>>& trades_, const std::string& action_);
@@ -196,7 +197,7 @@ protected:
 
 public:
     ~MarketDataInterface() = default;
-    explicit MarketDataInterface(const std::shared_ptr<Config>& config_);
+    MarketDataInterface(const std::shared_ptr<Config>& config_, const std::shared_ptr<InstrumentService>& insSvc_);
     MarketDataInterface();
     std::shared_ptr<Event> read();
     const std::unordered_map<std::string, OrderPtr>& getOrders() const;
@@ -233,11 +234,12 @@ public:
     void subscribe();
     void reconnect();
 
-    explicit MarketData(const std::shared_ptr<Config>& config_);
+    MarketData(const std::shared_ptr<Config>& config_, std::shared_ptr<InstrumentService>);
 
     ~MarketData();
 
     void init();
+
 };
 
 #endif //TRADING_BOT_MARKETDATA_H

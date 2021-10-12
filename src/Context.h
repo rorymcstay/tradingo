@@ -19,6 +19,7 @@
 #include "aixlog.hpp"
 #include "Utils.h"
 #include "api/InstrumentApi.h"
+#include "InstrumentService.h"
 
 
 template<typename TMarketData, typename TOrderApi>
@@ -30,7 +31,7 @@ class Context {
     web::http::client::http_client_config _httpConfig;
     std::shared_ptr<TOrderApi> _orderManager;
     std::shared_ptr<Strategy<TOrderApi>> _strategy;
-    std::shared_ptr<api::InstrumentApi> _instrumentApi;
+    std::shared_ptr<InstrumentService> _instrumentService;
     void* _handle;
 
 private:
@@ -65,8 +66,7 @@ public:
 
 template<typename TMarketData, typename TOrderApi>
 void Context<TMarketData, TOrderApi>::init() {
-    _instrumentApi = std::make_shared<api::InstrumentApi>(_apiClient);
-    _marketData->setInstrumentApi(_instrumentApi);
+
     _marketData->init();
     _marketData->subscribe();
 }
@@ -102,26 +102,24 @@ Context<TMarketData, TOrderApi>::loadFactoryMethod() {
 }
 
 template<typename TMarketData, typename TOrderApi>
-Context<TMarketData, TOrderApi>::Context(const std::shared_ptr<Config>& config_) {
-
-    _config = config_;
+Context<TMarketData, TOrderApi>::Context(const std::shared_ptr<Config>& config_)
+:   _config(config_)
+,   _instrumentService(std::make_shared<InstrumentService>(_apiClient, config_))
+,   _marketData(std::make_shared<TMarketData>(config_, _instrumentService))
+,   _apiConfig(std::make_shared<api::ApiConfiguration>())
+,   _httpConfig(web::http::client::http_client_config())
+,   _apiClient(std::make_shared<api::ApiClient>(_apiConfig))
+,   _orderManager(std::make_shared<TOrderApi>(_apiClient))
+{
     setupLogger();
-
     LOGINFO("Context created. Version Info: GIT_BRANCH='" << GIT_BRANCH << "' GIT_TAG='" << GIT_TAG
                     << "' GIT_REV='" << GIT_REV << "'");
-
-    _marketData = std::make_shared<TMarketData>(config_);
-    _apiConfig = std::make_shared<api::ApiConfiguration>();
-    _httpConfig = web::http::client::http_client_config();
 
     _apiConfig->setBaseUrl(config_->get("baseUrl", "NO HTTP"));
     _apiConfig->setApiKey("api-key", config_->get("apiKey", "NO AUTH"));
     _apiConfig->setApiKey("api-secret", config_->get("apiSecret", "NO AUTH"));
     _apiConfig->setHttpConfig(_httpConfig);
-    _config = config_;
 
-    _apiClient = std::make_shared<api::ApiClient>(_apiConfig);
-    _orderManager = std::make_shared<TOrderApi>(_apiClient);
 }
 
 template<typename TMarketData, typename TOrderApi>

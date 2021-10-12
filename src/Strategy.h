@@ -25,19 +25,20 @@ class Strategy {
 
 
     std::shared_ptr<MarketDataInterface> _marketData;
-    std::shared_ptr<TOrdApi>  _orderEngine;
+    std::shared_ptr<TOrdApi>             _orderEngine;
 
+    std::string                          _clOrdIdPrefix;
+    int                                  _oidSeed;
+    std::shared_ptr<Config>              _config;
 
-    std::string _clOrdIdPrefix;
-    int _oidSeed;
-    std::shared_ptr<Config> _config;
+    std::shared_ptr<Allocations>         _allocations;
+    std::unordered_map<long, OrderPtr>   _orders;
 
-    std::shared_ptr<Allocations>           _allocations;
-    std::unordered_map<long, OrderPtr> _orders;
     std::unordered_map<std::string, std::shared_ptr<Signal>> _timed_signals;
     std::unordered_map<std::string, std::shared_ptr<Signal>> _callback_signals;
 
-
+    std::shared_ptr<model::Instrument> _instrument;
+    std::shared_ptr<api::InstrumentApi> _instrumentApi;
 
     virtual void onExecution(const std::shared_ptr<Event>& event_) = 0;
     virtual void onTrade(const std::shared_ptr<Event>& event_) = 0;
@@ -53,14 +54,15 @@ public:
     virtual void init(const std::shared_ptr<Config>& config_);
     virtual bool shouldEval();
     const std::shared_ptr<Allocations>& allocations() { return _allocations; }
+    /// market data accessor
     std::shared_ptr<MarketDataInterface> getMD() const { return _marketData; }
+    /// conduct function_ on each signal. Optionally only evaluate on callback types
     void forEachSignal(std::function<void(const Signal::Map::value_type&)> function_, bool callbacks=true) {
         if (callbacks) {
             std::for_each(_callback_signals.begin(), _callback_signals.end(), function_);
         } else {
             std::for_each(_timed_signals.begin(), _timed_signals.end(), function_);
         }
-
     }
     void updateSignals();
     Signal::Ptr getSignal(const std::string& name);
@@ -74,7 +76,7 @@ protected:
     void addSignal(const std::shared_ptr<Signal>& signal_);
 
 public:
-    std::shared_ptr<model::Instrument> instrument() const { return _marketData ? _marketData->instrument() : nullptr; }
+    std::shared_ptr<model::Instrument> instrument() const { return _instrument; }
 
     void placeAllocations();
 };
@@ -85,6 +87,7 @@ Strategy<TOrdApi>::Strategy(std::shared_ptr<MarketDataInterface> md_, std::share
 ,   _orderEngine(std::move(od_))
 ,   _allocations(nullptr)
 ,   _oidSeed(std::chrono::system_clock::now().time_since_epoch().count()) {
+
 
 }
 
@@ -130,6 +133,7 @@ void Strategy<TOrdApi>::init(const std::shared_ptr<Config>& config_) {
 
     _symbol = _config->get("symbol");
     _clOrdIdPrefix = _config->get("clOrdPrefix");
+
     auto cloidSeed = _config->get("cloidSeed", "");
     if (!cloidSeed.empty()) {
         _oidSeed = std::stoi(cloidSeed);

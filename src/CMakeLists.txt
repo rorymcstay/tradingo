@@ -30,6 +30,8 @@ add_library(trading_funcs SHARED
         HeartBeat.cpp
 		Signal.cpp
 		CallbackTimer.cpp
+		Functional.cpp
+		InstrumentService.cpp
 
 		signal/MovingAverageCrossOver.cpp
 

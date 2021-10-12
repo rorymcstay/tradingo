@@ -53,8 +53,8 @@ void TestMarketData::operator<<(const std::string &marketDataString) {
 
 }
 
-TestMarketData::TestMarketData(const std::shared_ptr<Config>& ptr)
-: MarketDataInterface(ptr)
+TestMarketData::TestMarketData(const std::shared_ptr<Config>& ptr, std::shared_ptr<InstrumentService> instSvc_)
+: MarketDataInterface(ptr, instSvc_)
 , _config(ptr)
 , _time(utility::datetime::utc_now()){
 

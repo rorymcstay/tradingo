@@ -8,6 +8,7 @@ build/
 .env
 thirdparty/googletest/
 tmp
+wip
 CMakeLists.txt.user
 CMakeCache.txt
 CMakeFiles
