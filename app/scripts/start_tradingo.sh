@@ -3,36 +3,28 @@ source "$(dirname ${BASH_SOURCE[0]})/profile.env"
 
 start_tradingo() {
     # exit on first failure
+
     set -e
+    config_file=$STORAGE/${RUN_ID}/tradingo.cfg
+    mkdir -p $STORAGE/$RUN_ID
 
-    run_date=$(date -I)
-    eval "$(date +'today=%F now=%s')"
-    midnight=$(date -d "$today 0" +%s)
-    time_since_midnight="$((now - midnight))"
-    run_id=$run_date.$time_since_midnight
-    STORAGE=${STORAGE:-/data/tradingo}
-    mkdir -p $STORAGE/${run_id}
-    config_file=$STORAGE/${run_id}/tradingo.cfg
-
-    # build the config file
-    set -x
-    STORAGE=$storage \
+    echo "# Tradingo Start config" > $config_file
+    echo "# run_id=${RUN_ID}" >> $config_file
+    echo "# tradingo config" >> $config_file
     CONNECTION_STRING=${CONNECTION_STRING} \
     BASE_URL=${BASE_URL} \
-    LOG_DIR=${LOG_DIR} \
     API_KEY=${API_KEY} \
     API_SECRET=${API_SECRET} \
-    STORAGE=${STORAGE} \
-    LOG_LEVEL=${LOG_LEVEL:-info} \
-        envsubst < $INSTALL_LOCATION/etc/config/strategy/${STRATEGY}.cfg  \
-    > $config_file
-
-    populate_strategy_params $INSTALL_LOCATION/etc/config/strategy/${STRATEGY}.cfg >> $config_file
+        envsubst < $INSTALL_LOCATION/etc/config/tradingo.cfg  \
+    >> $config_file
+    populate_common_params $config_file
+    populate_strategy_params $INSTALL_LOCATION/etc/config/strategy/${STRATEGY}.cfg $config_file
     cat $config_file
 
     # start tradingo
+    cd $STORAGE
+    set +e
     tradingo --config $config_file
-    aws s3 sync "$STORAGE" "s3://$BUCKET_NAME/tradingo/storage"
-    aws s3 sync "$LOG_DIR" "s3://$BUCKET_NAME/tradingo/logs"
+    aws s3 sync "$STORAGE/" "s3://$BUCKET_NAME/tradingo/"
 }
-replay_tradingo_on $1
+start_tradingo

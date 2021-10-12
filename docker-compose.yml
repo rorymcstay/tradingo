@@ -1,25 +1,44 @@
 version: "3.0"
 
-x-common-env:
-  &common-env:
-    AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
-    AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
-    AWS_REGION: ${AWS_REGION}
-
 
 services:
-  build: ./
-  tickRecorder:
-    entrypoint: tickRecorder --config /usr/etc/config/tickRecorder
-    volumes:
-      - data:/data/tickRecorder/storage/
-    environemt:
-    <<: *common-env
 
-  replayTradingo:
-    entrypoint: /usr/scripts/replay.sh 2021-09-13
-    environemt:
-    <<: *common-env
+  live-tradingo:
+    build:
+      context: .
+      dockerfile: docker/tradingo-replay.docker
+    entrypoint: ["/usr/local/scripts/start_tradingo.sh"]
+    environment:
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_REGION: ${AWS_REGION}
+      MOVING_AVG_INTERVAL: "1000"
+      MOVING_AVG_CALLBACK: "false"
+      MOVING_AVG_LONG_TERM: "8000"
+      MOVING_AVG_SHORT_TERM: "1000"
+      STRATEGY: "breakout"
+      SYMBOL: "XBTUSD"
+      STARTING_AMOUNT: "1000"
+      LONG_EXPOSE: "1000"
+      SHORT_EXPOSE: "100"
+  replay-tradingo:
+    build:
+      context: .
+      dockerfile: docker/tradingo-replay.docker
+    entrypoint: ["/usr/local/scripts/start_replay.sh", "2021-09-13"]
+    environment:
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_REGION: ${AWS_REGION}
+      MOVING_AVG_INTERVAL: "1000"
+      MOVING_AVG_CALLBACK: "false"
+      MOVING_AVG_LONG_TERM: "8000"
+      MOVING_AVG_SHORT_TERM: "1000"
+      STRATEGY: "breakout"
+      SYMBOL: "XBTUSD"
+      STARTING_AMOUNT: "1000"
+      LONG_EXPOSE: "1000"
+      SHORT_EXPOSE: "100"
 
 volumes:
   data: {}

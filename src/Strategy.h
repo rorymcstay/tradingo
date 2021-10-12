@@ -247,7 +247,7 @@ void Strategy<TOrdApi>::placeAllocations() {
             try {
                 _orderEngine->order_cancel(boost::none,
                                            toSend->origClOrdIDIsSet() ? toSend->getOrigClOrdID() : toSend->getClOrdID(),
-                                           std::string("Allocation removed")).then(
+                                           std::string("")).then(
                     [this, &toSend](const pplx::task<std::vector<std::shared_ptr<model::Order>>> &orders_) {
                         this->updateFromTask(orders_);
                     });
