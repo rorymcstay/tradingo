@@ -51,8 +51,9 @@ int main(int argc, char **argv) {
     auto printer = [](const std::shared_ptr<model::ModelBase>& order_) {
         return order_->toJson().serialize();
     };
-    auto trades = std::make_shared<ModelBatchWriter>("trades", symbol, storage, 100, printer);
-    auto quotes = std::make_shared<ModelBatchWriter>("quotes", symbol, storage, 1000, printer);
+    // enable file rotation for batch writers
+    auto trades = std::make_shared<ModelBatchWriter>("trades", symbol, storage, 100, printer, true);
+    auto quotes = std::make_shared<ModelBatchWriter>("quotes", symbol, storage, 1000, printer, true);
 
     while (marketData)
     {
