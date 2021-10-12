@@ -49,7 +49,7 @@ class Strategy {
 
 public:
     Strategy(std::shared_ptr<MarketDataInterface> md_,  std::shared_ptr<TOrdApi> od_,
-             std::shared_ptr<InstrumentService instService_);
+             std::shared_ptr<InstrumentService> instService_);
     void evaluate();
     void init(const std::string& config_);
     virtual void init(const std::shared_ptr<Config>& config_);
@@ -72,7 +72,7 @@ public:
 protected:
     // allocation api
     std::string _symbol;
-    price_t _balance;
+    price_t _balance{};
 
     void addSignal(const std::shared_ptr<Signal>& signal_);
 
@@ -140,9 +140,10 @@ void Strategy<TOrdApi>::init(const std::shared_ptr<Config>& config_) {
     if (!cloidSeed.empty()) {
         _oidSeed = std::stoi(cloidSeed);
     }
-    auto tickSize = instrument()->getTickSize();
-    auto referencePrice = instrument()->getPrevPrice24h();
-    auto lotSize = instrument()->getLotSize();
+    auto instrument = _instrumentService->get(_symbol);
+    auto tickSize = instrument->getTickSize();
+    auto referencePrice = instrument->getPrevPrice24h();
+    auto lotSize = instrument->getLotSize();
     _balance = std::atof(_config->get("balance", "0.01").c_str());
 
     LOGINFO("Initialising allocations with " << LOG_VAR(referencePrice) << LOG_VAR(tickSize));

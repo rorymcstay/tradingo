@@ -27,7 +27,10 @@ const std::shared_ptr<model::Instrument>& InstrumentService::get(const std::stri
     return _instruments[symbol_];
 }
 
-void InstrumentService::add(std::shared_ptr<model::Instrument> instr_) {
-    _instruments[instr_->getSymbol()] = std::move(instr_);
-
+void InstrumentService::add(const std::shared_ptr<model::Instrument>& instr_) {
+    // this is dirty hack for testing only :( - and still not working
+    _instruments.insert(std::make_pair(instr_->getSymbol(), std::make_shared<model::Instrument>()));
+    _instruments[instr_->getSymbol()]->setPrevPrice24h(instr_->getPrevPrice24h());
+    _instruments[instr_->getSymbol()]->setTickSize(instr_->getTickSize());
+    _instruments[instr_->getSymbol()]->setLotSize(instr_->getLotSize());
 }

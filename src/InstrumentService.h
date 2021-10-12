@@ -19,7 +19,7 @@ public:
 
 
     const std::shared_ptr<model::Instrument>& get(const std::string& symbol_, bool reload_=false);
-    void add(const std::shared_ptr<model::Instrument> inst_);
+    void add(const std::shared_ptr<model::Instrument>& inst_);
 };
 
 #endif //TRADINGO_INSTRUMENTSERVICE_H

@@ -181,6 +181,9 @@ protected:
     void callback() {
         _callback();
     }
+    void init() {
+        _instrument = _instSvc->get(_symbol);
+    }
 
 protected:
     template<typename T>

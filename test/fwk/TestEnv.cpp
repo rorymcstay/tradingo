@@ -196,11 +196,19 @@ void TestEnv::init() {
     if (_config->get("logLevel", "").empty())
         _config->set("logLevel", "debug");
     _config->set("cloidSeed", "0");
+    auto tickSize = std::atof(_config->get("tickSize", "0.5").c_str());
+    auto referencePrice = std::atof(_config->get("referencePrice").c_str());
+    auto lotSize = std::atof(_config->get("lotSize", "100").c_str());
     auto instSvc = std::shared_ptr<InstrumentService>(nullptr);
     _context = std::make_shared<Context<TestMarketData, OrderApi>>(_config);
+    auto instrument = std::make_shared<model::Instrument>();
+    instrument->setSymbol(_config->get("symbol"));
+    instrument->setPrevPrice24h(referencePrice);
+    instrument->setTickSize(tickSize);
+    instrument->setLotSize(lotSize);
+    _context->instrumentService()->add(instrument);
     _context->init();
     _context->initStrategy();
-
     _position->setSymbol(_config->get("symbol"));
     _context->orderApi()->setPosition(_position);
     _context->marketData()->addPosition(_position);

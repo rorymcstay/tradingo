@@ -60,6 +60,7 @@ MarketData::MarketData(const std::shared_ptr<Config>& config_, std::shared_ptr<I
 /// initialise heartbeat, callback method
 void MarketData::init() {
 
+
     _heartBeat = std::make_shared<HeartBeat>(_wsClient);
 
     // initialise callback
@@ -329,7 +330,7 @@ MarketDataInterface::MarketDataInterface(const std::shared_ptr<Config>& config_,
 ,   _instrument()
 ,   _callback([]() {}) {
 
-    _instrument = _instSvc->get(_symbol);
+
 }
 
 void MarketDataInterface::setCallback(const std::function<void()> &callback) {
