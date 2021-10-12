@@ -32,7 +32,7 @@ class Context {
     std::shared_ptr<TOrderApi> _orderManager;
     std::shared_ptr<Strategy<TOrderApi>> _strategy;
     std::shared_ptr<InstrumentService> _instrumentService;
-    void* _handle;
+    void* _handle{};
 
 private:
     std::shared_ptr<Config> _config;
@@ -43,7 +43,7 @@ public:
 
     ~Context();
     /// set base variables, setupLogger, order manager
-    explicit Context(const std::shared_ptr<Config>& config_);
+    explicit Context(std::shared_ptr<Config> config_);
     /// load 'factoryMethod' from 'libraryLocation', specified in config.
     factoryMethod_t loadFactoryMethod();
     /// set log level, log to file if configured.
@@ -102,23 +102,26 @@ Context<TMarketData, TOrderApi>::loadFactoryMethod() {
 }
 
 template<typename TMarketData, typename TOrderApi>
-Context<TMarketData, TOrderApi>::Context(const std::shared_ptr<Config>& config_)
-:   _config(config_)
-,   _instrumentService(std::make_shared<InstrumentService>(_apiClient, config_))
-,   _marketData(std::make_shared<TMarketData>(config_, _instrumentService))
+Context<TMarketData, TOrderApi>::Context(std::shared_ptr<Config> config_)
+:   _config(std::move(config_))
 ,   _apiConfig(std::make_shared<api::ApiConfiguration>())
 ,   _httpConfig(web::http::client::http_client_config())
-,   _apiClient(std::make_shared<api::ApiClient>(_apiConfig))
-,   _orderManager(std::make_shared<TOrderApi>(_apiClient))
+
 {
+
+    _apiConfig->setBaseUrl(_config->get("baseUrl", "NO HTTP"));
+    _apiConfig->setApiKey("api-key", _config->get("apiKey", "NO AUTH"));
+    _apiConfig->setApiKey("api-secret", _config->get("apiSecret", "NO AUTH"));
+    _apiConfig->setHttpConfig(_httpConfig);
+    _apiClient = std::make_shared<api::ApiClient>(_apiConfig);
+    _instrumentService = std::make_shared<InstrumentService>(_apiClient, _config);
+    _marketData = std::make_shared<TMarketData>(_config, _instrumentService);
+    _orderManager = std::make_shared<TOrderApi>(_apiClient);
     setupLogger();
     LOGINFO("Context created. Version Info: GIT_BRANCH='" << GIT_BRANCH << "' GIT_TAG='" << GIT_TAG
                     << "' GIT_REV='" << GIT_REV << "'");
 
-    _apiConfig->setBaseUrl(config_->get("baseUrl", "NO HTTP"));
-    _apiConfig->setApiKey("api-key", config_->get("apiKey", "NO AUTH"));
-    _apiConfig->setApiKey("api-secret", config_->get("apiSecret", "NO AUTH"));
-    _apiConfig->setHttpConfig(_httpConfig);
+
 
 }
 

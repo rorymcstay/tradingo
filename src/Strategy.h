@@ -38,7 +38,7 @@ class Strategy {
     std::unordered_map<std::string, std::shared_ptr<Signal>> _callback_signals;
 
     std::shared_ptr<model::Instrument> _instrument;
-    std::shared_ptr<api::InstrumentApi> _instrumentApi;
+    std::shared_ptr<InstrumentService> _instrumentService;
 
     virtual void onExecution(const std::shared_ptr<Event>& event_) = 0;
     virtual void onTrade(const std::shared_ptr<Event>& event_) = 0;
@@ -48,7 +48,8 @@ class Strategy {
     void updateFromTask(const pplx::task<std::vector<std::shared_ptr<model::Order>>>& task_);
 
 public:
-    Strategy(std::shared_ptr<MarketDataInterface> md_,  std::shared_ptr<TOrdApi> od_);
+    Strategy(std::shared_ptr<MarketDataInterface> md_,  std::shared_ptr<TOrdApi> od_,
+             std::shared_ptr<InstrumentService instService_);
     void evaluate();
     void init(const std::string& config_);
     virtual void init(const std::shared_ptr<Config>& config_);
@@ -82,12 +83,13 @@ public:
 };
 
 template<typename TOrdApi>
-Strategy<TOrdApi>::Strategy(std::shared_ptr<MarketDataInterface> md_, std::shared_ptr<TOrdApi> od_)
+Strategy<TOrdApi>::Strategy(std::shared_ptr<MarketDataInterface> md_, std::shared_ptr<TOrdApi> od_,
+                            std::shared_ptr<InstrumentService> instrumentSvc_)
 :   _marketData(std::move(md_))
 ,   _orderEngine(std::move(od_))
 ,   _allocations(nullptr)
+,   _instrumentService(std::move(instrumentSvc_))
 ,   _oidSeed(std::chrono::system_clock::now().time_since_epoch().count()) {
-
 
 }
 
@@ -142,7 +144,6 @@ void Strategy<TOrdApi>::init(const std::shared_ptr<Config>& config_) {
     auto referencePrice = instrument()->getPrevPrice24h();
     auto lotSize = instrument()->getLotSize();
     _balance = std::atof(_config->get("balance", "0.01").c_str());
-
 
     LOGINFO("Initialising allocations with " << LOG_VAR(referencePrice) << LOG_VAR(tickSize));
     _allocations = std::make_shared<Allocations>(referencePrice, tickSize, lotSize);

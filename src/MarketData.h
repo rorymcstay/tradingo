@@ -197,7 +197,7 @@ protected:
 
 public:
     ~MarketDataInterface() = default;
-    MarketDataInterface(const std::shared_ptr<Config>& config_, const std::shared_ptr<InstrumentService>& insSvc_);
+    MarketDataInterface(const std::shared_ptr<Config>& config_, std::shared_ptr<InstrumentService>  insSvc_);
     MarketDataInterface();
     std::shared_ptr<Event> read();
     const std::unordered_map<std::string, OrderPtr>& getOrders() const;

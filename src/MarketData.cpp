@@ -9,6 +9,8 @@
 #include <model/Order.h>
 
 #include <auth_helpers.h>
+
+#include <utility>
 #include "Functional.h"
 #include "InstrumentService.h"
 
@@ -321,11 +323,13 @@ const std::shared_ptr<model::Instrument>& MarketDataInterface::instrument() cons
 
 
 MarketDataInterface::MarketDataInterface(const std::shared_ptr<Config>& config_,
-                                         const std::shared_ptr<InstrumentService>& instSvc_)
-:    _instSvc(instSvc_)
+                                         std::shared_ptr<InstrumentService>  instSvc_)
+:   _instSvc(std::move(instSvc_))
 ,   _symbol(config_->get("symbol"))
-,   _instrument(_instSvc->get(_symbol))
-,   _callback([]() {}){
+,   _instrument()
+,   _callback([]() {}) {
+
+    _instrument = _instSvc->get(_symbol);
 }
 
 void MarketDataInterface::setCallback(const std::function<void()> &callback) {

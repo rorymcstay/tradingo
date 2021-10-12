@@ -15,10 +15,11 @@ class InstrumentService {
     std::shared_ptr<Config> _config;
     std::unordered_map<std::string, std::shared_ptr<api::Instrument>> _instruments;
 public:
-    explicit InstrumentService(std::shared_ptr<api::ApiClient> apiClient_, std::shared_ptr<Config> config_);
+    explicit InstrumentService(const std::shared_ptr<api::ApiClient>& apiClient_, std::shared_ptr<Config> config_);
 
 
     const std::shared_ptr<model::Instrument>& get(const std::string& symbol_, bool reload_=false);
+    void add(const std::shared_ptr<model::Instrument> inst_);
 };
 
 #endif //TRADINGO_INSTRUMENTSERVICE_H
