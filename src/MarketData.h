@@ -170,7 +170,7 @@ protected:
     std::unordered_map<std::string, std::shared_ptr<model::Position>> _positions;
     std::unordered_map<std::string, std::shared_ptr<model::Order>> _orders;
     std::shared_ptr<model::Quote> _quote;
-    std::shared_ptr<model::Instrument> _instrument;
+    model::Instrument _instrument;
     std::shared_ptr<InstrumentService> _instSvc;
 
     void handleQuotes(const std::vector<std::shared_ptr<model::Quote>>& quotes_, const std::string& action_);
@@ -207,7 +207,7 @@ public:
     const std::queue<ExecPtr>& getExecutions() const;
     const std::unordered_map<std::string, PositionPtr>& getPositions() const;
     const std::shared_ptr<model::Quote> quote() const;
-    const std::shared_ptr<model::Instrument>& instrument() const;
+    const model::Instrument& instrument() const;
 
 };
 

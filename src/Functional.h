@@ -16,7 +16,7 @@ using namespace io::swagger::client;
 namespace func {
 
 
-std::shared_ptr<model::Instrument>
+model::Instrument
 get_instrument(const std::shared_ptr<api::InstrumentApi>& _instrumentApi, const std::string& symbol_);
 
 } // func

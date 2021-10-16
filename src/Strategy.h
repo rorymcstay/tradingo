@@ -141,9 +141,9 @@ void Strategy<TOrdApi>::init(const std::shared_ptr<Config>& config_) {
         _oidSeed = std::stoi(cloidSeed);
     }
     auto instrument = _instrumentService->get(_symbol);
-    auto tickSize = instrument->getTickSize();
-    auto referencePrice = instrument->getPrevPrice24h();
-    auto lotSize = instrument->getLotSize();
+    auto tickSize = instrument.getTickSize();
+    auto referencePrice = instrument.getPrevPrice24h();
+    auto lotSize = instrument.getLotSize();
     _balance = std::atof(_config->get("balance", "0.01").c_str());
 
     LOGINFO("Initialising allocations with " << LOG_VAR(referencePrice) << LOG_VAR(tickSize));

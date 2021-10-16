@@ -318,7 +318,7 @@ const std::shared_ptr<model::Quote> MarketDataInterface::quote() const {
     return _quote;
 }
 
-const std::shared_ptr<model::Instrument>& MarketDataInterface::instrument() const {
+const model::Instrument& MarketDataInterface::instrument() const {
     return _instrument;
 }
 

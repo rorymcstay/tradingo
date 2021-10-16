@@ -4,7 +4,7 @@
 
 #include "Functional.h"
 
-std::shared_ptr<model::Instrument>
+model::Instrument
 func::get_instrument(const std::shared_ptr<api::InstrumentApi> &_instrumentApi, const std::string &symbol_) {
     std::shared_ptr<model::Instrument> inst;
     auto instTask = _instrumentApi->instrument_get(symbol_, SEVENNULL).then(
@@ -16,5 +16,9 @@ func::get_instrument(const std::shared_ptr<api::InstrumentApi> &_instrumentApi, 
                     inst = nullptr;
                 }
             });
-    return inst;
+    instTask.wait();
+    if (inst)
+        return *inst;
+    else
+        return model::Instrument();
 }

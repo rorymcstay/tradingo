@@ -20,7 +20,7 @@ InstrumentService::InstrumentService(const std::shared_ptr<api::ApiClient>& apiC
 
 }
 
-const std::shared_ptr<model::Instrument>& InstrumentService::get(const std::string& symbol_, bool reload) {
+const model::Instrument& InstrumentService::get(const std::string& symbol_, bool reload) {
     if (not reload && _instruments.find(symbol_) != _instruments.end())
         return _instruments[symbol_];
     _instruments[symbol_] = func::get_instrument(_instrumentApi, symbol_);
@@ -29,8 +29,8 @@ const std::shared_ptr<model::Instrument>& InstrumentService::get(const std::stri
 
 void InstrumentService::add(const std::shared_ptr<model::Instrument>& instr_) {
     // this is dirty hack for testing only :( - and still not working
-    _instruments.insert(std::make_pair(instr_->getSymbol(), std::make_shared<model::Instrument>()));
-    _instruments[instr_->getSymbol()]->setPrevPrice24h(instr_->getPrevPrice24h());
-    _instruments[instr_->getSymbol()]->setTickSize(instr_->getTickSize());
-    _instruments[instr_->getSymbol()]->setLotSize(instr_->getLotSize());
+    _instruments[instr_->getSymbol()] = model::Instrument();
+    _instruments[instr_->getSymbol()].setPrevPrice24h(instr_->getPrevPrice24h());
+    _instruments[instr_->getSymbol()].setTickSize(instr_->getTickSize());
+    _instruments[instr_->getSymbol()].setLotSize(instr_->getLotSize());
 }
