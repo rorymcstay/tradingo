@@ -20,9 +20,14 @@
 
 template<typename TOrdApi>
 class Strategy {
+    /*
+     * Base strategy class for trading strategies.
+     * The strategy api consists of three handler methods
+     * and an Allocations set. This enables the strategy
+     * to place orders onto market.
+     */
 
     using OrderPtr = std::shared_ptr<model::Order>;
-
 
     std::shared_ptr<MarketDataInterface> _marketData;
     std::shared_ptr<TOrdApi>             _orderEngine;
@@ -39,10 +44,13 @@ class Strategy {
 
     std::shared_ptr<model::Instrument> _instrument;
     std::shared_ptr<InstrumentService> _instrumentService;
-
+    /// own execution handler method
     virtual void onExecution(const std::shared_ptr<Event>& event_) = 0;
+    /// trade in market handler method
     virtual void onTrade(const std::shared_ptr<Event>& event_) = 0;
+    /// bbo update hanlder method
     virtual void onBBO(const std::shared_ptr<Event>& event_) = 0;
+    /// create a new order from an allocation
     std::shared_ptr<model::Order> createOrder(const std::shared_ptr<Allocation>& allocation_);
     /// update orders after call to api.
     void updateFromTask(const pplx::task<std::vector<std::shared_ptr<model::Order>>>& task_);
@@ -50,10 +58,17 @@ class Strategy {
 public:
     Strategy(std::shared_ptr<MarketDataInterface> md_,  std::shared_ptr<TOrdApi> od_,
              std::shared_ptr<InstrumentService> instService_);
+    /// read an event of event queue and call handler.
     void evaluate();
-    void init(const std::string& config_);
+
+    /// read config, get instrument and create allocations
     virtual void init(const std::shared_ptr<Config>& config_);
+    /// convenience method on the above, instead read config_ from file.
+    void init(const std::string& config_);
+    /// if evaluate should be called.
     virtual bool shouldEval();
+    /// the strategies allocations, in the future, might be need for > 1 set of allocations. i.e multi instrument
+    /// strategies
     const std::shared_ptr<Allocations>& allocations() { return _allocations; }
     /// market data accessor
     std::shared_ptr<MarketDataInterface> getMD() const { return _marketData; }
@@ -65,20 +80,22 @@ public:
             std::for_each(_timed_signals.begin(), _timed_signals.end(), function_);
         }
     }
+    /// update siganls on the current event
     void updateSignals();
+    /// get a signal
     Signal::Ptr getSignal(const std::string& name);
-
 
 protected:
     // allocation api
     std::string _symbol;
     price_t _balance{};
-
+    /// add a signal to strategy
     void addSignal(const std::shared_ptr<Signal>& signal_);
 
 public:
+    /// instrument accessor
     std::shared_ptr<model::Instrument> instrument() const { return _instrument; }
-
+    /// reflect current allocations onto exchange
     void placeAllocations();
 };
 

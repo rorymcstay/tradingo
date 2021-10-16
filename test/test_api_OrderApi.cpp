@@ -53,7 +53,7 @@ struct OrderManager {
 
 };
 
-TEST(TestStrategyInterface, smoke_test) {
+TEST(TestStrategyInterface, DISABLED_smoke_test) {
     auto config = std::make_shared<Config>();
     config->set("apiKey", "-rqipjFxM43WSRKdC8keq83K");
     config->set("apiSecret", "uaCYIiwpwpXNKuVGCBPWE3ThzvyhOzKs6F9mWFzc9LueG3yd");
@@ -67,8 +67,11 @@ TEST(TestStrategyInterface, smoke_test) {
     context->strategy()->allocations()->addAllocation(ORDER_PRICE, ORDER_QTY);
     context->strategy()->placeAllocations();
     std::this_thread::sleep_for(std::chrono::seconds(1));
+    // results in an amend
     context->strategy()->allocations()->addAllocation(ORDER_PRICE, 2*ORDER_QTY);
     context->strategy()->placeAllocations();
+    // this loops over every price level, need to keep an 'occupied' index to loop over which are indices of the price
+    // level vector. also provide a default to cancel all orders rather than passing an always true predicate.
     context->strategy()->allocations()->cancelOrders([](const std::shared_ptr<Allocation>& alloc_) { return true; } /* all */);
     std::this_thread::sleep_for(std::chrono::seconds(1));
 }
