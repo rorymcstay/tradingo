@@ -159,10 +159,10 @@ bool Strategy<TOrdApi>::shouldEval() {
 
 template<typename TOrdApi>
 void Strategy<TOrdApi>::placeAllocations() {
-    std::vector<std::shared_ptr<model::Order>> _amends;
-    std::vector<std::shared_ptr<model::Order>> _newOrders;
-    std::vector<std::shared_ptr<model::Order>> _cancels;
-    //_amends.clear(); _newOrders.clear(); _cancels.clear();
+    thread_local std::vector<std::shared_ptr<model::Order>> _amends;
+    thread_local std::vector<std::shared_ptr<model::Order>> _newOrders;
+    thread_local std::vector<std::shared_ptr<model::Order>> _cancels;
+    _amends.clear(); _newOrders.clear(); _cancels.clear();
     // TODO use ranges ontop of *_allocations iterator. - occupied price level view
     for (auto& allocation : *_allocations) {
         if (!allocation) {
@@ -183,8 +183,7 @@ void Strategy<TOrdApi>::placeAllocations() {
                     << LOG_VAR(currentOrder->getOrderQty())
                     << LOG_VAR(currentOrder->getPrice())
                     << LOG_VAR(currentOrder->getOrderID()));
-            //order->setOrderID(currentOrder->getOrderID());
-            // 2021-07-11 22-31-13.707 [Info] (updateFromTask) 	ApiException: {"error":{"message":"You may send orderID or origClOrdID, but not both.","name":"ValidationError"}} apiException.error_code()='generic:400', apiException.what()='error calling order_amendBulk: Bad Request',  |Strategy.h:282
+            // ApiException: {"error":{"message":"You may send orderID or origClOrdID, but not both.","name":"ValidationError"}}
             order->setOrigClOrdID(currentOrder->getClOrdID());
             //assert(currentOrder->getLeavesQty() == allocation->getSize() && "Allocation + LeavesQty out of sync");
             // we have an order at this price level
@@ -192,14 +191,6 @@ void Strategy<TOrdApi>::placeAllocations() {
                 LOGINFO("Chaging sides");
                 currentOrder->setOrdStatus("PendingCancel");
                 currentOrder->setOrderQty(0.0);
-                /*
-                auto cancel = createOrder(allocation);
-                // cancel will be for opposite side
-                cancel->setSide("Buy" == allocation->getSide() ? "Sell" : "Buy");
-                cancel->setOrderQty(0);
-                cancel->setOrderID(currentOrder->getOrderID());
-                cancel->setOrigClOrdID(order->getOrigClOrdID());
-                 */
                 _cancels.push_back(currentOrder);
                 order->setOrderID("");
                 order->unsetOrigClOrdID();
@@ -245,12 +236,14 @@ void Strategy<TOrdApi>::placeAllocations() {
     for (auto& toSend : _cancels) {
         if (!_cancels.empty()) {
             try {
-                _orderEngine->order_cancel(boost::none,
+                auto task = _orderEngine->order_cancel(boost::none,
                                            toSend->origClOrdIDIsSet() ? toSend->getOrigClOrdID() : toSend->getClOrdID(),
                                            std::string("")).then(
                     [this, &toSend](const pplx::task<std::vector<std::shared_ptr<model::Order>>> &orders_) {
                         this->updateFromTask(orders_);
                     });
+                task.wait();
+
             } catch (api::ApiException &ex_) {
                 LOGERROR("Error cancelling order " << ex_.getContent()->rdbuf() << LOG_VAR(ex_.what())
                                                    << LOG_NVP("order", toSend->toJson().serialize()));
@@ -269,10 +262,11 @@ void Strategy<TOrdApi>::placeAllocations() {
     // and then amends
     if (!_amends.empty()) {
         try {
-            _orderEngine->order_amendBulk(jsList.serialize()).then(
+            auto task = _orderEngine->order_amendBulk(jsList.serialize()).then(
                 [this, &_amends](const pplx::task<std::vector<std::shared_ptr<model::Order>>>& orders_) {
                     this->updateFromTask(orders_);
                 });
+            task.wait();
         } catch (api::ApiException &ex_) {
             LOGERROR("Error amending orders: " << ex_.getContent()->rdbuf() << LOG_VAR(ex_.what()));
             _allocations->cancel([](const std::shared_ptr<Allocation> &alloc_) {
@@ -289,10 +283,11 @@ void Strategy<TOrdApi>::placeAllocations() {
     }
     if (!_newOrders.empty()) {
         try {
-            _orderEngine->order_newBulk(jsList.serialize()).then(
+            auto task = _orderEngine->order_newBulk(jsList.serialize()).then(
                 [this, &_newOrders](const pplx::task<std::vector<std::shared_ptr<model::Order>>>& orders_) {
                         this->updateFromTask(orders_);
             });
+            task.wait();
         } catch (api::ApiException &ex_) {
             LOGERROR("Error placing new orders " << ex_.getContent()->rdbuf() << LOG_VAR(ex_.what()));
             _allocations->cancel([](const std::shared_ptr<Allocation>& alloc_) { return alloc_->isNew() || alloc_->isChangingSide(); });

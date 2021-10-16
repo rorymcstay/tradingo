@@ -66,8 +66,11 @@ TEST(TestStrategyInterface, smoke_test) {
     context->strategy()->allocations()->addAllocation(ORDER_PRICE, ORDER_QTY);
     context->strategy()->allocations()->addAllocation(ORDER_PRICE, ORDER_QTY);
     context->strategy()->placeAllocations();
-    std::this_thread::sleep_for(std::chrono::seconds(10));
+    std::this_thread::sleep_for(std::chrono::seconds(1));
     context->strategy()->allocations()->addAllocation(ORDER_PRICE, 2*ORDER_QTY);
+    context->strategy()->placeAllocations();
+    context->strategy()->allocations()->cancelOrders([](const std::shared_ptr<Allocation>& alloc_) { return true; } /* all */);
+    std::this_thread::sleep_for(std::chrono::seconds(1));
 }
 
 TEST(OrderApi, DISABLED_order_newBulk) {
