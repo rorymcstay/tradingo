@@ -5,8 +5,10 @@ build/
 *.json
 .cache/
 .aws
+.env
 thirdparty/googletest/
 tmp
+wip
 test.cfg
 CMakeLists.txt.user
 CMakeCache.txt

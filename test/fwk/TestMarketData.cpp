@@ -53,21 +53,15 @@ void TestMarketData::operator<<(const std::string &marketDataString) {
 
 }
 
-TestMarketData::TestMarketData(const std::shared_ptr<Config>& ptr)
-: MarketDataInterface(ptr)
+TestMarketData::TestMarketData(const std::shared_ptr<Config>& ptr, const std::shared_ptr<InstrumentService>& instSvc_)
+: MarketDataInterface(ptr, instSvc_)
 , _config(ptr)
 , _time(utility::datetime::utc_now()){
 
 }
 
 void TestMarketData::init() {
-    auto tickSize = std::atof(_config->get("tickSize", "0.5").c_str());
-    auto referencePrice = std::atof(_config->get("referencePrice").c_str());
-    auto lotSize = std::atof(_config->get("lotSize", "100").c_str());
-    _instrument = std::make_shared<model::Instrument>();
-    _instrument->setPrevPrice24h(referencePrice);
-    _instrument->setTickSize(tickSize);
-    _instrument->setLotSize(lotSize);
+
 }
 
 void TestMarketData::operator<<(const std::shared_ptr<model::Quote> &quote_) {

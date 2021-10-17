@@ -34,6 +34,8 @@ TEST(BatchWriter, Order_smoke_test) {
     fileToCheck.open(batchWriter.location());
     std::string line;
     auto count = 0;
+    std::getline(fileToCheck, line);
+    ASSERT_EQ(line, "");
     while (std::getline(fileToCheck, line)) {
         count++;
         ASSERT_EQ(line, toWrite);
