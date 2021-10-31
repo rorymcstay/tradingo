@@ -15,7 +15,6 @@ TEST(StrategyApi, smooke)
         {"symbol", "XBTUSD"},
         {"clOrdPrefix", "MCST"},
         {"factoryMethod", "RegisterBreakOutStrategy"},
-        {"startingAmount", "1000"},
         {"referencePrice", "100"},
         {"shortTermWindow", "100"},
         {"longTermWindow", "1000"},
@@ -40,7 +39,6 @@ TEST(Strategy, changing_sides) {
         {"symbol", "XBTUSD"},
         {"clOrdPrefix", "MCST"},
         {"factoryMethod", "RegisterBreakOutStrategy"},
-        {"startingAmount", "1000"},
         {"referencePrice", "100"},
         {"shortTermWindow", "100"},
         {"longTermWindow", "1000"},
@@ -63,7 +61,6 @@ TEST(Strategy, amend_order_more_than_once)
         {"symbol", "XBTUSD"},
         {"clOrdPrefix", "MCST"},
         {"factoryMethod", "RegisterBreakOutStrategy"},
-        {"startingAmount", "1000"},
         {"referencePrice", "100"},
         {"shortTermWindow", "100"},
         {"longTermWindow", "1000"},
@@ -89,7 +86,6 @@ TEST(Strategy, test_time_control) {
         {"symbol", "XBTUSD"},
         {"clOrdPrefix", "MCST"},
         {"factoryMethod", "RegisterBreakOutStrategy"},
-        {"startingAmount", "1000"},
         {"referencePrice", "100"},
         {"shortTermWindow", "5"},
         {"longTermWindow", "10"},
@@ -122,4 +118,8 @@ TEST(Strategy, time_diff) {
     double diff = time_diff(time_p1, time, "milliseconds");
     LOGINFO(LOG_NVP("TimeDiff", diff));
     ASSERT_EQ(diff, 7);
+}
+
+TEST(Strategy, balance_is_updated_during_test) {
+
 }

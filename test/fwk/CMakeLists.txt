@@ -15,7 +15,8 @@ add_library(test_trading_funcs
         TestEnv.cpp
         Params.cpp
         TempStorage.cpp
-        TempStorage.h)
+        TempStorage.h
+        MarginCalculator.cpp)
 
 target_link_libraries(test_trading_funcs
         #${CPPREST_LIBRARY}

@@ -5,8 +5,8 @@
 #define _TURN_OFF_PLATFORM_STRING
 #include <Object.h>
 #include <Allocation.h>
+#include <model/Margin.h>
 #include "TestOrdersApi.h"
-
 
 
 TestOrdersApi::TestOrdersApi(std::shared_ptr<io::swagger::client::api::ApiClient> ptr)
@@ -181,12 +181,13 @@ TestOrdersApi::order_newBulk(boost::optional<utility::string_t> orders) {
     }
 
 #define PVAR(order, name_)  #name_ "="  << (order)->get##name_() << " "
-void TestOrdersApi::operator>>(const std::string &outEvent_) {
+std::shared_ptr<model::Order> TestOrdersApi::operator>>(const std::string &outEvent_) {
     auto eventType = getEventTypeFromString(outEvent_);
     if (eventType == "NONE") {
+
+        std::stringstream failMessage;
         if (!_newOrders.empty() || !_orderCancels.empty() || !_orderAmends.empty()) {
-            auto message = [](const std::shared_ptr<model::ModelBase>& ptr_ ) { return ptr_->toJson().serialize(); };
-            std::stringstream failMessage;
+            failMessage << "There are events still pending!\n";
             while (!_newOrders.empty()) {
                 auto order = _newOrders.front();
                 failMessage << "env >> \"ORDER_NEW "
@@ -200,7 +201,6 @@ void TestOrdersApi::operator>>(const std::string &outEvent_) {
                             << PVAR(order, OrdStatus)
                             << PVAR(order, Side)
                             << PVAR(order, Symbol)
-
                         << "\" LN;\n";
                 _newOrders.pop();
             }
@@ -234,13 +234,12 @@ void TestOrdersApi::operator>>(const std::string &outEvent_) {
                             << PVAR(order, OrdStatus)
                             << PVAR(order, Side)
                             << PVAR(order, Symbol)
-
                         << "\" LN;\n";
                 _orderCancels.pop();
             }
-            throw std::runtime_error("There are events still pending!\n"+failMessage.str());
+            throw std::runtime_error(failMessage.str());
         }
-        return;
+        return nullptr;
     }
     auto params = Params(outEvent_);
     auto expectedOrder = fromJson<model::Order>(params.asJson());
@@ -254,6 +253,7 @@ void TestOrdersApi::operator>>(const std::string &outEvent_) {
         CHECK_VAL(latestOrder->getOrderQty(), expectedOrder->getOrderQty());
         CHECK_VAL(latestOrder->getSymbol(), expectedOrder->getSymbol());
         _newOrders.pop();
+        return latestOrder;
     } else if (eventType == "ORDER_AMEND") {
         checkOrderExists(expectedOrder);
         if (_orderAmends.empty()) {
@@ -265,6 +265,7 @@ void TestOrdersApi::operator>>(const std::string &outEvent_) {
         CHECK_VAL(orderAmend->getSide(), expectedOrder->getSide());
         CHECK_VAL(orderAmend->getOrderQty(), expectedOrder->getOrderQty());
         CHECK_VAL(orderAmend->getSymbol(), expectedOrder->getSymbol());
+        return orderAmend;
     } else if (eventType == "ORDER_CANCEL") {
         if (_orderCancels.empty()) {
             throw std::runtime_error( "No expectedOrder cancels");
@@ -275,9 +276,9 @@ void TestOrdersApi::operator>>(const std::string &outEvent_) {
         CHECK_VAL(orderCancel->getSide(), expectedOrder->getSide());
         CHECK_VAL(orderCancel->getOrderQty(), expectedOrder->getOrderQty());
         CHECK_VAL(orderCancel->getSymbol(), expectedOrder->getSymbol());
-    } else {
-        throw std::runtime_error("Must specify event type - One of ORDER_NEW, ORDER_AMEND, ORDER_CANCEL");
+        return orderCancel;
     }
+    throw std::runtime_error("Must specify event type - One of ORDER_NEW, ORDER_AMEND, ORDER_CANCEL");
 }
 
 std::shared_ptr<model::Order> TestOrdersApi::checkOrderExists(const std::shared_ptr<model::Order> &order) {
@@ -286,11 +287,6 @@ std::shared_ptr<model::Order> TestOrdersApi::checkOrderExists(const std::shared_
         || _orders.find(order->getOrigClOrdID()) != _orders.end()) {
         // is amend
         return _orders.find(order->getClOrdID()) != _orders.end() ? _orders[order->getClOrdID()] : _orders[order->getOrigClOrdID()];
-        /*assert((
-                _orders[order->getClOrdID()]->getOrdStatus() == "PendingCancel"
-             || _orders[order->getClOrdID()]->getOrdStatus() == "PendingAmend"
-             || _orders[order->getClOrdID()]->getOrdStatus() == "New")
-                && "Unhandled condition for TestOrdersApi::checkOrderExists ClOrdID check")*/
     } else {
         // reject amend request, fail test
         std::stringstream str;
@@ -381,6 +377,8 @@ void TestOrdersApi::addExecToPosition(const std::shared_ptr<model::Execution>& e
     qty_t newCost = _position->getCurrentCost() + ((1/exec_->getPrice() * exec_->getLastQty())*(exec_->getSide()=="Buy" ? 1 : -1));
     _position->setCurrentQty(newPosition);
     _position->setCurrentCost(newCost);
+    auto unrealisedPnl = _marginCalculator->getUnrealisedPnL(_position);
+    _position->setUnrealisedPnl(unrealisedPnl);
     _position->setTimestamp(exec_->getTimestamp());
     LOGINFO(AixLog::Color::GREEN
                     << "New Position: "
@@ -388,6 +386,18 @@ void TestOrdersApi::addExecToPosition(const std::shared_ptr<model::Execution>& e
                     << LOG_NVP("Size", _position->getCurrentQty())
                     << LOG_NVP("Time", _position->getTimestamp().to_string())
                     << AixLog::Color::none);
+}
+
+void TestOrdersApi::addExecToMargin(const std::shared_ptr<model::Execution>& exec_) {
+
+    auto lastQty = exec_->getLastQty();
+    auto lastPx = exec_->getLastPx();
+    auto dirMx = (exec_->getSide() == "Buy") ? -1 : +1;
+    auto cost = lastQty * lastPx *dirMx;
+    auto newBalance = cost + _margin->getWalletBalance();
+    _margin->setWalletBalance(newBalance);
+    auto marginBalance = newBalance + _position->getUnrealisedPnl();
+    _margin->setMarginBalance(marginBalance);
 }
 
 const std::shared_ptr<model::Position> &TestOrdersApi::getPosition() const {
@@ -398,31 +408,53 @@ void TestOrdersApi::setPosition(const std::shared_ptr<model::Position> &position
     _position = position;
 }
 
-// TODO validate and add order
-// TODO assert clordid is unique.
+const std::shared_ptr<model::Margin>& TestOrdersApi::getMargin() const {
+    return _margin;
+}
+void TestOrdersApi::setMargin(const std::shared_ptr<model::Margin> &margin_) {
+    _margin = margin_;
+}
+
+/*
+ * Check order is valid given current status of margin and that parameters are correct.
+ */
 bool TestOrdersApi::validateOrder(const std::shared_ptr<model::Order> &order_) {
     if (order_->origClOrdIDIsSet() && order_->getOrderID() != "") {
         auto msg = order_->toJson().serialize();
         auto content = std::make_shared<std::istringstream>(msg);
-        auto error = api::ApiException(400, "Must specify only one of orderID or origClOrdId", content);
-        throw error;
+        throw api::ApiException(400, "Must specify only one of orderID or origClOrdId", content);
     }
     if (order_->origClOrdIDIsSet() && !order_->clOrdIDIsSet()){
         auto msg = order_->toJson().serialize();
         auto content = std::make_shared<std::istringstream>(msg);
-        auto error = api::ApiException(400, "Must specify ClOrdID if OrigClOrdID is set", content);
-        throw error;
+        throw api::ApiException(400, "Must specify ClOrdID if OrigClOrdID is set", content);
     }
     if ((int)order_->getOrderQty() % std::stoi(_config->get("lotSize", "100")) != 0) {
         auto msg = order_->toJson().serialize();
         auto content = std::make_shared<std::istringstream>(msg);
         throw api::ApiException(400, "Orderty is not a multiple of lotsize", content);
     }
+    auto total_cost = 1/(order_->getOrderQty() * order_->getPrice());
+    if (total_cost > _margin->getWalletBalance()) {
+        auto msg = order_->toJson().serialize();
+        auto content = std::make_shared<std::istringstream>(msg);
+        std::stringstream reason;
+        reason << "Account has insufficient Available Balance, " << total_cost << " XBt required";
+        throw api::ApiException(400, reason.str(), content);
+    }
     return true;
 }
 
 void TestOrdersApi::init(std::shared_ptr<Config> config_) {
     _config = config_;
+}
+
+const std::shared_ptr<MarginCalculator> &TestOrdersApi::getMarginCalculator() const {
+    return _marginCalculator;
+}
+
+void TestOrdersApi::setMarginCalculator(const std::shared_ptr<MarginCalculator>& marginCalculator) {
+    _marginCalculator = marginCalculator;
 }
 
 

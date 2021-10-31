@@ -11,7 +11,6 @@ TEST(BreakOutStrategy, smoke_test)
         {"symbol", "XBTUSD"},
         {"clOrdPrefix", "MCST"},
         {"factoryMethod", "RegisterBreakOutStrategy"},
-        {"startingAmount", "1000"},
         {"referencePrice", "100"},
         {"shortTermWindow", "1"},
         {"longTermWindow", "2"},

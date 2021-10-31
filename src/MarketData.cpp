@@ -38,8 +38,6 @@ MarketData::~MarketData() {
     _wsClient->close();
 }
 
-
-
 MarketData::MarketData(const std::shared_ptr<Config>& config_, std::shared_ptr<InstrumentService> instrumentSvc_)
 :   MarketDataInterface(config_, instrumentSvc_)
 ,   _connectionString(config_->get("connectionString"))
@@ -54,13 +52,10 @@ MarketData::MarketData(const std::shared_ptr<Config>& config_, std::shared_ptr<I
 ,   _cycle(0)
 {
     // Config TODO bool helpers + templating get
-
 }
 
 /// initialise heartbeat, callback method
 void MarketData::init() {
-
-
     _heartBeat = std::make_shared<HeartBeat>(_wsClient);
 
     // initialise callback
@@ -95,6 +90,9 @@ void MarketData::init() {
                     } else if (table == "order") {
                         auto orders = getData<model::Order, decltype(_orderPool)>(data, _orderPool);
                         handleOrders(orders, action);
+                    } else if (table == "margin") {
+                        auto margins = getData<model::Margin, decltype(_marginPool)>(data, _marginPool);
+                        handleMargin(margins, action);
                     }
                 } else if (msgJson.has_field("info")) {
                     LOGINFO("Connection response: " << msgJson.serialize());
@@ -159,6 +157,7 @@ void MarketData::subscribe() {
     std::vector<std::string> topics = {
             "position",
             "order",
+            "margin",
             "execution:" + _symbol
     };
     std::vector<std::string> noAuthTopics = {
@@ -250,6 +249,15 @@ void MarketDataInterface::handlePositions(std::vector<std::shared_ptr<model::Pos
     } else if (action_ == "delete") {
         removePositions(positions_);
     }
+}
+
+void
+MarketDataInterface::handleMargin(std::vector<std::shared_ptr<model::Margin>> margin_, const std::string &action_) {
+    if (action_ == "update" or action_ == "partial") {
+        // update margin
+        _margin = margin_[0];
+    }
+
 }
 
 void MarketDataInterface::handleExecutions(std::vector<std::shared_ptr<model::Execution>> &execs_,

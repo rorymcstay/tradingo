@@ -23,6 +23,7 @@
 // test/fwk
 #include "TestUtils.h"
 #include "Params.h"
+#include "MarginCalculator.h"
 
 using namespace io::swagger::client;
 
@@ -38,12 +39,21 @@ private:
     long _oidSeed;
     utility::datetime _time;
     std::shared_ptr<model::Position> _position;
+    std::shared_ptr<model::Margin> _margin;
     std::shared_ptr<Config> _config;
+    std::shared_ptr<MarginCalculator> _marginCalculator;
+public:
+    void setMarginCalculator(const std::shared_ptr<MarginCalculator>& marginCalculator);
+
+public:
+    const std::shared_ptr<MarginCalculator>& getMarginCalculator() const;
+
 public:
     using Writer = BatchWriter<std::shared_ptr<model::ModelBase>>;
-    const std::shared_ptr<model::Position> &getPosition() const;
-
-    void setPosition(const std::shared_ptr<model::Position> &position);
+    const std::shared_ptr<model::Position>& getPosition() const;
+    void setPosition(const std::shared_ptr<model::Position>& position_);
+    const std::shared_ptr<model::Margin>& getMargin() const;
+    void setMargin(const std::shared_ptr<model::Margin>& margin_);
 
 private:
 
@@ -135,9 +145,10 @@ private:
     bool hasMatchingOrder(const std::shared_ptr<model::Trade>& trade_);
 public:
     void addExecToPosition(const std::shared_ptr<model::Execution>& exec_);
+    void addExecToMargin(const std::shared_ptr<model::Execution>& exec_);
 
 public:
-    void operator >> (const std::string& outEvent_);
+    std::shared_ptr<model::Order> operator >> (const std::string& outEvent_);
     void operator >> (std::vector<std::shared_ptr<model::ModelBase>>& outBuffer_);
     void operator >> (Writer& outBuffer_);
 

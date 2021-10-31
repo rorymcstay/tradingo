@@ -7,9 +7,11 @@
 TestEnv::TestEnv(std::initializer_list<std::pair<std::string,std::string>> config_)
 :   _config(std::make_shared<Config>(config_))
 ,   _position(std::make_shared<model::Position>())
+,   _margin(std::make_shared<model::Margin>())
 ,   _lastDispatch()
 ,   _realtime(false)
 ,   _events(0)
+,   _marginCalculator(std::make_shared<MarginCalculator>())
 {
     init();
 }
@@ -30,11 +32,15 @@ void TestEnv::operator<<(const std::string &value_) {
     }
 }
 
-void TestEnv::operator>>(const std::string &value_) {
+std::shared_ptr<model::Order> TestEnv::operator>>(const std::string &value_) {
     try {
-        *_context->orderApi() >> value_;
+        auto order = *_context->orderApi() >> value_;
+        return order;
     } catch (std::runtime_error& ex) {
-        FAIL() << "TEST Exception: " << ex.what() << " during event >>\n\n      " << value_;
+        std::stringstream error_msg;
+        error_msg << "TEST Exception: " << ex.what() << " during event >>\n\n      " << value_;
+        //FAIL() << error_msg;
+        throw ex;
     }
 }
 
@@ -138,6 +144,7 @@ void TestEnv::playback(const std::string& tradeFile_, const std::string& quoteFi
     while (not stop) {
         if (!hasTrades or trade->getTimestamp() >= quote->getTimestamp()) {
             // trades are ahead of quotes, send the quote
+            (*_context->orderApi()->getMarginCalculator())(quote);
             auto time = quote->getTimestamp();
 
             dispatch(time, quote, nullptr, nullptr);
@@ -214,7 +221,11 @@ void TestEnv::init() {
     _context->init();
     _context->initStrategy();
     _position->setSymbol(_config->get("symbol"));
+    _context->orderApi()->setMarginCalculator(_marginCalculator);
+    _margin->setWalletBalance(std::atof(_config->get("startingBalance").c_str()));
+    _margin->setCurrency("XBt");
     _context->orderApi()->setPosition(_position);
+    _context->orderApi()->setMargin(_margin);
     _context->marketData()->addPosition(_position);
     _context->orderApi()->init(_config);
 
@@ -239,7 +250,7 @@ void TestEnv::dispatch(utility::datetime time_, const std::shared_ptr<model::Quo
     if (quote_) {
         _lastDispatch.mkt_time = quote_->getTimestamp();
         LOGDEBUG(AixLog::Color::blue << "quote: " << LOG_NVP("time",time_.to_string(utility::datetime::ISO_8601)) << AixLog::Color::none);
-        *_context->orderApi() << time_; //  >> std::vector
+        *_context->orderApi() << time_;
         *_context->marketData() << quote_;
         _context->strategy()->updateSignals();
         _context->strategy()->evaluate();

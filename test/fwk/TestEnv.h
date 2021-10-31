@@ -11,6 +11,7 @@
 
 #include "TestMarketData.h"
 #include "TestOrdersApi.h"
+#include "MarginCalculator.h"
 
 #include "Strategy.h"
 #include "OrderInterface.h"
@@ -33,17 +34,17 @@ struct Dispatch {
         {"symbol", "XBTUSD"},\
         {"clOrdPrefix", "MCST"},\
         {"factoryMethod", "RegisterBreakOutStrategy"},\
-        {"startingAmount", "1000"},\
         {"displaySize", "200"},\
         {"referencePrice", "35000"},\
         {"shortTermWindow", "1000"},\
-        {"longTermWindow", "8000"},\
+        {"longTermWindow", "8000"},                   \
         {"moving_average_crossover-interval", "1000"},\
         {"signal-callback", "1000"},\
         {"logLevel", "debug"},\
         {"moving_average_crossover-callback", "false"}, \
         {"realtime", "false"},                         \
-        {"override-signal-callback", "true"},            \
+        {"override-signal-callback", "true"},         \
+        {"startingBalance", "0.001"}, \
         {"libraryLocation", LIBRARY_LOCATION"/libtest_trading_strategies.so" }, \
         {"storage", "./"},   \
         {"tickStorage", "./"}
@@ -61,7 +62,9 @@ class TestEnv
     std::shared_ptr<Config> _config;
     std::shared_ptr<Context<TestMarketData, OrderApi>> _context;
     std::shared_ptr<model::Position> _position;
-    Dispatch _lastDispatch; // first is time, second is mkttime
+    std::shared_ptr<model::Margin> _margin;
+    std::shared_ptr<MarginCalculator> _marginCalculator;
+    Dispatch _lastDispatch;
     bool _realtime;
     long _events;
 public:
@@ -78,7 +81,7 @@ public:
                   const std::shared_ptr<model::Execution> exec_, const std::shared_ptr<model::Order> order_);
 
     void operator << (const std::string& value_);
-    void operator >> (const std::string& value_);
+    std::shared_ptr<model::Order> operator >> (const std::string& value_);
     void sleep(const utility::datetime& time_) const;
 };
 template<typename T> std::shared_ptr<T> getEvent(std::ifstream& fileHandle_);

@@ -11,6 +11,7 @@
 #include <model/Position.h>
 #include <model/Order.h>
 #include <model/Execution.h>
+#include <model/Margin.h>
 #include <mutex>
 #include <cpprest/json.h>
 #include <cpprest/ws_client.h>
@@ -107,6 +108,21 @@ struct PositionReleaser {
     }
 };
 
+struct MarginReleaser {
+    void operator() (model::Margin* margin_) {
+        margin_->unsetAction();
+        margin_->unsetAmount();
+        margin_->unsetAvailableMargin();
+        margin_->unsetCommission();
+        margin_->unsetConfirmedDebit();
+        margin_->unsetExcessMargin();
+        margin_->unsetExcessMarginPcnt();
+        margin_->unsetGrossComm();
+        margin_->unsetGrossExecCost();
+        // ...
+    }
+};
+
 struct ExecutionReleaser {
     void operator() (model::Execution* exec_) {
         exec_->unsetWorkingIndicator();
@@ -174,11 +190,13 @@ protected:
     cache::ObjectPool<model::Position, 1, PositionReleaser> _positionPool;
     cache::ObjectPool<model::Execution, 1, ExecutionReleaser> _execPool;
     cache::ObjectPool<model::Order, 1, OrderReleaser> _orderPool;
+    cache::ObjectPool<model::Margin, 1, MarginReleaser> _marginPool;
 
     std::queue<std::shared_ptr<model::Execution>> _executions;
     std::unordered_map<std::string, std::shared_ptr<model::Position>> _positions;
     std::unordered_map<std::string, std::shared_ptr<model::Order>> _orders;
     std::shared_ptr<model::Quote> _quote;
+    std::shared_ptr<model::Margin> _margin;
     model::Instrument _instrument;
     std::shared_ptr<InstrumentService> _instSvc;
 
@@ -192,6 +210,8 @@ protected:
     void handleExecutions(std::vector<std::shared_ptr<model::Execution>>& execs_, const std::string& action_);
     /// handle order update after data is read from socket.
     void handleOrders(std::vector<std::shared_ptr<model::Order>>& orders_, const std::string& action_);
+    /// handle updates to margin and balance
+    void handleMargin(std::vector<std::shared_ptr<model::Margin>> margin_, const std::string& action_);
     /// evaluate callback linked to self. i.e signals
     void callback() {
         _callback();
