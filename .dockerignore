@@ -3,6 +3,9 @@ cmake-build-*
 build
 build*
 data
+tmp
+wip
+docker
 .github
 .gitignore
 .gitmodules

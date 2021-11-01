@@ -398,6 +398,9 @@ void TestOrdersApi::addExecToMargin(const std::shared_ptr<model::Execution>& exe
     _margin->setWalletBalance(newBalance);
     auto marginBalance = newBalance + _position->getUnrealisedPnl();
     _margin->setMarginBalance(marginBalance);
+    double maintenanceMargin = _marginCalculator->getMarginAmount(_position);
+    _position->setMaintMarginReq(maintenanceMargin);
+    _margin->setMaintMargin(maintenanceMargin);
 }
 
 const std::shared_ptr<model::Position> &TestOrdersApi::getPosition() const {
