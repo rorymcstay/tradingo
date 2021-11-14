@@ -63,21 +63,21 @@ void BreakOutStrategy<TORDApi>::init(const std::shared_ptr<Config>& config_) {
 
 template<typename TORDApi>
 void BreakOutStrategy<TORDApi>::onExecution(const std::shared_ptr<Event> &event_) {
+    std::shared_ptr<MarketDataInterface> md = StrategyApi::getMD();
     auto exec = event_->getExec();
+    auto margin = md->getMargin();
+    auto balance = margin->getWalletBalance();
     LOGINFO(LOG_NVP("ordStatus", exec->getOrdStatus()) << LOG_NVP("price", exec->getPrice())
             << LOG_NVP("orderQty", exec->getOrderQty()) << LOG_NVP("leavesQty", exec->getLeavesQty())
             << LOG_NVP("cumQty", exec->getCumQty()) << LOG_NVP("lastQty", exec->getLastQty()));
-    std::shared_ptr<model::Position> pos = StrategyApi::getMD()->getPositions().at(StrategyApi::_symbol);
+    std::shared_ptr<model::Position> pos = md->getPositions().at(StrategyApi::_symbol);
     LOGINFO("Position: " << LOG_NVP("CurrentQty", pos->getCurrentQty())
             << LOG_NVP("CurrentCost", pos->getCurrentCost())
             << LOG_NVP("UnrealisedPnl", pos->getUnrealisedPnl())
             << LOG_NVP("RealisedPnl", pos->getRealisedPnl())
             << LOG_NVP("UnrealisedRoe%", pos->getUnrealisedRoePcnt())
-            << LOG_NVP("Balance", StrategyApi::_balance));
-    std::shared_ptr<MarketDataInterface> md = StrategyApi::getMD();
-    auto margin = md->getMargin();
-    auto position = md->getPositions().at("XBTUSD");
-    position->getLiquidationPrice();
+            << LOG_NVP("Balance", balance)
+            << LOG_NVP("LiquidationPrice", pos->getLiquidationPrice()));
 }
 
 template<typename TORDApi>

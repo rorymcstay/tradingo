@@ -39,4 +39,5 @@ double MarginCalculator::getLiquidationPrice(const std::shared_ptr<model::Positi
     auto size = position_->getCurrentQty();
     auto entryPrice = position_->getAvgEntryPrice();
     auto leverage = position_->getLeverage();
+    return _indexPrice;
 }
