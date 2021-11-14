@@ -4,6 +4,7 @@
 
 #ifndef TRADING_BOT_MARKETDATA_H
 #define TRADING_BOT_MARKETDATA_H
+#include <memory>
 #include <thread>
 #include <model/Trade.h>
 #include <model/Instrument.h>
@@ -247,6 +248,7 @@ public:
     const std::queue<ExecPtr>& getExecutions() const;
     /// get current positions.
     const std::unordered_map<std::string, PositionPtr>& getPositions() const;
+    const std::shared_ptr<model::Margin> getMargin() const;
     /// get current quote.
     const std::shared_ptr<model::Quote> quote() const;
     /// get instrument static.

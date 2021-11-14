@@ -380,6 +380,8 @@ void TestOrdersApi::addExecToPosition(const std::shared_ptr<model::Execution>& e
     auto unrealisedPnl = _marginCalculator->getUnrealisedPnL(_position);
     _position->setUnrealisedPnl(unrealisedPnl);
     _position->setTimestamp(exec_->getTimestamp());
+    auto liqPrice = _marginCalculator->getLiquidationPrice(_position, );
+    _position->setLiquidationPrice(liqPrice);
     LOGINFO(AixLog::Color::GREEN
                     << "New Position: "
                     << LOG_NVP("CurrentCost", _position->getCurrentCost())
@@ -450,14 +452,14 @@ bool TestOrdersApi::validateOrder(const std::shared_ptr<model::Order> &order_) {
 
 void TestOrdersApi::init(std::shared_ptr<Config> config_) {
     _config = config_;
+    _leverage = std::atof(_config->get("leverage", "10").c_str());
+    _leverageType = _config->get("leverageType", "ISOLATED");
 }
 
-const std::shared_ptr<MarginCalculator> &TestOrdersApi::getMarginCalculator() const {
+const std::shared_ptr<MarginCalculator>& TestOrdersApi::getMarginCalculator() const {
     return _marginCalculator;
 }
 
 void TestOrdersApi::setMarginCalculator(const std::shared_ptr<MarginCalculator>& marginCalculator) {
     _marginCalculator = marginCalculator;
 }
-
-

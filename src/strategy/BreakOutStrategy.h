@@ -58,8 +58,6 @@ void BreakOutStrategy<TORDApi>::init(const std::shared_ptr<Config>& config_) {
 
     StrategyApi::addSignal(std::make_shared<MovingAverageCrossOver>(shortTermWindow, longTermWindow));
 
-
-
     LOGINFO("Breakout strategy is initialised with " << LOG_VAR(shortTermWindow) << LOG_VAR(longTermWindow) << LOG_VAR(primePercent) << LOG_NVP("buyThreshold", _buyThreshold));
 }
 
@@ -76,6 +74,10 @@ void BreakOutStrategy<TORDApi>::onExecution(const std::shared_ptr<Event> &event_
             << LOG_NVP("RealisedPnl", pos->getRealisedPnl())
             << LOG_NVP("UnrealisedRoe%", pos->getUnrealisedRoePcnt())
             << LOG_NVP("Balance", StrategyApi::_balance));
+    std::shared_ptr<MarketDataInterface> md = StrategyApi::getMD();
+    auto margin = md->getMargin();
+    auto position = md->getPositions().at("XBTUSD");
+    position->getLiquidationPrice();
 }
 
 template<typename TORDApi>

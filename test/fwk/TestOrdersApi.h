@@ -42,13 +42,12 @@ private:
     std::shared_ptr<model::Margin> _margin;
     std::shared_ptr<Config> _config;
     std::shared_ptr<MarginCalculator> _marginCalculator;
-public:
-    void setMarginCalculator(const std::shared_ptr<MarginCalculator>& marginCalculator);
+    double _leverage;
+    std::string _leverageType;
 
 public:
     const std::shared_ptr<MarginCalculator>& getMarginCalculator() const;
-
-public:
+    void setMarginCalculator(const std::shared_ptr<MarginCalculator>& marginCalculator);
     using Writer = BatchWriter<std::shared_ptr<model::ModelBase>>;
     const std::shared_ptr<model::Position>& getPosition() const;
     void setPosition(const std::shared_ptr<model::Position>& position_);

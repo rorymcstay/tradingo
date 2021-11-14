@@ -176,9 +176,9 @@ bool Strategy<TOrdApi>::shouldEval() {
 
 template<typename TOrdApi>
 void Strategy<TOrdApi>::placeAllocations() {
-    thread_local std::vector<std::shared_ptr<model::Order>> _amends;
-    thread_local std::vector<std::shared_ptr<model::Order>> _newOrders;
-    thread_local std::vector<std::shared_ptr<model::Order>> _cancels;
+    std::vector<std::shared_ptr<model::Order>> _amends;
+    std::vector<std::shared_ptr<model::Order>> _newOrders;
+    std::vector<std::shared_ptr<model::Order>> _cancels;
     _amends.clear(); _newOrders.clear(); _cancels.clear();
     // TODO use ranges ontop of *_allocations iterator. - occupied price level view
     for (auto& allocation : *_allocations) {

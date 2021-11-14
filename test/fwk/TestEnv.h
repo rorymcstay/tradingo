@@ -37,7 +37,7 @@ struct Dispatch {
         {"displaySize", "200"},\
         {"referencePrice", "35000"},\
         {"shortTermWindow", "1000"},\
-        {"longTermWindow", "8000"},                   \
+        {"longTermWindow", "8000"},\
         {"moving_average_crossover-interval", "1000"},\
         {"signal-callback", "1000"},\
         {"logLevel", "debug"},\
