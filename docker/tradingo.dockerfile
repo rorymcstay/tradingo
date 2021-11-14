@@ -3,12 +3,10 @@ FROM rmcstay95/tradingo-base:0ee37ab-dirty as builder
 
 # build tradingo
 ARG install_base=/usr/from-src/
-ADD "https://api.github.com/repos/rorymcstay/tradingo/commits?per_page=1" latest_commit
-RUN git clone https://github.com/rorymcstay/tradingo.git /usr/src/tradingo
-RUN cd tradingo \ 
-    && git submodule update --init
-RUN cd tradingo \
-    && mkdir build.release \
+WORKDIR /usr/src/tradingo
+ADD . .
+RUN git submodule update --init
+RUN mkdir build.release \
     && cd build.release \
     && cmake -DCMAKE_BUILD_TYPE=Release \
         -DCPPREST_ROOT=${install_base}/cpprest \
@@ -18,6 +16,9 @@ RUN cd tradingo \
         -DCMAKE_PREFIX_PATH="${install_base}/cpprest;${install_base}/benchmark" \
         ../ \
     && make install -j3
+
+# TEST tradingo
+RUN ${install_base}/bin/testTradingo
 
 ENV USER=tradingo
 ENV UID=12345
@@ -82,7 +83,6 @@ RUN apk --no-cache add \
         curl \
     && rm -rf /var/cache/apk/*
 
-
 ENV USER=tradingo
 ENV UID=12345
 ENV GID=23456
@@ -95,8 +95,7 @@ RUN adduser \
     --ingroup "$USER" \
     --no-create-home \
     --uid "$UID" \
-    "$USER" \
-    \
+    "$USER"
 
 ARG install_base=/usr/from-src/
 COPY --from=builder ${install_base}/cpprest/lib /usr/local/lib

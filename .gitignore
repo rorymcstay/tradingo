@@ -6,6 +6,7 @@ build/
 .cache/
 .aws
 .env
+*.swp
 thirdparty/googletest/
 tmp
 wip

@@ -2,11 +2,10 @@ FROM rmcstay95/tradingo-base:0ee37ab-dirty as builder
 
 # build tradingo
 ARG install_base=/usr/from-src/
-ADD "https://api.github.com/repos/rorymcstay/tradingo/commits?per_page=1" latest_commit
-RUN git clone https://github.com/rorymcstay/tradingo.git /usr/src/tradingo
-RUN cd tradingo \ 
-    && git submodule update --init
-RUN cd tradingo \
+WORKDIR /usr/src/tradingo
+ADD . .
+RUN git submodule update --init
+RUN mkdir build.release \
     && mkdir build.release \
     && cd build.release \
     && cmake -DCMAKE_BUILD_TYPE=Release \

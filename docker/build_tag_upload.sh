@@ -11,7 +11,7 @@ remote_tag=rmcstay95/"$(if [[ $component == "tradingo" ]]; then echo tradingo; e
 
 docker_file=$(if [[ $component == "tradingo" ]]; then echo "tradingo.dockerfile"; else echo "tradingo-$component.dockerfile"; fi)
 
-docker build -f docker/$docker_file --tag $local_tag .
+docker build -f docker/$docker_file --tag $local_tag $ROOT_DIR
 
 set -x
 docker tag $local_tag $remote_tag

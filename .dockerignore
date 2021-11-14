@@ -6,11 +6,8 @@ data
 tmp
 wip
 docker
-.github
-.gitignore
-.gitmodules
 .cache
-.git
+*.swp
 compile_commands.json
 CMakeCache.txt
 CMakeFiles
