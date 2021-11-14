@@ -9,8 +9,7 @@
 
 #include "Config.h"
 
-MarginCalculator::MarginCalculator(const std::shared_ptr<Config>& config_,
-        const std::shared_ptr<model::Funding>& funding_)
+MarginCalculator::MarginCalculator(const std::shared_ptr<Config>& config_)
 :   _indexPrice()
 ,   _interestRate()
 ,   _leverageType(config_->get("leverageType", "ISOLATED"))

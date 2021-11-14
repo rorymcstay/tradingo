@@ -11,7 +11,7 @@ TestEnv::TestEnv(std::initializer_list<std::pair<std::string,std::string>> confi
 ,   _lastDispatch()
 ,   _realtime(false)
 ,   _events(0)
-,   _marginCalculator(std::make_shared<MarginCalculator>())
+,   _marginCalculator(std::make_shared<MarginCalculator>(_config))
 {
     init();
 }

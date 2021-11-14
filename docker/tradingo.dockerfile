@@ -17,9 +17,6 @@ RUN mkdir build.release \
         ../ \
     && make install -j3
 
-# TEST tradingo
-RUN ${install_base}/bin/testTradingo
-
 ENV USER=tradingo
 ENV UID=12345
 ENV GID=23456

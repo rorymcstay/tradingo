@@ -28,8 +28,7 @@ class MarginCalculator {
     std::string _leverageType;
 
 public:
-    MarginCalculator(const std::shared_ptr<Config>& config_,
-        const std::shared_ptr<model::Funding>& funding_);
+    explicit MarginCalculator(const std::shared_ptr<Config>& config_);
     void operator()(const std::shared_ptr<model::Quote>& quote_);
     double getUnrealisedPnL(const std::shared_ptr<model::Position>& position_) const;
     double getMarkPrice() const;

@@ -161,6 +161,7 @@ public:
     using TradePtr = std::shared_ptr<model::Trade>;
     using QuotePtr = std::shared_ptr<model::Quote>;
     using ExecPtr = std::shared_ptr<model::Execution>;
+    using MarginPtr = std::shared_ptr<model::Margin>;
 
     std::function<void()> _callback;
 
@@ -248,7 +249,8 @@ public:
     const std::queue<ExecPtr>& getExecutions() const;
     /// get current positions.
     const std::unordered_map<std::string, PositionPtr>& getPositions() const;
-    const std::shared_ptr<model::Margin> getMargin() const;
+    /// get current margin.
+    const MarginPtr& getMargin() const;
     /// get current quote.
     const std::shared_ptr<model::Quote> quote() const;
     /// get instrument static.

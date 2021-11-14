@@ -2,6 +2,7 @@
 // Created by Rory McStay on 18/06/2021.
 //
 
+#include <stdexcept>
 #define _TURN_OFF_PLATFORM_STRING
 #include <Object.h>
 #include <Allocation.h>
@@ -183,9 +184,10 @@ TestOrdersApi::order_newBulk(boost::optional<utility::string_t> orders) {
 #define PVAR(order, name_)  #name_ "="  << (order)->get##name_() << " "
 std::shared_ptr<model::Order> TestOrdersApi::operator>>(const std::string &outEvent_) {
     auto eventType = getEventTypeFromString(outEvent_);
-    if (eventType == "NONE") {
 
-        std::stringstream failMessage;
+    std::stringstream failMessage;
+    failMessage << "Event filter:\n\t" << outEvent_ << "\nnot satisifed. Reason:\n";
+    if (eventType == "NONE") {
         if (!_newOrders.empty() || !_orderCancels.empty() || !_orderAmends.empty()) {
             failMessage << "There are events still pending!\n";
             while (!_newOrders.empty()) {
@@ -237,7 +239,6 @@ std::shared_ptr<model::Order> TestOrdersApi::operator>>(const std::string &outEv
                         << "\" LN;\n";
                 _orderCancels.pop();
             }
-            throw std::runtime_error(failMessage.str());
         }
         return nullptr;
     }
@@ -245,7 +246,7 @@ std::shared_ptr<model::Order> TestOrdersApi::operator>>(const std::string &outEv
     auto expectedOrder = fromJson<model::Order>(params.asJson());
     if (eventType == "ORDER_NEW") {
         if (_newOrders.empty()) {
-            throw std::runtime_error("No new orders created.");
+            failMessage << "No new orders created.";
         }
         auto latestOrder = _newOrders.front();
         CHECK_VAL(latestOrder->getPrice(), expectedOrder->getPrice());
@@ -257,7 +258,7 @@ std::shared_ptr<model::Order> TestOrdersApi::operator>>(const std::string &outEv
     } else if (eventType == "ORDER_AMEND") {
         checkOrderExists(expectedOrder);
         if (_orderAmends.empty()) {
-            throw std::runtime_error("No amends made for any orders");
+            failMessage << "No amends made for any orders";
         }
         auto orderAmend = _orderAmends.front();
         _orderAmends.pop();
@@ -268,7 +269,7 @@ std::shared_ptr<model::Order> TestOrdersApi::operator>>(const std::string &outEv
         return orderAmend;
     } else if (eventType == "ORDER_CANCEL") {
         if (_orderCancels.empty()) {
-            throw std::runtime_error( "No expectedOrder cancels");
+            failMessage << "No expectedOrder cancels";
         }
         auto orderCancel = _orderCancels.front();
         _orderCancels.pop();
@@ -278,7 +279,8 @@ std::shared_ptr<model::Order> TestOrdersApi::operator>>(const std::string &outEv
         CHECK_VAL(orderCancel->getSymbol(), expectedOrder->getSymbol());
         return orderCancel;
     }
-    throw std::runtime_error("Must specify event type - One of ORDER_NEW, ORDER_AMEND, ORDER_CANCEL");
+    failMessage << "Must specify event type - One of \"ORDER_NEW\", \"ORDER_AMEND\", \"ORDER_CANCEL\"";
+    throw std::runtime_error(failMessage.str());
 }
 
 std::shared_ptr<model::Order> TestOrdersApi::checkOrderExists(const std::shared_ptr<model::Order> &order) {
@@ -373,25 +375,6 @@ void TestOrdersApi::addExecToPosition(const std::shared_ptr<model::Execution>& e
                     << LOG_NVP("LastPx", exec_->getLastPx())
                     << AixLog::Color::none);
 
-    qty_t newPosition = _position->getCurrentQty() + ((exec_->getSide() == "Buy") ? exec_->getLastQty() : -exec_->getLastQty());
-    qty_t newCost = _position->getCurrentCost() + ((1/exec_->getPrice() * exec_->getLastQty())*(exec_->getSide()=="Buy" ? 1 : -1));
-    _position->setCurrentQty(newPosition);
-    _position->setCurrentCost(newCost);
-    auto unrealisedPnl = _marginCalculator->getUnrealisedPnL(_position);
-    _position->setUnrealisedPnl(unrealisedPnl);
-    _position->setTimestamp(exec_->getTimestamp());
-    auto liqPrice = _marginCalculator->getLiquidationPrice(_position, );
-    _position->setLiquidationPrice(liqPrice);
-    LOGINFO(AixLog::Color::GREEN
-                    << "New Position: "
-                    << LOG_NVP("CurrentCost", _position->getCurrentCost())
-                    << LOG_NVP("Size", _position->getCurrentQty())
-                    << LOG_NVP("Time", _position->getTimestamp().to_string())
-                    << AixLog::Color::none);
-}
-
-void TestOrdersApi::addExecToMargin(const std::shared_ptr<model::Execution>& exec_) {
-
     auto lastQty = exec_->getLastQty();
     auto lastPx = exec_->getLastPx();
     auto dirMx = (exec_->getSide() == "Buy") ? -1 : +1;
@@ -403,6 +386,27 @@ void TestOrdersApi::addExecToMargin(const std::shared_ptr<model::Execution>& exe
     double maintenanceMargin = _marginCalculator->getMarginAmount(_position);
     _position->setMaintMarginReq(maintenanceMargin);
     _margin->setMaintMargin(maintenanceMargin);
+
+    qty_t newPosition = _position->getCurrentQty() + ((exec_->getSide() == "Buy") ? exec_->getLastQty() : -exec_->getLastQty());
+    qty_t newCost = _position->getCurrentCost() + ((1/exec_->getPrice() * exec_->getLastQty())*(exec_->getSide()=="Buy" ? 1 : -1));
+    _position->setCurrentQty(newPosition);
+    _position->setCurrentCost(newCost);
+    auto unrealisedPnl = _marginCalculator->getUnrealisedPnL(_position);
+    _position->setUnrealisedPnl(unrealisedPnl);
+    _position->setTimestamp(exec_->getTimestamp());
+    auto liqPrice = _marginCalculator->getLiquidationPrice(_position, newBalance);
+    _position->setLiquidationPrice(liqPrice);
+    LOGINFO(AixLog::Color::GREEN
+                    << "New Position: "
+                    << LOG_NVP("CurrentCost", _position->getCurrentCost())
+                    << LOG_NVP("Size", _position->getCurrentQty())
+                    << LOG_NVP("Time", _position->getTimestamp().to_string())
+                    << AixLog::Color::none);
+}
+
+void TestOrdersApi::addExecToMargin(const std::shared_ptr<model::Execution>& exec_) {
+
+
 }
 
 const std::shared_ptr<model::Position> &TestOrdersApi::getPosition() const {

@@ -310,6 +310,9 @@ const std::queue<MarketDataInterface::ExecPtr> &MarketDataInterface::getExecutio
 const std::unordered_map<std::string, MarketDataInterface::PositionPtr> &MarketDataInterface::getPositions() const {
     return _positions;
 }
+const MarketDataInterface::MarginPtr &MarketDataInterface::getMargin() const {
+    return _margin;
+}
 
 void MarketDataInterface::updateSignals(const std::shared_ptr<Event>& event_) {
     /*
