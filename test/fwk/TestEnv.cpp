@@ -156,6 +156,27 @@ void TestEnv::playback(const std::string& tradeFile_, const std::string& quoteFi
             if (not quote) {
                 stop = true;
             }
+            std::shared_ptr<MarginCalculator> mc = _context->orderApi()->getMarginCalculator();
+            auto md = _context->strategy()->getMD();
+            auto position = md->getPositions().at(_config->get("symbol"));
+            auto liqPrice = position->getLiquidationPrice();
+            auto qty = position->getCurrentQty();
+            auto margin = md->getMargin();
+            if ((qty >= 0 and mc->getMarkPrice() > liqPrice )
+                    or (qty < 0 and mc->getMarkPrice() < liqPrice )) {
+
+                position->setCurrentQty(0);
+                position->setUnrealisedPnl(-1);
+                auto cost_to_balance = position->getCurrentCost(); 
+                if (_config->get("leverageType", "ISOLATED") == "CROSSED")
+                    margin->setWalletBalance(margin->getWalletBalance() - cost_to_balance);
+                positionWriter.write(position);
+                LOGINFO("Auto liquidation triggered: "
+                        << LOG_VAR(liqPrice)
+                        << LOG_VAR(qty)
+                        << LOG_NVP("markPrice", mc->getMarkPrice())
+                        << LOG_NVP("balance", margin->getWalletBalance()));
+            }
         } else { // send the trade.
             // TODO Check if trade can match on what we have? then send EXECUTION
             for (auto& order : _context->orderApi()->orders()) {
