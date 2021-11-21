@@ -9,9 +9,10 @@
 #include <iostream>
 #include <dlfcn.h>
 #include <chrono>
+#include <filesystem>
 
 #include <api/OrderApi.h>
-#include <filesystem>
+
 #include "MarketData.h"
 #include "ApiConfiguration.h"
 #include "ApiClient.h"
@@ -22,7 +23,9 @@
 #include "InstrumentService.h"
 
 
-template<typename TMarketData, typename TOrderApi>
+template<typename TMarketData,
+    typename TOrderApi,
+    typename TPositionApi>
 class Context {
 
     std::shared_ptr<TMarketData> _marketData;
@@ -31,10 +34,11 @@ class Context {
     web::http::client::http_client_config _httpConfig;
     std::shared_ptr<TOrderApi> _orderManager;
     std::shared_ptr<Strategy<TOrderApi>> _strategy;
+    // TODO: Factor out instrument service into templated type, and mock InstrumentApi in test/fwk
     std::shared_ptr<InstrumentService> _instrumentService;
+    std::shared_ptr<TPositionApi> _positionApi;
     void* _handle{};
 
-private:
     std::shared_ptr<Config> _config;
     typedef std::shared_ptr<Strategy<TOrderApi>> (*factoryMethod_t)(
             std::shared_ptr<TMarketData>,std::shared_ptr<TOrderApi>, std::shared_ptr<InstrumentService>) ;
@@ -61,6 +65,7 @@ public:
     const std::shared_ptr<Strategy<TOrderApi>>& strategy() const { return _strategy; }
     const std::shared_ptr<Config>& config() const { return _config; }
     const std::shared_ptr<InstrumentService>& instrumentService() const { return _instrumentService; }
+    const std::shared_ptr<TPositionApi>& positionApi() const { return _positionApi; }
 
 };
 

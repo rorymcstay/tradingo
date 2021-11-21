@@ -8,6 +8,8 @@ build/
 .env
 *.swp
 thirdparty/googletest/
+build.release
+build.debug
 tmp
 wip
 test.cfg

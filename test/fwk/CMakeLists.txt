@@ -4,12 +4,19 @@ FILE(GLOB SourcesToTest
         ../../signal/*.cpp)
 
 link_directories(${CPPREST_ROOT}/lib)
+message(STATUS "BITMEXAPI_INCLUDE_DIR = ${BITMEXAPI_INCLUDE_DIR}")
 
+include_directories(
+    ${BITMEXAPI_INCLUDE_DIR}/
+    ${BITMEXAPI_INCLUDE_DIR}/api
+    ${BITMEXAPI_INCLUDE_DIR}/model
+)
 
 add_library(test_trading_funcs
         ${SourcesToTest}
         # test framework
         TestOrdersApi.cpp
+        TestPositionApi.cpp
         TestMarketData.cpp
         TestUtils.cpp
         TestEnv.cpp

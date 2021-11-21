@@ -5,10 +5,14 @@
 #ifndef TRADINGO_BREAKOUTSTRATEGY_H
 #define TRADINGO_BREAKOUTSTRATEGY_H
 
+#include "api/OrderApi.h"
+
 #include "SimpleMovingAverage.h"
 #include "signal/MovingAverageCrossOver.h"
 #include "Strategy.h"
 #include "Event.h"
+
+using namespace io::swagger::client;
 
 using SMA_T = SimpleMovingAverage<uint64_t, uint64_t>;
 
