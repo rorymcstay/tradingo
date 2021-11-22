@@ -4,6 +4,7 @@
 
 #include <boost/program_options.hpp>
 #include <api/OrderApi.h>
+#include <api/PositionApi.h>
 
 #include "MarketData.h"
 #include "Event.h"
@@ -40,7 +41,7 @@ int main(int argc, char **argv) {
     } else {
         return 1;
     }
-    auto context = std::make_shared<Context<MarketData, io::swagger::client::api::OrderApi>>(config);
+    auto context = std::make_shared<Context<MarketData, io::swagger::client::api::OrderApi, io::swagger::client::api::PositionApi>>(config);
     context->init();
 
     auto marketData = context->marketData();

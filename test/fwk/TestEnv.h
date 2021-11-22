@@ -17,6 +17,7 @@
 #include "OrderInterface.h"
 #include "Utils.h"
 #include "Context.h"
+#include "TestPositionApi.h"
 
 #define STRINGIFY(x) #x
 #define TO_STRING(x) STRINGIFY(x)
@@ -60,7 +61,7 @@ class TestEnv
     using TStrategy = Strategy<OrderApi>;
 
     std::shared_ptr<Config> _config;
-    std::shared_ptr<Context<TestMarketData, OrderApi>> _context;
+    std::shared_ptr<Context<TestMarketData, OrderApi, TestPositionApi>> _context;
     std::shared_ptr<model::Position> _position;
     std::shared_ptr<model::Margin> _margin;
     std::shared_ptr<MarginCalculator> _marginCalculator;
@@ -69,7 +70,7 @@ class TestEnv
     long _events;
 public:
     const std::shared_ptr<TStrategy>& strategy() const { return _context->strategy(); }
-    const std::shared_ptr<Context<TestMarketData, OrderApi>>& context() const { return _context; }
+    const std::shared_ptr<Context<TestMarketData, OrderApi, TestPositionApi>>& context() const { return _context; }
     TestEnv(std::initializer_list<std::pair<std::string, std::string>>);
     TestEnv(const std::shared_ptr<Config>& config_);
 

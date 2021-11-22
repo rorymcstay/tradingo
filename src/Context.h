@@ -70,15 +70,15 @@ public:
 };
 
 
-template<typename TMarketData, typename TOrderApi>
-void Context<TMarketData, TOrderApi>::init() {
+template<typename TMarketData, typename TOrderApi, typename TPositionApi>
+void Context<TMarketData, TOrderApi, TPositionApi>::init() {
     _marketData->init();
     _marketData->subscribe();
 }
 
-template<typename TMarketData, typename TOrderApi>
-typename Context<TMarketData, TOrderApi>::factoryMethod_t
-Context<TMarketData, TOrderApi>::loadFactoryMethod() {
+template<typename TMarketData, typename TOrderApi, typename TPositionApi>
+typename Context<TMarketData, TOrderApi, TPositionApi>::factoryMethod_t
+Context<TMarketData, TOrderApi, TPositionApi>::loadFactoryMethod() {
     std::string factoryMethodName = _config->get("factoryMethod");
     std::string lib = _config->get("libraryLocation");
     LOGINFO("Loading strategy ... " << LOG_VAR(lib) << LOG_VAR(factoryMethodName));
@@ -106,8 +106,8 @@ Context<TMarketData, TOrderApi>::loadFactoryMethod() {
 
 }
 
-template<typename TMarketData, typename TOrderApi>
-Context<TMarketData, TOrderApi>::Context(std::shared_ptr<Config> config_)
+template<typename TMarketData, typename TOrderApi, typename TPositionApi>
+Context<TMarketData, TOrderApi, TPositionApi>::Context(std::shared_ptr<Config> config_)
 :   _config(std::move(config_))
 ,   _apiConfig(std::make_shared<api::ApiConfiguration>())
 ,   _httpConfig(web::http::client::http_client_config())
@@ -129,14 +129,14 @@ Context<TMarketData, TOrderApi>::Context(std::shared_ptr<Config> config_)
 }
 
 
-template<typename TMarketData, typename TOrderApi>
-Context<TMarketData, TOrderApi>::~Context() {
+template<typename TMarketData, typename TOrderApi, typename TPositionApi>
+Context<TMarketData, TOrderApi, TPositionApi>::~Context() {
     dlclose(_handle);
 }
 
 
-template<typename TMarketData, typename TOrderApi>
-void Context<TMarketData, TOrderApi>::setupLogger() {
+template<typename TMarketData, typename TOrderApi, typename TPositionApi>
+void Context<TMarketData, TOrderApi, TPositionApi>::setupLogger() {
     auto logLevel = AixLog::Filter(AixLog::to_severity(_config->get("logLevel", "info")));
     std::vector<std::shared_ptr<AixLog::Sink>> sinks = {
         std::make_shared<AixLog::SinkCout>(logLevel),
@@ -160,10 +160,10 @@ void Context<TMarketData, TOrderApi>::setupLogger() {
 }
 
 
-template<typename TMarketData, typename TOrderApi>
-void Context<TMarketData, TOrderApi>::initStrategy() {
+template<typename TMarketData, typename TOrderApi, typename TPositionApi>
+void Context<TMarketData, TOrderApi, TPositionApi>::initStrategy() {
 
-    Context<TMarketData,TOrderApi>::factoryMethod_t factoryMethod = loadFactoryMethod();
+    Context<TMarketData,TOrderApi,TPositionApi>::factoryMethod_t factoryMethod = loadFactoryMethod();
     std::shared_ptr<Strategy<TOrderApi>> strategy = factoryMethod(_marketData,_orderManager, _instrumentService);
     _strategy = strategy;
 
