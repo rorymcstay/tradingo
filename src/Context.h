@@ -126,9 +126,8 @@ Context<TMarketData, TOrderApi>::Context(std::shared_ptr<Config> config_)
     LOGINFO("Context created. Version Info: GIT_BRANCH='" << GIT_BRANCH << "' GIT_TAG='" << GIT_TAG
                     << "' GIT_REV='" << GIT_REV << "'");
 
-
-
 }
+
 
 template<typename TMarketData, typename TOrderApi>
 Context<TMarketData, TOrderApi>::~Context() {
@@ -172,6 +171,5 @@ void Context<TMarketData, TOrderApi>::initStrategy() {
     _marketData->setCallback([this]() { _strategy->evaluate(); });
 
 }
-
 
 #endif //TRADINGO_CONTEXT_H

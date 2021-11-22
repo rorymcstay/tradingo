@@ -82,6 +82,7 @@ void BreakOutStrategy<TORDApi>::onExecution(const std::shared_ptr<Event> &event_
             << LOG_NVP("UnrealisedRoe%", pos->getUnrealisedRoePcnt())
             << LOG_NVP("Balance", balance)
             << LOG_NVP("LiquidationPrice", pos->getLiquidationPrice()));
+
 }
 
 template<typename TORDApi>

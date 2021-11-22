@@ -73,6 +73,12 @@ public:
     /// market data accessor
     std::shared_ptr<MarketDataInterface> getMD() const { return _marketData; }
     /// conduct function_ on each signal. Optionally only evaluate on callback types
+    /// update siganls on the current event
+    void updateSignals();
+    /// get a signal
+    Signal::Ptr getSignal(const std::string& name);
+
+private:
     void forEachSignal(std::function<void(const Signal::Map::value_type&)> function_, bool callbacks=true) {
         if (callbacks) {
             std::for_each(_callback_signals.begin(), _callback_signals.end(), function_);
@@ -80,10 +86,7 @@ public:
             std::for_each(_timed_signals.begin(), _timed_signals.end(), function_);
         }
     }
-    /// update siganls on the current event
-    void updateSignals();
-    /// get a signal
-    Signal::Ptr getSignal(const std::string& name);
+
 
 protected:
     // allocation api
