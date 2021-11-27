@@ -46,6 +46,7 @@ struct Dispatch {
         {"realtime", "false"},                         \
         {"override-signal-callback", "true"},         \
         {"startingBalance", "0.001"}, \
+        {"initialLeverage", "15.0"}, \
         {"libraryLocation", LIBRARY_LOCATION"/libtest_trading_strategies.so" }, \
         {"storage", "./"},   \
         {"tickStorage", "./"}
@@ -58,10 +59,11 @@ struct Dispatch {
 class TestEnv
 {
     using OrderApi = TestOrdersApi;
-    using TStrategy = Strategy<OrderApi>;
+    using PositionApi = TestPositionApi;
+    using TStrategy = Strategy<OrderApi, PositionApi>;
 
     std::shared_ptr<Config> _config;
-    std::shared_ptr<Context<TestMarketData, OrderApi, TestPositionApi>> _context;
+    std::shared_ptr<Context<TestMarketData, OrderApi, PositionApi>> _context;
     std::shared_ptr<model::Position> _position;
     std::shared_ptr<model::Margin> _margin;
     std::shared_ptr<MarginCalculator> _marginCalculator;

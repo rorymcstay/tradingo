@@ -18,6 +18,7 @@ cmake -DCPPREST_ROOT=/usr/ \
     -Wno-dev \
     -DCMAKE_EXPORT_COMPILE_COMMANDS=1 \
     -DCPPREST_ROOT=${CPPREST_ROOT:-/usr/} \
+    -DCMAKE_BUILD_TYPE=$BUILD_TYPE \
     "$@" \
     $ROOT_DIR
 )

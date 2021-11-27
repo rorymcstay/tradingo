@@ -252,6 +252,9 @@ void TestEnv::init() {
     _position->setSymbol(_config->get("symbol"));
     _context->orderApi()->setMarginCalculator(_marginCalculator);
     _margin->setWalletBalance(std::atof(_config->get("startingBalance").c_str()));
+    _margin->setMaintMargin(0.0);
+    _margin->setAvailableMargin(_margin->getWalletBalance());
+    _margin->setUnrealisedPnl(0.0);
     _margin->setCurrency("XBt");
     _context->orderApi()->setPosition(_position);
     _context->orderApi()->setMargin(_margin);
@@ -264,7 +267,7 @@ TestEnv::TestEnv(const std::shared_ptr<Config> &config_)
 :   _config(config_)
 ,   _position(std::make_shared<model::Position>())
 ,   _realtime(false){
-init();
+    init();
 }
 
 void TestEnv::dispatch(utility::datetime time_, const std::shared_ptr<model::Quote> &quote_,

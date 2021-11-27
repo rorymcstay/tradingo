@@ -33,15 +33,18 @@ class Context {
     std::shared_ptr<api::ApiClient> _apiClient;
     web::http::client::http_client_config _httpConfig;
     std::shared_ptr<TOrderApi> _orderManager;
-    std::shared_ptr<Strategy<TOrderApi>> _strategy;
+    std::shared_ptr<Strategy<TOrderApi, TPositionApi>> _strategy;
     // TODO: Factor out instrument service into templated type, and mock InstrumentApi in test/fwk
     std::shared_ptr<InstrumentService> _instrumentService;
     std::shared_ptr<TPositionApi> _positionApi;
     void* _handle{};
 
     std::shared_ptr<Config> _config;
-    typedef std::shared_ptr<Strategy<TOrderApi>> (*factoryMethod_t)(
-            std::shared_ptr<TMarketData>,std::shared_ptr<TOrderApi>, std::shared_ptr<InstrumentService>) ;
+    typedef std::shared_ptr<Strategy<TOrderApi, TPositionApi>> (*factoryMethod_t)(
+            std::shared_ptr<TMarketData>,
+            std::shared_ptr<TOrderApi>,
+            std::shared_ptr<TPositionApi>,
+            std::shared_ptr<InstrumentService>);
 
 public:
 
@@ -62,7 +65,7 @@ public:
     const std::shared_ptr<TOrderApi>& orderApi() const { return _orderManager; }
     const std::shared_ptr<api::ApiConfiguration>& apiConfig() const { return _apiConfig; }
     const std::shared_ptr<api::ApiClient>& apiClient() const { return _apiClient; }
-    const std::shared_ptr<Strategy<TOrderApi>>& strategy() const { return _strategy; }
+    const std::shared_ptr<Strategy<TOrderApi, TPositionApi>>& strategy() const { return _strategy; }
     const std::shared_ptr<Config>& config() const { return _config; }
     const std::shared_ptr<InstrumentService>& instrumentService() const { return _instrumentService; }
     const std::shared_ptr<TPositionApi>& positionApi() const { return _positionApi; }
@@ -75,6 +78,7 @@ void Context<TMarketData, TOrderApi, TPositionApi>::init() {
     _marketData->init();
     _marketData->subscribe();
 }
+
 
 template<typename TMarketData, typename TOrderApi, typename TPositionApi>
 typename Context<TMarketData, TOrderApi, TPositionApi>::factoryMethod_t
@@ -106,6 +110,7 @@ Context<TMarketData, TOrderApi, TPositionApi>::loadFactoryMethod() {
 
 }
 
+
 template<typename TMarketData, typename TOrderApi, typename TPositionApi>
 Context<TMarketData, TOrderApi, TPositionApi>::Context(std::shared_ptr<Config> config_)
 :   _config(std::move(config_))
@@ -120,8 +125,11 @@ Context<TMarketData, TOrderApi, TPositionApi>::Context(std::shared_ptr<Config> c
     _apiConfig->setHttpConfig(_httpConfig);
     _apiClient = std::make_shared<api::ApiClient>(_apiConfig);
     _instrumentService = std::make_shared<InstrumentService>(_apiClient, _config);
+
     _marketData = std::make_shared<TMarketData>(_config, _instrumentService);
     _orderManager = std::make_shared<TOrderApi>(_apiClient);
+    _positionApi = std::make_shared<TPositionApi>(_apiClient);
+
     setupLogger();
     LOGINFO("Context created. Version Info: GIT_BRANCH='" << GIT_BRANCH << "' GIT_TAG='" << GIT_TAG
                     << "' GIT_REV='" << GIT_REV << "'");
@@ -164,7 +172,8 @@ template<typename TMarketData, typename TOrderApi, typename TPositionApi>
 void Context<TMarketData, TOrderApi, TPositionApi>::initStrategy() {
 
     Context<TMarketData,TOrderApi,TPositionApi>::factoryMethod_t factoryMethod = loadFactoryMethod();
-    std::shared_ptr<Strategy<TOrderApi>> strategy = factoryMethod(_marketData,_orderManager, _instrumentService);
+    std::shared_ptr<Strategy<TOrderApi, TPositionApi>> strategy = factoryMethod(
+            _marketData, _orderManager, _positionApi, _instrumentService);
     _strategy = strategy;
 
     _strategy->init(_config);
