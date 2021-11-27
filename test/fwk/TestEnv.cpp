@@ -221,42 +221,42 @@ batchWriter.write_batch();
 }
 
 void TestEnv::init() {
-_config->set("baseUrl", "https://localhost:8888/api/v1");
-_config->set("apiKey", "dummy");
-_config->set("apiSecret", "dummy");
-_config->set("connectionString", "https://localhost:8888/realtime");
-_config->set("clOrdPrefix", "MCST");
-_config->set("httpEnabled", "False");
-_config->set("tickSize", "0.5");
-_config->set("lotSize", "100");
-_config->set("callback-signals", "true");
-if (_config->get("realtime", "false") == "true") {
-    _realtime = true;
-}
-if (_config->get("logLevel", "").empty())
-    _config->set("logLevel", "debug");
-_config->set("cloidSeed", "0");
-auto tickSize = std::atof(_config->get("tickSize", "0.5").c_str());
-auto referencePrice = std::atof(_config->get("referencePrice").c_str());
-auto lotSize = std::atof(_config->get("lotSize", "100").c_str());
-auto instSvc = std::shared_ptr<InstrumentService>(nullptr);
-_context = std::make_shared<Context<TestMarketData, OrderApi>>(_config);
-auto instrument = std::make_shared<model::Instrument>();
-instrument->setSymbol(_config->get("symbol"));
-instrument->setPrevPrice24h(referencePrice);
-instrument->setTickSize(tickSize);
-instrument->setLotSize(lotSize);
-_context->instrumentService()->add(instrument);
-_context->init();
-_context->initStrategy();
-_position->setSymbol(_config->get("symbol"));
-_context->orderApi()->setMarginCalculator(_marginCalculator);
-_margin->setWalletBalance(std::atof(_config->get("startingBalance").c_str()));
-_margin->setCurrency("XBt");
-_context->orderApi()->setPosition(_position);
-_context->orderApi()->setMargin(_margin);
-_context->marketData()->addPosition(_position);
-_context->orderApi()->init(_config);
+    _config->set("baseUrl", "https://localhost:8888/api/v1");
+    _config->set("apiKey", "dummy");
+    _config->set("apiSecret", "dummy");
+    _config->set("connectionString", "https://localhost:8888/realtime");
+    _config->set("clOrdPrefix", "MCST");
+    _config->set("httpEnabled", "False");
+    _config->set("tickSize", "0.5");
+    _config->set("lotSize", "100");
+    _config->set("callback-signals", "true");
+    if (_config->get("realtime", "false") == "true") {
+        _realtime = true;
+    }
+    if (_config->get("logLevel", "").empty())
+        _config->set("logLevel", "debug");
+    _config->set("cloidSeed", "0");
+    auto tickSize = std::atof(_config->get("tickSize", "0.5").c_str());
+    auto referencePrice = std::atof(_config->get("referencePrice").c_str());
+    auto lotSize = std::atof(_config->get("lotSize", "100").c_str());
+    auto instSvc = std::shared_ptr<InstrumentService>(nullptr);
+    _context = std::make_shared<Context<TestMarketData, OrderApi, TestPositionApi>>(_config);
+    auto instrument = std::make_shared<model::Instrument>();
+    instrument->setSymbol(_config->get("symbol"));
+    instrument->setPrevPrice24h(referencePrice);
+    instrument->setTickSize(tickSize);
+    instrument->setLotSize(lotSize);
+    _context->instrumentService()->add(instrument);
+    _context->init();
+    _context->initStrategy();
+    _position->setSymbol(_config->get("symbol"));
+    _context->orderApi()->setMarginCalculator(_marginCalculator);
+    _margin->setWalletBalance(std::atof(_config->get("startingBalance").c_str()));
+    _margin->setCurrency("XBt");
+    _context->orderApi()->setPosition(_position);
+    _context->orderApi()->setMargin(_margin);
+    _context->marketData()->addPosition(_position);
+    _context->orderApi()->init(_config);
 
 }
 
@@ -268,17 +268,17 @@ init();
 }
 
 void TestEnv::dispatch(utility::datetime time_, const std::shared_ptr<model::Quote> &quote_,
-                   const std::shared_ptr<model::Execution> exec_, const std::shared_ptr<model::Order> order_) {
+                       const std::shared_ptr<model::Execution> exec_, const std::shared_ptr<model::Order> order_) {
 
-// default behaviour is not to sleep
-if (_realtime) {
-    sleep(time_);
-}
-_events++;
-_lastDispatch.actual_time = utility::datetime::utc_now();
-if (quote_) {
-    _lastDispatch.mkt_time = quote_->getTimestamp();
-    LOGDEBUG(AixLog::Color::blue << "quote: " << LOG_NVP("time",time_.to_string(utility::datetime::ISO_8601)) << AixLog::Color::none);
+    // default behaviour is not to sleep
+    if (_realtime) {
+        sleep(time_);
+    }
+    _events++;
+    _lastDispatch.actual_time = utility::datetime::utc_now();
+    if (quote_) {
+        _lastDispatch.mkt_time = quote_->getTimestamp();
+        LOGDEBUG(AixLog::Color::blue << "quote: " << LOG_NVP("time",time_.to_string(utility::datetime::ISO_8601)) << AixLog::Color::none);
         *_context->orderApi() << time_;
         *_context->marketData() << quote_;
         _context->strategy()->updateSignals();

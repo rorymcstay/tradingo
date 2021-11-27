@@ -9,6 +9,7 @@
 
 // CppRestSwaggerClient
 #include "api/OrderApi.h"
+#include "api/PositionApi.h"
 
 #include "fwk/TestEnv.h"
 
@@ -61,7 +62,7 @@ TEST(TestStrategyInterface, DISABLED_smoke_test) {
     config->set("baseUrl", "https://testnet.bitmex.com/api/v1/");
     config->set("connectionString", "wss://testnet.bitmex.com");
     INSERT_DEFAULT_ARGS(config);
-    auto context = std::make_shared<Context<TestMarketData, api::OrderApi>>(config);
+    auto context = std::make_shared<Context<TestMarketData, api::OrderApi, api::PositionApi>>(config);
     context->initStrategy();
     context->strategy()->allocations()->addAllocation(ORDER_PRICE, ORDER_QTY);
     context->strategy()->allocations()->addAllocation(ORDER_PRICE, ORDER_QTY);
