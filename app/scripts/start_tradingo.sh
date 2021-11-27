@@ -6,7 +6,7 @@ start_tradingo() {
 
     set -e
     ping -c 5 testnet.bitmex.com
-    pint -c 5 bitmex.com
+    ping -c 5 bitmex.com
     config_file=$STORAGE/${RUN_ID}/tradingo.cfg
     mkdir -p $STORAGE/$RUN_ID
 
