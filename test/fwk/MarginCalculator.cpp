@@ -1,13 +1,14 @@
 //
 // Created by rory on 31/10/2021.
 //
-
 #include "MarginCalculator.h"
 #include <memory>
 
+#define _TURN_OFF_PLATFORM_STRING
 #include <model/Funding.h>
 
 #include "Config.h"
+
 
 MarginCalculator::MarginCalculator(const std::shared_ptr<Config>& config_)
 :   _indexPrice()

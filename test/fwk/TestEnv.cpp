@@ -1,7 +1,24 @@
+#include <memory>
+
 #define _TURN_OFF_PLATFORM_STRING
-#include <Context.h>
-#include <BatchWriter.h>
+#include <model/Margin.h>
+
+#include "Context.h"
+#include "BatchWriter.h"
 #include "TestEnv.h"
+
+
+TestEnv::TestEnv(const std::shared_ptr<Config> &config_)
+:   _config(config_)
+,   _position(std::make_shared<model::Position>())
+,   _margin(std::make_shared<model::Margin>())
+,   _lastDispatch()
+,   _realtime(false)
+,   _events(0)
+,   _marginCalculator(std::make_shared<MarginCalculator>(_config))
+{
+    init();
+}
 
 
 TestEnv::TestEnv(std::initializer_list<std::pair<std::string,std::string>> config_)
@@ -141,6 +158,8 @@ void TestEnv::playback(const std::string& tradeFile_, const std::string& quoteFi
                                                 _context->config()->get("storage"), 5,
                                                 printer, /*rotate=*/false);
     _lastDispatch.mkt_time = quote->getTimestamp();
+    auto leverageType = _config->get("leverageType", "ISOLATED");
+    auto symbol = _config->get("symbol");
     while (not stop) {
         if (!hasTrades or trade->getTimestamp() >= quote->getTimestamp()) {
             // trades are ahead of quotes, send the quote
@@ -162,24 +181,23 @@ void TestEnv::playback(const std::string& tradeFile_, const std::string& quoteFi
             {
                 std::shared_ptr<MarginCalculator> mc = _context->orderApi()->getMarginCalculator();
                 auto md = _context->strategy()->getMD();
-                auto position = md->getPositions().at(_config->get("symbol"));
+                auto position = md->getPositions().at(symbol);
                 auto liqPrice = position->getLiquidationPrice();
                 auto qty = position->getCurrentQty();
                 auto margin = md->getMargin();
+                auto markPrice = mc->getMarkPrice();
 
-                if ((qty >= 0 and mc->getMarkPrice() > liqPrice)
-                    or (qty < 0 and mc->getMarkPrice() < liqPrice)) {
+                if (not almost_equal(qty, 0.0) and ((qty > 0 and markPrice > liqPrice)
+                    or (qty < 0 and markPrice < liqPrice))) {
 
                     position->setCurrentQty(0);
                     position->setUnrealisedPnl(-1);
                     auto cost_to_balance = position->getCurrentCost();
-                    if (_config->get("leverageType", "ISOLATED") == "CROSSED")
+                    if (leverageType == "CROSSED")
                         margin->setWalletBalance(margin->getWalletBalance() - cost_to_balance);
                     positionWriter.write(position);
                     LOGINFO("Auto liquidation triggered: "
-                                    << LOG_VAR(liqPrice)
-                                    << LOG_VAR(qty)
-                                    << LOG_NVP("markPrice", mc->getMarkPrice())
+                                    << LOG_VAR(liqPrice) << LOG_VAR(markPrice) << LOG_VAR(qty)
                                     << LOG_NVP("balance", margin->getWalletBalance()));
                 }
             }
@@ -187,8 +205,8 @@ void TestEnv::playback(const std::string& tradeFile_, const std::string& quoteFi
             // TODO Check if trade can match on what we have? then send EXECUTION
             for (auto& order : _context->orderApi()->orders()) {
 
-                // TODO: env << "EXEC Price=..."
                 auto exec = canTrade(order.second, trade);
+                // TODO: env << "EXEC Price=..."
                 if (exec) {
                     _context->orderApi()->set_order_timestamp(order.second);
                     exec->setTimestamp(order.second->getTimestamp());
@@ -200,24 +218,24 @@ void TestEnv::playback(const std::string& tradeFile_, const std::string& quoteFi
                         << LOG_NVP("LeavesQty", order.second->getLeavesQty())
                         << LOG_NVP("OrdStatus", order.second->getOrdStatus())
                         << AixLog::Color::none);
-                dispatch(exec->getTimestamp(), nullptr, exec, order.second);
-                if (exec->getOrdStatus() == "Filled") {
-                    LOGDEBUG("Filled order");
+                    dispatch(exec->getTimestamp(), nullptr, exec, order.second);
+                    if (exec->getOrdStatus() == "Filled") {
+                        LOGDEBUG("Filled order");
+                    }
+                    positionWriter.write(_context->orderApi()->getPosition());
                 }
-                positionWriter.write(_context->orderApi()->getPosition());
+            }
+            _context->strategy()->evaluate();
+            trade = getEvent<model::Trade>(tradeFile);
+
+            if (not trade) {
+                // trades are finished now, wont come in here again
+                hasTrades = false;
             }
         }
-        _context->strategy()->evaluate();
 
-        trade = getEvent<model::Trade>(tradeFile);
-        if (not trade) {
-            // trades are finished now
-            hasTrades = false;
-        }
     }
-
-}
-batchWriter.write_batch();
+    batchWriter.write_batch();
 }
 
 void TestEnv::init() {
@@ -236,38 +254,46 @@ void TestEnv::init() {
     if (_config->get("logLevel", "").empty())
         _config->set("logLevel", "debug");
     _config->set("cloidSeed", "0");
+
+    _context = std::make_shared<Context<TestMarketData, OrderApi, TestPositionApi>>(_config);
+
+    // make instrument for test
     auto tickSize = std::atof(_config->get("tickSize", "0.5").c_str());
     auto referencePrice = std::atof(_config->get("referencePrice").c_str());
     auto lotSize = std::atof(_config->get("lotSize", "100").c_str());
     auto instSvc = std::shared_ptr<InstrumentService>(nullptr);
-    _context = std::make_shared<Context<TestMarketData, OrderApi, TestPositionApi>>(_config);
     auto instrument = std::make_shared<model::Instrument>();
     instrument->setSymbol(_config->get("symbol"));
     instrument->setPrevPrice24h(referencePrice);
     instrument->setTickSize(tickSize);
     instrument->setLotSize(lotSize);
     _context->instrumentService()->add(instrument);
+
+    // initialise strategy
     _context->init();
     _context->initStrategy();
+
+    // setup initial positoin
+
     _position->setSymbol(_config->get("symbol"));
+    _position->setCurrentQty(0.0);
+    _position->setCurrentCost(0.0);
+    _position->setUnrealisedPnl(0.0);
+    _context->orderApi()->setPosition(_position);
+    _context->marketData()->addPosition(_position);
+
+    // set up initial margin
     _context->orderApi()->setMarginCalculator(_marginCalculator);
     _margin->setWalletBalance(std::atof(_config->get("startingBalance").c_str()));
     _margin->setMaintMargin(0.0);
     _margin->setAvailableMargin(_margin->getWalletBalance());
     _margin->setUnrealisedPnl(0.0);
     _margin->setCurrency("XBt");
-    _context->orderApi()->setPosition(_position);
+    _context->marketData()->setMargin(_margin);
     _context->orderApi()->setMargin(_margin);
-    _context->marketData()->addPosition(_position);
+
     _context->orderApi()->init(_config);
 
-}
-
-TestEnv::TestEnv(const std::shared_ptr<Config> &config_)
-:   _config(config_)
-,   _position(std::make_shared<model::Position>())
-,   _realtime(false){
-    init();
 }
 
 void TestEnv::dispatch(utility::datetime time_, const std::shared_ptr<model::Quote> &quote_,

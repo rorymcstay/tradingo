@@ -1,13 +1,14 @@
 //
 // Created by Rory McStay on 18/06/2021.
 //
+#include "TestOrdersApi.h"
 
 #include <stdexcept>
+
 #define _TURN_OFF_PLATFORM_STRING
 #include <Object.h>
 #include <Allocation.h>
 #include <model/Margin.h>
-#include "TestOrdersApi.h"
 
 
 TestOrdersApi::TestOrdersApi(std::shared_ptr<io::swagger::client::api::ApiClient> ptr)

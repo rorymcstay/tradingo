@@ -1,14 +1,18 @@
+#ifndef TRADINGO_APIMANAGER_H
+#define TRADINGO_APIMANAGER_H
 #include <chrono>
 
 // src
+
 #include "Config.h"
 #include "MarketData.h"
 #include "Context.h"
 #include "fwk/TestMarketData.h"
 
 // CppRestSwaggerClient
-#include "api/OrderApi.h"
-#include "api/PositionApi.h"
+#define _TURN_OFF_PLATFORM_STRING
+#include <api/OrderApi.h>
+#include <api/PositionApi.h>
 
 struct ApiManager {
     std::shared_ptr<api::OrderApi> orderApi;
@@ -47,3 +51,5 @@ struct ApiManager {
     }
 
 };
+
+#endif

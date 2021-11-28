@@ -10,6 +10,7 @@
 #include "Config.h"
 
 #include "MarketData.h"
+#include "model/Margin.h"
 
 class TestMarketData : public MarketDataInterface {
     std::shared_ptr<Config> _config;
@@ -24,6 +25,9 @@ public:
 
     void addPosition(const std::shared_ptr<model::Position>& position_) {
         _positions[position_->getSymbol()] = position_;
+    }
+    void setMargin(const std::shared_ptr<model::Margin>& margin_) {
+        _margin = margin_;
     }
 
     void operator << (const std::string& marketDataString);

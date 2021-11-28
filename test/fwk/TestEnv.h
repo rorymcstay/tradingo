@@ -11,13 +11,13 @@
 
 #include "TestMarketData.h"
 #include "TestOrdersApi.h"
+#include "TestPositionApi.h"
 #include "MarginCalculator.h"
 
 #include "Strategy.h"
 #include "OrderInterface.h"
 #include "Utils.h"
 #include "Context.h"
-#include "TestPositionApi.h"
 
 #define STRINGIFY(x) #x
 #define TO_STRING(x) STRINGIFY(x)

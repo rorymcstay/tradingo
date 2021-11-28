@@ -5,14 +5,14 @@
 #include "Config.h"
 #include "MarketData.h"
 #include "Context.h"
-#include "fwk/TestMarketData.h"
 
 // CppRestSwaggerClient
-#include "api/OrderApi.h"
-#include "api/PositionApi.h"
+#define _TURN_OFF_PLATFORM_STRING
+#include <api/OrderApi.h>
+#include <api/PositionApi.h>
 
 #include "fwk/ApiManager.h"
-
+#include "fwk/TestMarketData.h"
 #include "fwk/TestEnv.h"
 
 using namespace io::swagger::client;

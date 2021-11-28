@@ -3,7 +3,7 @@
 
 #include <unordered_map>
 
-#include <model/Position.h>
+#define _TURN_OFF_PLATFORM_STRING
 #include <ApiClient.h>
 
 
