@@ -24,7 +24,7 @@ double MarginCalculator::getUnrealisedPnL(const std::shared_ptr <model::Position
 }
 
 void MarginCalculator::operator()(const std::shared_ptr<model::Quote>& quote_) {
-    _indexPrice = (quote_->getBidPrice() + quote_->getBidSize())/2.0;
+    _indexPrice = (quote_->getBidPrice() + quote_->getBidPrice())/2.0;
 }
 
 double MarginCalculator::getMarkPrice() const {
@@ -40,5 +40,6 @@ double MarginCalculator::getLiquidationPrice(const std::shared_ptr<model::Positi
     auto size = position_->getCurrentQty();
     auto entryPrice = position_->getAvgEntryPrice();
     auto leverage = position_->getLeverage();
+    // TODO Calculate liquidation price given margin
     return _indexPrice;
 }
