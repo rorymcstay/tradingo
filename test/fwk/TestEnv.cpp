@@ -167,6 +167,7 @@ void TestEnv::playback(const std::string& tradeFile_, const std::string& quoteFi
                 auto qty = position->getCurrentQty();
                 auto margin = md->getMargin();
 
+
                 if ((qty >= 0 and mc->getMarkPrice() > liqPrice)
                     or (qty < 0 and mc->getMarkPrice() < liqPrice)) {
 
@@ -181,6 +182,7 @@ void TestEnv::playback(const std::string& tradeFile_, const std::string& quoteFi
                                     << LOG_VAR(qty)
                                     << LOG_NVP("markPrice", mc->getMarkPrice())
                                     << LOG_NVP("balance", margin->getWalletBalance()));
+                    *(_context->marketData()) << position;
                 }
             }
         } else { // send the trade.
@@ -267,6 +269,7 @@ TestEnv::TestEnv(const std::shared_ptr<Config> &config_)
 init();
 }
 
+
 void TestEnv::dispatch(utility::datetime time_, const std::shared_ptr<model::Quote> &quote_,
                        const std::shared_ptr<model::Execution> exec_, const std::shared_ptr<model::Order> order_) {
 
@@ -291,6 +294,7 @@ void TestEnv::dispatch(utility::datetime time_, const std::shared_ptr<model::Quo
         *_context->marketData() << _context->orderApi()->getPosition();
     }
 }
+
 
 void TestEnv::sleep(const utility::datetime& time_) const {
     if (_events == 0) {
