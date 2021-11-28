@@ -16,9 +16,10 @@
 #include "Signal.h"
 #include "Allocations.h"
 #include "CallbackTimer.h"
+#include "api/PositionApi.h"
 
 
-template<typename TOrdApi>
+template<typename TOrdApi, typename TPositionApi>
 class Strategy {
     /*
      * Base strategy class for trading strategies.
@@ -31,6 +32,7 @@ class Strategy {
 
     std::shared_ptr<MarketDataInterface> _marketData;
     std::shared_ptr<TOrdApi>             _orderEngine;
+    std::shared_ptr<TPositionApi>        _positionApi;
 
     std::string                          _clOrdIdPrefix;
     int                                  _oidSeed;
@@ -56,8 +58,10 @@ class Strategy {
     void updateFromTask(const pplx::task<std::vector<std::shared_ptr<model::Order>>>& task_);
 
 public:
-    Strategy(std::shared_ptr<MarketDataInterface> md_,  std::shared_ptr<TOrdApi> od_,
-             std::shared_ptr<InstrumentService> instService_);
+    Strategy(std::shared_ptr<MarketDataInterface> md_,
+        std::shared_ptr<TOrdApi> od_,
+        std::shared_ptr<TPositionApi> posApi_,
+        std::shared_ptr<InstrumentService> instService_);
     /// read an event of event queue and call handler.
     void evaluate();
 
@@ -77,6 +81,8 @@ public:
     void updateSignals();
     /// get a signal
     Signal::Ptr getSignal(const std::string& name);
+
+    void setLeverage(double leverage_);
 
 private:
     void forEachSignal(std::function<void(const Signal::Map::value_type&)> function_, bool callbacks=true) {
@@ -102,11 +108,14 @@ public:
     void placeAllocations();
 };
 
-template<typename TOrdApi>
-Strategy<TOrdApi>::Strategy(std::shared_ptr<MarketDataInterface> md_, std::shared_ptr<TOrdApi> od_,
-                            std::shared_ptr<InstrumentService> instrumentSvc_)
+template<typename TOrdApi, typename TPositionApi>
+Strategy<TOrdApi, TPositionApi>::Strategy(std::shared_ptr<MarketDataInterface> md_,
+        std::shared_ptr<TOrdApi> od_,
+        std::shared_ptr<TPositionApi> posApi_,
+        std::shared_ptr<InstrumentService> instrumentSvc_)
 :   _marketData(std::move(md_))
 ,   _orderEngine(std::move(od_))
+,   _positionApi(std::move(posApi_))
 ,   _allocations(nullptr)
 ,   _instrumentService(std::move(instrumentSvc_))
 ,   _oidSeed(std::chrono::system_clock::now().time_since_epoch().count()) {
@@ -114,8 +123,14 @@ Strategy<TOrdApi>::Strategy(std::shared_ptr<MarketDataInterface> md_, std::share
 }
 
 
-template<typename TOrdApi>
-void Strategy<TOrdApi>::evaluate() {
+template<typename TOrdApi, typename TPositionApi>
+void Strategy<TOrdApi, TPositionApi>::setLeverage(double leverage_) {
+    _positionApi->position_updateLeverage(_symbol, leverage_);
+}
+
+
+template<typename TOrdApi, typename TPositionApi>
+void Strategy<TOrdApi, TPositionApi>::evaluate() {
     LOGDEBUG(AixLog::Color::YELLOW << "======== START Evaluate ========" << AixLog::Color::none);
     auto event = _marketData->read();
     if (!event) {
@@ -143,13 +158,13 @@ void Strategy<TOrdApi>::evaluate() {
     LOGDEBUG(AixLog::Color::YELLOW << "======== FINISH Evaluate ========" << AixLog::Color::none);
 }
 
-template<typename TOrdApi>
-void Strategy<TOrdApi>::init(const std::string& config_) {
+template<typename TOrdApi, typename TPositionApi>
+void Strategy<TOrdApi, TPositionApi>::init(const std::string& config_) {
     init(config_);
 }
 
-template<typename TOrdApi>
-void Strategy<TOrdApi>::init(const std::shared_ptr<Config>& config_) {
+template<typename TOrdApi, typename TPositionApi>
+void Strategy<TOrdApi, TPositionApi>::init(const std::shared_ptr<Config>& config_) {
     LOGINFO("Initializing strategy");
     _config = config_;
 
@@ -168,17 +183,20 @@ void Strategy<TOrdApi>::init(const std::shared_ptr<Config>& config_) {
 
     LOGINFO("Initialising allocations with " << LOG_VAR(referencePrice) << LOG_VAR(tickSize));
     _allocations = std::make_shared<Allocations>(referencePrice, tickSize, lotSize);
+ 
+    double initialLeverage = std::atof(_config->get("initialLeverage", "10.0").c_str());
+    _positionApi->position_updateLeverage(_symbol, initialLeverage); 
 
 }
 
-template<typename TOrdApi>
-bool Strategy<TOrdApi>::shouldEval() {
+template<typename TOrdApi, typename TPositionApi>
+bool Strategy<TOrdApi, TPositionApi>::shouldEval() {
     return true;
 }
 
 
-template<typename TOrdApi>
-void Strategy<TOrdApi>::placeAllocations() {
+template<typename TOrdApi, typename TPositionApi>
+void Strategy<TOrdApi, TPositionApi>::placeAllocations() {
     std::vector<std::shared_ptr<model::Order>> _amends;
     std::vector<std::shared_ptr<model::Order>> _newOrders;
     std::vector<std::shared_ptr<model::Order>> _cancels;
@@ -323,8 +341,8 @@ void Strategy<TOrdApi>::placeAllocations() {
 
 }
 
-template<typename TOrdApi>
-std::shared_ptr<model::Order> Strategy<TOrdApi>::createOrder(const std::shared_ptr<Allocation> &allocation_) {
+template<typename TOrdApi, typename TPositionApi>
+std::shared_ptr<model::Order> Strategy<TOrdApi, TPositionApi>::createOrder(const std::shared_ptr<Allocation> &allocation_) {
     auto newOrder = std::make_shared<model::Order>();
     newOrder->setPrice(allocation_->getPrice());
     newOrder->setSide(allocation_->targetSide());
@@ -334,8 +352,8 @@ std::shared_ptr<model::Order> Strategy<TOrdApi>::createOrder(const std::shared_p
     return newOrder;
 }
 
-template<typename TOrdApi>
-void Strategy<TOrdApi>::updateFromTask(const pplx::task<std::vector<std::shared_ptr<model::Order>>>& task_) {
+template<typename TOrdApi, typename TPositionApi>
+void Strategy<TOrdApi, TPositionApi>::updateFromTask(const pplx::task<std::vector<std::shared_ptr<model::Order>>>& task_) {
     for (auto& order : task_.get()) {
         long index = _allocations->allocIndex(order->getPrice());
         LOGINFO("Success: " << LOG_NVP("price", order->getPrice())
@@ -352,13 +370,13 @@ void Strategy<TOrdApi>::updateFromTask(const pplx::task<std::vector<std::shared_
     }
 }
 
-template<typename TOrdApi>
-void Strategy<TOrdApi>::updateSignals() {
+template<typename TOrdApi, typename TPositionApi>
+void Strategy<TOrdApi, TPositionApi>::updateSignals() {
     forEachSignal([](const Signal::Map::value_type& signal_) { signal_.second->update(); });
 }
 
-template<typename TOrdApi>
-void Strategy<TOrdApi>::addSignal(const std::shared_ptr<Signal> &signal_) {
+template<typename TOrdApi, typename TPositionApi>
+void Strategy<TOrdApi, TPositionApi>::addSignal(const std::shared_ptr<Signal> &signal_) {
     signal_->init(_config, _marketData);
     // signals are either globally callback to disable timer thread during tests.
     if (signal_->callback() or _config->get("override-signal-callback", "false") == "true") {
@@ -368,8 +386,8 @@ void Strategy<TOrdApi>::addSignal(const std::shared_ptr<Signal> &signal_) {
     }
 }
 
-template<typename TOrdApi>
-Signal::Ptr Strategy<TOrdApi>::getSignal(const std::string &name) {
+template<typename TOrdApi, typename TPositionApi>
+Signal::Ptr Strategy<TOrdApi, TPositionApi>::getSignal(const std::string &name) {
     if (_timed_signals.find(name) != _timed_signals.end()) {
         return _timed_signals[name];
     }

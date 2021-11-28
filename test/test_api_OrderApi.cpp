@@ -5,12 +5,14 @@
 #include "Config.h"
 #include "MarketData.h"
 #include "Context.h"
-#include "fwk/TestMarketData.h"
 
 // CppRestSwaggerClient
-#include "api/OrderApi.h"
-#include "api/PositionApi.h"
+#define _TURN_OFF_PLATFORM_STRING
+#include <api/OrderApi.h>
+#include <api/PositionApi.h>
 
+#include "fwk/ApiManager.h"
+#include "fwk/TestMarketData.h"
 #include "fwk/TestEnv.h"
 
 using namespace io::swagger::client;
@@ -19,40 +21,6 @@ auto ORDER_PRICE = 47000;
 auto ORDER_QTY = 100;
 auto SIDE = "Buy";
 
-struct OrderManager {
-    std::shared_ptr<api::OrderApi> orderApi;
-    long oidSeed;
-    OrderManager()
-    :   orderApi(nullptr)
-    ,   oidSeed(std::chrono::system_clock::now().time_since_epoch().count()){
-
-        auto config = std::make_shared<Config>();
-        config->set("apiKey", "-rqipjFxM43WSRKdC8keq83K");
-        config->set("apiSecret", "uaCYIiwpwpXNKuVGCBPWE3ThzvyhOzKs6F9mWFzc9LueG3yd");
-        config->set("symbol", "XBTUSD");
-        config->set("baseUrl", "https://testnet.bitmex.com/api/v1/");
-        config->set("connectionString", "wss://testnet.bitmex.com");
-        std::string base_url = config->get("baseUrl");
-        auto apiConfig = std::make_shared<api::ApiConfiguration>();
-        auto httpConfig = web::http::client::http_client_config();
-        apiConfig->setHttpConfig(httpConfig);
-        apiConfig->setBaseUrl(base_url);
-        apiConfig->setApiKey("api-key", config->get("apiKey"));
-        apiConfig->setApiKey("api-secret", config->get("apiSecret"));
-        auto apiClient = std::make_shared<api::ApiClient>(apiConfig);
-        orderApi = std::make_shared<api::OrderApi>(apiClient);
-    }
-
-    std::string to_string(std::initializer_list<model::Order> orders_) {
-        auto lis = web::json::value::array();
-        int count = 0;
-        for (auto& order : orders_) {
-            lis[count++] = order.toJson();
-        }
-        return lis.serialize();
-    }
-
-};
 
 TEST(TestStrategyInterface, DISABLED_smoke_test) {
     auto config = std::make_shared<Config>();
@@ -79,7 +47,7 @@ TEST(TestStrategyInterface, DISABLED_smoke_test) {
 
 TEST(OrderApi, DISABLED_order_newBulk) {
 
-    OrderManager om {};
+    ApiManager om {};
 
     std::string orders = R"([{"clOrdID":"MCST0","orderID":"","orderQty":100,"price":33709.5,"side":"Buy","symbol":"XBTUSD"},{"clOrdID":"MCST1","orderID":"","orderQty":50,"price":33710,"side":"Sell","symbol":"XBTUSD"}])";
     auto newOrders = om.orderApi->order_newBulk(orders).then(
@@ -94,7 +62,7 @@ TEST(OrderApi, DISABLED_order_newBulk) {
 
 TEST(OrderApi, order_newBulk_throws_ApiException) {
 
-    OrderManager om {};
+    ApiManager om {};
 
     model::Order order1 {};
     order1.setOrderQty(100);

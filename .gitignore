@@ -1,4 +1,5 @@
 .idea/
+.gdb_history
 cmake-build-*/
 *.csv
 build/

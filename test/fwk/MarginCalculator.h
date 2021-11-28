@@ -7,6 +7,7 @@
 #include <memory>
 #include <string>
 
+#define _TURN_OFF_PLATFORM_STRING
 #include <model/Position.h>
 #include <model/Quote.h>
 #include <model/Funding.h>

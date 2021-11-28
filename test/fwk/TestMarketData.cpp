@@ -31,6 +31,11 @@ void TestMarketData::operator<<(const std::string &marketDataString) {
         handleQuotes(qts, "insert");
         std::lock_guard<decltype(MarketDataInterface::_mutex)> lock(MarketDataInterface::_mutex);
         set_time(quote, _time);
+    } else if (type == "MARGIN") {
+        auto margin = fromJson<model::Margin>(json);
+        std::vector<decltype(margin)> mgns = {margin};
+        handleMargin(mgns, "insert");
+        std::lock_guard<decltype(MarketDataInterface::_mutex)> lock(MarketDataInterface::_mutex);
     } else if (type == "TRADE") {
         auto trade = fromJson<model::Trade>(json);
         std::vector<decltype(trade)> trades = {trade};

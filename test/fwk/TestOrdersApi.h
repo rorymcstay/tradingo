@@ -8,16 +8,17 @@
 
 #include <gtest/gtest.h>
 #include <boost/optional.hpp>
+
 #define _TURN_OFF_PLATFORM_STRING
 #include <model/Order.h>
+#include <model/Margin.h>
 #include <Object.h>
 #include <ApiClient.h>
 #include <model/Position.h>
-#include <BatchWriter.h>
-
-#include "Config.h"
 
 // src
+#include "BatchWriter.h"
+#include "Config.h"
 #include "Utils.h"
 
 // test/fwk

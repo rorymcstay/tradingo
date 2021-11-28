@@ -14,8 +14,14 @@ replay_tradingo_on() {
         return 1
     fi
     mkdir -p "$TICK_STORAGE/$DATESTR"
-    aws s3 cp "s3://$BUCKET_NAME/tickRecorder/storage/$1/quotes_$SYMBOL.json" "$TICK_STORAGE/$DATESTR/"
-    aws s3 cp "s3://$BUCKET_NAME/tickRecorder/storage/$1/trades_$SYMBOL.json" "$TICK_STORAGE/$DATESTR/"
+    tick_location="$TICK_STORAGE/$DATESTR/"
+
+    if [[ ! -f $tick_location/quotes_$SYMBOL.json ]]; then
+        aws s3 cp "s3://$BUCKET_NAME/tickRecorder/storage/$1/quotes_$SYMBOL.json" $tick_location
+    fi
+    if [[ !-f $tick_location/trades_$SYMBOL.json ]]; then
+        aws s3 cp "s3://$BUCKET_NAME/tickRecorder/storage/$1/trades_$SYMBOL.json" $tick_location
+    fi
 
     config_file=$REPLAY_STORAGE/$RUN_ID/tradingo.cfg
     echo "config_file="$config_file
@@ -28,6 +34,7 @@ replay_tradingo_on() {
     echo "" >> $config_file
     TICK_STORAGE=$TICK_STORAGE \
     DATESTR=$DATESTR \
+    LIB_NAME_PREFIX="test" \
     REALTIME=${REALTIME:-false} \
     INSTALL_LOCATION=$INSTALL_LOCATION \
         envsubst < $INSTALL_LOCATION/etc/config/replayTradingo.cfg  \

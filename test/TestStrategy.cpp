@@ -137,7 +137,7 @@ TEST(Strategy, balance_is_updated_during_test) {
     strategy->placeAllocations();
     env >> "ORDER_NEW price=10 orderQty=100 symbol=XBTUSD  side=Buy orderID=1" LN;
     env >> "NONE" LN;
-    env << "EXECUTION side=Buy lastPx=9.99 lastQty=100 clOrdID=1" LN;
+    env << "EXECUTION side=Buy lastPx=9.99 lastQty=100 clOrdID=1 execType=Trade" LN;
     auto position = env.strategy()->getMD()->getPositions().at("XBTUSD");
     ASSERT_EQ(position->getCurrentCost(), 9.9);
     ASSERT_EQ(position->getCurrentQty(), 100);
