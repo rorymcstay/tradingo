@@ -186,7 +186,6 @@ void Strategy<TOrdApi, TPositionApi>::init(const std::shared_ptr<Config>& config
  
     double initialLeverage = std::atof(_config->get("initialLeverage", "10.0").c_str());
     _positionApi->position_updateLeverage(_symbol, initialLeverage); 
-
 }
 
 template<typename TOrdApi, typename TPositionApi>
@@ -299,6 +298,14 @@ void Strategy<TOrdApi, TPositionApi>::placeAllocations() {
     }
     // and then amends
     if (!_amends.empty()) {
+        for (auto order : _amends) {
+            _orderEngine->order_amend(
+                order->getClOrdID(),
+                boost::none,
+
+
+                )
+        }
         try {
             auto task = _orderEngine->order_amendBulk(jsList.serialize()).then(
                 [this, &_amends](const pplx::task<std::vector<std::shared_ptr<model::Order>>>& orders_) {
@@ -329,6 +336,7 @@ void Strategy<TOrdApi, TPositionApi>::placeAllocations() {
         } catch (api::ApiException &ex_) {
             LOGERROR("Error placing new orders " << ex_.getContent()->rdbuf() << LOG_VAR(ex_.what()));
             _allocations->cancel([](const std::shared_ptr<Allocation>& alloc_) { return alloc_->isNew() || alloc_->isChangingSide(); });
+
         }
     }
 

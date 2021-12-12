@@ -184,6 +184,7 @@ void TestEnv::playback(const std::string& tradeFile_, const std::string& quoteFi
                 auto position = md->getPositions().at(symbol);
                 auto liqPrice = position->getLiquidationPrice();
                 auto qty = position->getCurrentQty();
+
                 auto margin = md->getMargin();
                 auto markPrice = mc->getMarkPrice();
 
