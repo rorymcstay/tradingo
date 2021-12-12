@@ -10,5 +10,4 @@ Type=simple
 User=root
 Group=root
 WorkingDirectory=/home/rory
-Restart=on-failure
-
+Restart=always

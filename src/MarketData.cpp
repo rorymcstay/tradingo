@@ -303,7 +303,7 @@ void MarketDataInterface::handleInstruments(
         if (action_ == "update" and _instruments.find(symbol) != _instruments.end()) {
             auto update_json = instrument->toJson();
             _instruments[symbol]->fromJson(update_json);
-        } else if (action_ == "insert" or action_ == "update") {
+        } else if (action_ == "insert" or action_ == "update" or action_=="partial") {
             _instruments[symbol] = instrument;
         } else if (action_ == "delete") {
             _instruments.erase(symbol);
