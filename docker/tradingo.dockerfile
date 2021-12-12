@@ -95,7 +95,8 @@ RUN adduser \
     --ingroup "$USER" \
     --no-create-home \
     --uid "$UID" \
-    "$USER"
+    "$USER" \
+    \
 
 ARG install_base=/usr/from-src/
 COPY --from=builder ${install_base}/cpprest/lib /usr/local/lib

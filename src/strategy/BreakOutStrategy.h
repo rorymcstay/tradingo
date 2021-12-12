@@ -27,7 +27,8 @@ class BreakOutStrategy final : public Strategy<TORDApi> {
 
 public:
     ~BreakOutStrategy();
-    BreakOutStrategy(std::shared_ptr<MarketDataInterface> mdPtr_,  std::shared_ptr<TORDApi> od_);
+    BreakOutStrategy(std::shared_ptr<MarketDataInterface> mdPtr_,  std::shared_ptr<TORDApi> od_,
+                     std::shared_ptr<InstrumentService> instSvc_);
 private:
     void onExecution(const std::shared_ptr<Event>& event_) override;
     void onTrade(const std::shared_ptr<Event>& event_) override;
@@ -133,8 +134,9 @@ BreakOutStrategy<TORDApi>::~BreakOutStrategy() {
 }
 
 template<typename TORDApi>
-BreakOutStrategy<TORDApi>::BreakOutStrategy(std::shared_ptr<MarketDataInterface> mdPtr_,  std::shared_ptr<TORDApi> od_)
-:   StrategyApi(mdPtr_, od_)
+BreakOutStrategy<TORDApi>::BreakOutStrategy(std::shared_ptr<MarketDataInterface> mdPtr_,  std::shared_ptr<TORDApi> od_,
+                                            std::shared_ptr<InstrumentService> instSvc_)
+:   StrategyApi(mdPtr_, od_, instSvc_)
 ,   _longExpose()
 ,   _shortExpose()
 ,   _previousDirection(""){

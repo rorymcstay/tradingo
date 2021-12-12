@@ -4,11 +4,19 @@
 // src
 #include "Config.h"
 #include "MarketData.h"
+#include "Context.h"
+#include "fwk/TestMarketData.h"
 
 // CppRestSwaggerClient
 #include "api/OrderApi.h"
 
+#include "fwk/TestEnv.h"
+
 using namespace io::swagger::client;
+
+auto ORDER_PRICE = 47000;
+auto ORDER_QTY = 100;
+auto SIDE = "Buy";
 
 struct OrderManager {
     std::shared_ptr<api::OrderApi> orderApi;
@@ -44,6 +52,29 @@ struct OrderManager {
     }
 
 };
+
+TEST(TestStrategyInterface, DISABLED_smoke_test) {
+    auto config = std::make_shared<Config>();
+    config->set("apiKey", "-rqipjFxM43WSRKdC8keq83K");
+    config->set("apiSecret", "uaCYIiwpwpXNKuVGCBPWE3ThzvyhOzKs6F9mWFzc9LueG3yd");
+    config->set("symbol", "XBTUSD");
+    config->set("baseUrl", "https://testnet.bitmex.com/api/v1/");
+    config->set("connectionString", "wss://testnet.bitmex.com");
+    INSERT_DEFAULT_ARGS(config);
+    auto context = std::make_shared<Context<TestMarketData, api::OrderApi>>(config);
+    context->initStrategy();
+    context->strategy()->allocations()->addAllocation(ORDER_PRICE, ORDER_QTY);
+    context->strategy()->allocations()->addAllocation(ORDER_PRICE, ORDER_QTY);
+    context->strategy()->placeAllocations();
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+    // results in an amend
+    context->strategy()->allocations()->addAllocation(ORDER_PRICE, 2*ORDER_QTY);
+    context->strategy()->placeAllocations();
+    // this loops over every price level, need to keep an 'occupied' index to loop over which are indices of the price
+    // level vector. also provide a default to cancel all orders rather than passing an always true predicate.
+    context->strategy()->allocations()->cancelOrders([](const std::shared_ptr<Allocation>& alloc_) { return true; } /* all */);
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+}
 
 TEST(OrderApi, DISABLED_order_newBulk) {
 
@@ -95,8 +126,5 @@ TEST(OrderApi, order_newBulk_throws_ApiException) {
     } catch (web::http::http_exception ex_) {
         LOGINFO("Httpexception!");
     }
-
-
-
     LOGINFO(LOG_VAR(res));
 }

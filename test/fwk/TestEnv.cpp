@@ -126,10 +126,14 @@ void TestEnv::playback(const std::string& tradeFile_, const std::string& quoteFi
     auto printer = [](const std::shared_ptr<model::ModelBase>& order_) {
         return order_->toJson().serialize();
     };
-    auto batchWriter = TestOrdersApi::Writer("replay_orders", _context->config()->get("symbol"),
-                                             _context->config()->get("storage"), 5, printer);
-    auto positionWriter = TestOrdersApi::Writer("replay_positions", _context->config()->get("symbol"),
-                                                _context->config()->get("storage"), 5, printer);
+    auto batchWriter = TestOrdersApi::Writer("replay_orders",
+                                             _context->config()->get("symbol"),
+                                             _context->config()->get("storage"), 5,
+                                             printer, /*rotate=*/false);
+    auto positionWriter = TestOrdersApi::Writer("replay_positions",
+                                                _context->config()->get("symbol"),
+                                                _context->config()->get("storage"), 5,
+                                                printer, /*rotate=*/false);
     _lastDispatch.mkt_time = quote->getTimestamp();
     while (not stop) {
         if (!hasTrades or trade->getTimestamp() >= quote->getTimestamp()) {
@@ -196,10 +200,19 @@ void TestEnv::init() {
     if (_config->get("logLevel", "").empty())
         _config->set("logLevel", "debug");
     _config->set("cloidSeed", "0");
+    auto tickSize = std::atof(_config->get("tickSize", "0.5").c_str());
+    auto referencePrice = std::atof(_config->get("referencePrice").c_str());
+    auto lotSize = std::atof(_config->get("lotSize", "100").c_str());
+    auto instSvc = std::shared_ptr<InstrumentService>(nullptr);
     _context = std::make_shared<Context<TestMarketData, OrderApi>>(_config);
+    auto instrument = std::make_shared<model::Instrument>();
+    instrument->setSymbol(_config->get("symbol"));
+    instrument->setPrevPrice24h(referencePrice);
+    instrument->setTickSize(tickSize);
+    instrument->setLotSize(lotSize);
+    _context->instrumentService()->add(instrument);
     _context->init();
     _context->initStrategy();
-
     _position->setSymbol(_config->get("symbol"));
     _context->orderApi()->setPosition(_position);
     _context->marketData()->addPosition(_position);

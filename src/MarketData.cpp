@@ -10,6 +10,9 @@
 
 #include <auth_helpers.h>
 
+#include <utility>
+#include "Functional.h"
+#include "InstrumentService.h"
 
 
 std::string MarketData::getConnectionUri() {
@@ -37,8 +40,8 @@ MarketData::~MarketData() {
 
 
 
-MarketData::MarketData(const std::shared_ptr<Config>& config_)
-:   MarketDataInterface(config_)
+MarketData::MarketData(const std::shared_ptr<Config>& config_, std::shared_ptr<InstrumentService> instrumentSvc_)
+:   MarketDataInterface(config_, instrumentSvc_)
 ,   _connectionString(config_->get("connectionString"))
 ,   _apiKey(config_->get("apiKey", "NO_AUTH"))
 ,   _apiSecret(config_->get("apiSecret", "NO_AUTH"))
@@ -57,19 +60,8 @@ MarketData::MarketData(const std::shared_ptr<Config>& config_)
 /// initialise heartbeat, callback method
 void MarketData::init() {
 
-    _heartBeat = std::make_shared<HeartBeat>(_wsClient);
 
-    // get instrument
-#define SEVENNULL boost::none,boost::none,boost::none,boost::none,boost::none,boost::none,boost::none
-    auto instTask = _instrumentApi->instrument_get(_symbol, SEVENNULL).then(
-            [this](pplx::task<std::vector<std::shared_ptr<model::Instrument>>> instr_) {
-                try {
-                    LOGINFO("Instrument: " << instr_.get()[0]->toJson().serialize());
-                    _instrument = instr_.get()[0];
-                } catch (std::exception &ex) {
-                    LOGINFO("Http exception raised " << LOG_VAR(ex.what()));
-                }
-            });
+    _heartBeat = std::make_shared<HeartBeat>(_wsClient);
 
     // initialise callback
     _wsClient->set_message_handler(
@@ -205,10 +197,6 @@ void MarketData::reconnect() {
     subscribe();
 }
 
-void MarketDataInterface::setInstrumentApi(const std::shared_ptr<api::InstrumentApi> &instrumentApi) {
-    _instrumentApi = instrumentApi;
-}
-
 template<typename T>
 void MarketDataInterface::update(const std::vector<std::shared_ptr<T>> &data_) {
     for (const auto& row : data_) {
@@ -330,15 +318,19 @@ const std::shared_ptr<model::Quote> MarketDataInterface::quote() const {
     return _quote;
 }
 
-const std::shared_ptr<model::Instrument>& MarketDataInterface::instrument() const {
+const model::Instrument& MarketDataInterface::instrument() const {
     return _instrument;
 }
 
 
-MarketDataInterface::MarketDataInterface(const std::shared_ptr<Config>& config_)
-:   _instrumentApi(nullptr)
+MarketDataInterface::MarketDataInterface(const std::shared_ptr<Config>& config_,
+                                         std::shared_ptr<InstrumentService>  instSvc_)
+:   _instSvc(std::move(instSvc_))
 ,   _symbol(config_->get("symbol"))
-,   _callback([]() {}){
+,   _instrument()
+,   _callback([]() {}) {
+
+
 }
 
 void MarketDataInterface::setCallback(const std::function<void()> &callback) {

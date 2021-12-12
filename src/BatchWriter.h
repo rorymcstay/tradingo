@@ -32,13 +32,18 @@ class BatchWriter
     std::string _symbol;
     std::string _storage;
     std::string _fileLocation;
+    bool        _rotate;
     std::function<std::string(const Item&)> _print;
 
     void update_file_location();
 
 public:
-    BatchWriter(std::string tableName_, std::string symbol_, std::string storage_, int batchSize_,
-                std::function<std::string(const Item&)> print_);
+    BatchWriter(std::string tableName_,
+                std::string symbol_,
+                std::string storage_,
+                int batchSize_,
+                std::function<std::string(const Item&)> print_,
+                bool rotate_);
     void write(Item item_);
     void write_batch();
     const std::string& location() { return _fileLocation; }
@@ -60,7 +65,12 @@ void BatchWriter<T>::update_file_location() {
 }
 
 template<typename T>
-BatchWriter<T>::BatchWriter(std::string tableName_, std::string symbol_, std::string storage_, int batchSize_, std::function<std::string(const T&)> print_)
+BatchWriter<T>::BatchWriter(std::string tableName_,
+                            std::string symbol_,
+                            std::string storage_,
+                            int batchSize_,
+                            std::function<std::string(const T&)> print_,
+                            bool rotate_)
         :   _batchSize(batchSize_)
         ,   _filehandle()
         ,   _batch()
@@ -70,8 +80,10 @@ BatchWriter<T>::BatchWriter(std::string tableName_, std::string symbol_, std::st
         ,   _storage(std::move(storage_))
         ,   _fileLocation(_storage + "/" +_dateString + "/" + _tableName + "_"+ _symbol +".json")
         ,   _print(print_)
+        ,   _rotate(rotate_)
 {
     _batch.reserve(_batchSize);
+    update_file_location();
     _filehandle.open(_fileLocation, std::ios::app);
     _filehandle << '\n';
     _filehandle.close();
@@ -93,7 +105,8 @@ void BatchWriter<T>::write_batch() {
     }
     _filehandle.close();
     _batch.clear();
-    update_file_location();
+    if (_rotate)
+        update_file_location();
 }
 
 

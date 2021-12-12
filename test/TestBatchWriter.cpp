@@ -18,7 +18,7 @@ TEST(BatchWriter, Order_smoke_test) {
         return order_->toJson().serialize();
     };
     auto batchWriter = BatchWriter<std::shared_ptr<model::Order>>(
-         "quotes", "XBTUSD", storage.name(), 5, printer);
+         "quotes", "XBTUSD", storage.name(), 5, printer, false);
     std::string toWrite = R"({"clOrdID":"MCST8","cumQty":0,"leavesQty":900,"ordStatus":"Replaced","orderID":"","orderQty":900,"origClOrdID":"MCST7","price":42780.5,"side":"Sell","symbol":"XBTUSD","timestamp":"2021-08-07T00:29:49.762Z"})";
     auto inserted = 0;
     for (int i(0); i < 5; i++) {
@@ -34,6 +34,8 @@ TEST(BatchWriter, Order_smoke_test) {
     fileToCheck.open(batchWriter.location());
     std::string line;
     auto count = 0;
+    std::getline(fileToCheck, line);
+    ASSERT_EQ(line, "");
     while (std::getline(fileToCheck, line)) {
         count++;
         ASSERT_EQ(line, toWrite);

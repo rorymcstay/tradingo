@@ -26,6 +26,7 @@
 #include "HeartBeat.h"
 #include "Allocation.h"
 #include "api/InstrumentApi.h"
+#include "InstrumentService.h"
 //#include "Signal.h"
 
 
@@ -132,6 +133,10 @@ using namespace io::swagger::client;
 
 
 class MarketDataInterface {
+    /// market data interface is a queue ontop of bitmex websocket.
+    /// it has a read method and upto date attributes of the market
+    /// status. consecutive events are read of the queue with the
+    /// read method.
 
 public:
     using OrderPtr = std::shared_ptr<model::Order>;
@@ -142,16 +147,20 @@ public:
 
     std::function<void()> _callback;
 
-        void setCallback(const std::function<void()> &callback);
+    /// callback may be added which is evaluated on every update.
+    void setCallback(const std::function<void()> &callback);
 
 private:
+    /// the event queue - trade execution or quote.
     std::priority_queue<std::shared_ptr<Event>, std::vector<std::shared_ptr<Event>>, QueueArrange> _eventBuffer;
     //std::unordered_map<std::string, std::shared_ptr<Signal>> _timed_signals;
+
 private:
+    /// update the signals for event
     void updateSignals(const std::shared_ptr<Event>& event_);
 public:
+    /// initialise the signals
     void initSignals(const std::string& cfg_);
-    void setInstrumentApi(const std::shared_ptr<api::InstrumentApi> &instrumentApi);
 
 protected:
     std::mutex _mutex;
@@ -159,6 +168,7 @@ protected:
     std::vector<std::string> _orderKey;
     std::string _symbol;
 
+    /// TODO Fix or remove object pools.
     cache::ObjectPool<model::Trade, 1, TradeReleaser> _tradePool;
     cache::ObjectPool<model::Quote, 1, QuoteReleaser> _quotePool;
     cache::ObjectPool<model::Position, 1, PositionReleaser> _positionPool;
@@ -169,20 +179,31 @@ protected:
     std::unordered_map<std::string, std::shared_ptr<model::Position>> _positions;
     std::unordered_map<std::string, std::shared_ptr<model::Order>> _orders;
     std::shared_ptr<model::Quote> _quote;
-    std::shared_ptr<model::Instrument> _instrument;
-    std::shared_ptr<api::InstrumentApi> _instrumentApi;
+    model::Instrument _instrument;
+    std::shared_ptr<InstrumentService> _instSvc;
 
+    /// handle quote update after data is read from socket.
     void handleQuotes(const std::vector<std::shared_ptr<model::Quote>>& quotes_, const std::string& action_);
+    /// handle trade update after data is read from socket.
     void handleTrades(std::vector<std::shared_ptr<model::Trade>>& trades_, const std::string& action_);
+    /// handle positon update after data is read from socket.
     void handlePositions(std::vector<std::shared_ptr<model::Position>>& trades_, const std::string& action_);
+    /// handle execution update after data is read from socket.
     void handleExecutions(std::vector<std::shared_ptr<model::Execution>>& execs_, const std::string& action_);
+    /// handle order update after data is read from socket.
     void handleOrders(std::vector<std::shared_ptr<model::Order>>& orders_, const std::string& action_);
+    /// evaluate callback linked to self. i.e signals
     void callback() {
         _callback();
+    }
+    /// load the instrument static data from instrument service.
+    void init() {
+        _instrument = _instSvc->get(_symbol);
     }
 
 protected:
     template<typename T>
+    /// specific update handlers, ie. delete
     void update(const std::vector<std::shared_ptr<T>>& data_);
     void updatePositions(const std::vector<std::shared_ptr<model::Position>>& positions_);
     void insertPositions(const std::vector<std::shared_ptr<model::Position>>& positions_);
@@ -196,14 +217,20 @@ protected:
 
 public:
     ~MarketDataInterface() = default;
-    explicit MarketDataInterface(const std::shared_ptr<Config>& config_);
+    MarketDataInterface(const std::shared_ptr<Config>& config_, std::shared_ptr<InstrumentService>  insSvc_);
     MarketDataInterface();
+    /// get the next event.
     std::shared_ptr<Event> read();
+    /// current open orders.
     const std::unordered_map<std::string, OrderPtr>& getOrders() const;
+    /// latest executions.
     const std::queue<ExecPtr>& getExecutions() const;
+    /// get current positions.
     const std::unordered_map<std::string, PositionPtr>& getPositions() const;
+    /// get current quote.
     const std::shared_ptr<model::Quote> quote() const;
-    const std::shared_ptr<model::Instrument>& instrument() const;
+    /// get instrument static.
+    const model::Instrument& instrument() const;
 
 };
 
@@ -212,6 +239,7 @@ using namespace io::swagger::client;
 class MarketData
 :   public MarketDataInterface
 {
+    /// Wrapper bitmex websocket.
     std::string _connectionString;
     std::shared_ptr<ws::client::websocket_callback_client> _wsClient;
 
@@ -233,11 +261,12 @@ public:
     void subscribe();
     void reconnect();
 
-    explicit MarketData(const std::shared_ptr<Config>& config_);
+    MarketData(const std::shared_ptr<Config>& config_, std::shared_ptr<InstrumentService>);
 
     ~MarketData();
 
     void init();
+
 };
 
 #endif //TRADING_BOT_MARKETDATA_H

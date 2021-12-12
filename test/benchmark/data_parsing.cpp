@@ -24,7 +24,7 @@ static void BM_read_quotes_json(benchmark::State& state) {
     ) config->set(kvp.first, kvp.second);
 
     std::ifstream quoteFile;
-    auto marketdata = std::make_shared<TestMarketData>(config);
+    auto marketdata = std::make_shared<TestMarketData>(config, nullptr);
     auto signal = std::make_shared<MovingAverageCrossOver>(1000, 8000);
     signal->init(config, marketdata);
     marketdata->setCallback([&](){ signal->update(); });
