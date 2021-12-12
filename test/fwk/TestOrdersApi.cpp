@@ -4,11 +4,14 @@
 #include "TestOrdersApi.h"
 
 #include <stdexcept>
+#include <utility>
 
 #define _TURN_OFF_PLATFORM_STRING
 #include <Object.h>
 #include <Allocation.h>
 #include <model/Margin.h>
+
+#include "Utils.h"
 
 
 TestOrdersApi::TestOrdersApi(std::shared_ptr<io::swagger::client::api::ApiClient> ptr)
@@ -23,51 +26,42 @@ TestOrdersApi::TestOrdersApi(std::shared_ptr<io::swagger::client::api::ApiClient
 }
 
 pplx::task<std::shared_ptr<model::Order>>
-TestOrdersApi::order_amend(boost::optional<utility::string_t> orderID, boost::optional<utility::string_t> origClOrdID,
-                           boost::optional<utility::string_t> clOrdID, boost::optional<double> simpleOrderQty,
-                           boost::optional<double> orderQty, boost::optional<double> simpleLeavesQty,
-                           boost::optional<double> leavesQty, boost::optional<double> price,
-                           boost::optional<double> stopPx, boost::optional<double> pegOffsetValue,
+TestOrdersApi::order_amend(boost::optional<utility::string_t> orderID,
+                           boost::optional<utility::string_t> origClOrdID,
+                           boost::optional<utility::string_t> clOrdID,
+                           boost::optional<double> simpleOrderQty,
+                           boost::optional<double> orderQty,
+                           boost::optional<double> simpleLeavesQty,
+                           boost::optional<double> leavesQty,
+                           boost::optional<double> price,
+                           boost::optional<double> stopPx,
+                           boost::optional<double> pegOffsetValue,
                            boost::optional<utility::string_t> text) {
     auto order = std::make_shared<model::Order>();
-    order->setClOrdID(origClOrdID.value());
-    order->setOrderQty(simpleOrderQty.value());
-    order->setPrice(price.value());
-    order->setStopPx(stopPx.value());
+    order->setOrdStatus("PendingNew");
+    order->setClOrdID(clOrdID.value());
+    order->setOrigClOrdID(origClOrdID.value());
+    order->setLeavesQty(orderQty.value());
+    if (orderID.has_value())
+        order->setOrderID(orderID.value());
+    if (price.has_value())
+        order->setPrice(price.value());
+    if (stopPx.has_value())
+        order->setStopPx(stopPx.value());
+    if (pegOffsetValue.has_value())
+        order->setPegOffsetValue(pegOffsetValue.value());
+    if (text.has_value())
+        order->setText(text.value());
+    auto origOrder = checkOrderExists(order);
+    checkValidAmend(order, origOrder);
+    amend_order(order, origOrder);
     set_order_timestamp(order);
     order->setOrdStatus("Replaced");
-    set_order_timestamp(order);
     _orderAmends.emplace(order);
-    auto task = pplx::task_from_result(order);
-    //auto task = pplx::task<decltype(order)>(order);
     _allEvents.push(order);
-    return task;
+    return pplx::task_from_result(order);
 }
 
-pplx::task<std::vector<std::shared_ptr<model::Order>>>
-TestOrdersApi::order_amendBulk(boost::optional<utility::string_t> orders) {
-
-    auto outOrders = std::vector<std::shared_ptr<model::Order>>();
-    auto json = web::json::value::parse(orders.value()).as_array();
-    for (auto& ordJson : json) {
-        auto order = std::make_shared<model::Order>();
-        order->fromJson(ordJson);
-        auto origOrder = checkOrderExists(order);
-        // checkValidAmend(order);
-        order->setLeavesQty(order->getOrderQty() - origOrder->getCumQty());
-        order->setCumQty(origOrder->getCumQty());
-        _orders[order->getClOrdID()] = order;
-        set_order_timestamp(order);
-        _orders.erase(order->getOrigClOrdID());
-        validateOrder(order);
-        order->setOrdStatus("Replaced");
-        _allEvents.push(order);
-        _orderAmends.emplace(order);
-        outOrders.push_back(order);
-    }
-    auto tsk = pplx::task_from_result(outOrders);
-    return tsk;
-}
 
 pplx::task<std::vector<std::shared_ptr<model::Order>>>
 TestOrdersApi::order_cancel(boost::optional<utility::string_t> orderID,
@@ -77,13 +71,14 @@ TestOrdersApi::order_cancel(boost::optional<utility::string_t> orderID,
 
     if (_orders.find(clOrdID.value()) == _orders.end()) {
         LOGWARN(LOG_NVP("ClOrdID",clOrdID.value()) << " not found to cancel.");
-        _orderCancels.push(nullptr);
+        std::stringstream str;
+        auto content = std::make_shared<std::istringstream>(R"({"clOrdID": ")" + clOrdID.value() +  R"(" })");
+        throw api::ApiException(404, "Order not found to cancel", content);
     } else {
         _orders[clOrdID.value()]->setOrdStatus("Canceled");
         _orders[clOrdID.value()]->setOrderQty(0.0);
         _orders[clOrdID.value()]->setLeavesQty(0.0);
         set_order_timestamp(_orders[clOrdID.value()]);
-        //validateOrder(_orders[orderID.value()]);
         ordersRet.push_back(_orders[clOrdID.value()]);
         _orderCancels.push(_orders[clOrdID.value()]);
         _allEvents.push(_orders[clOrdID.value()]);
@@ -130,50 +125,53 @@ TestOrdersApi::order_getOrders(boost::optional<utility::string_t> symbol, boost:
 }
 
 pplx::task<std::shared_ptr<model::Order>>
-TestOrdersApi::order_new(utility::string_t symbol, boost::optional<utility::string_t> side,
-                         boost::optional<double> simpleOrderQty, boost::optional<double> orderQty,
-                         boost::optional<double> price, boost::optional<double> displayQty,
-                         boost::optional<double> stopPx, boost::optional<utility::string_t> clOrdID,
-                         boost::optional<utility::string_t> clOrdLinkID, boost::optional<double> pegOffsetValue,
-                         boost::optional<utility::string_t> pegPriceType, boost::optional<utility::string_t> ordType,
-                         boost::optional<utility::string_t> timeInForce, boost::optional<utility::string_t> execInst,
-                         boost::optional<utility::string_t> contingencyType, boost::optional<utility::string_t> text) {
+TestOrdersApi::order_new(utility::string_t symbol,
+                         boost::optional<utility::string_t> side,
+                         boost::optional<double> simpleOrderQty,
+                         boost::optional<double> orderQty,
+                         boost::optional<double> price,
+                         boost::optional<double> displayQty,
+                         boost::optional<double> stopPx,
+                         boost::optional<utility::string_t> clOrdID,
+                         boost::optional<utility::string_t> clOrdLinkID,
+                         boost::optional<double> pegOffsetValue,
+                         boost::optional<utility::string_t> pegPriceType,
+                         boost::optional<utility::string_t> ordType,
+                         boost::optional<utility::string_t> timeInForce,
+                         boost::optional<utility::string_t> execInst,
+                         boost::optional<utility::string_t> contingencyType,
+                         boost::optional<utility::string_t> text) {
     auto order = std::make_shared<model::Order>();
-    order->setOrdStatus("New");
-    if (side.has_value())
-        order->setSide(side.value());
+    order->setOrdStatus("PendingNew");
+    order->setSymbol(std::move(symbol));
+    order->setSide(side.value());
+
+    order->setClOrdID(clOrdID.value());
+    order->setLeavesQty(orderQty.value());
+    order->setPrice(price.value());
+    order->setOrdType(ordType.value());
+    order->setTimeInForce(timeInForce.value());
+    if (displayQty.has_value())
+        order->setDisplayQty(displayQty.value());
     if (stopPx.has_value())
         order->setStopPx(stopPx.value());
-    if (simpleOrderQty.has_value())
-        order->setOrderQty(simpleOrderQty.value());
-    if (price.has_value())
-        order->setPrice(price.value());
-    if (clOrdID.has_value()) {
-        order->setClOrdID(clOrdID.value());
-    }
-    add_order(order);
+    if (clOrdLinkID.has_value())
+        order->setClOrdLinkID(clOrdLinkID.value());
+    if (pegOffsetValue.has_value())
+        order->setPegOffsetValue(pegOffsetValue.value());
+    if (pegPriceType.has_value())
+        order->setPegPriceType(pegPriceType.value());
+    if (execInst.has_value())
+        order->setExecInst(execInst.value());
+    if (contingencyType.has_value())
+        order->setContingencyType(contingencyType.value());
+    if (text.has_value())
+        order->setText(text.value());
     validateOrder(order);
-
+    add_order(order);
     return pplx::task_from_result(order);
 }
 
-pplx::task<std::vector<std::shared_ptr<model::Order>>>
-TestOrdersApi::order_newBulk(boost::optional<utility::string_t> orders) {
-    auto outOrders = std::vector<std::shared_ptr<model::Order>>();
-    auto json = web::json::value::parse(orders.value()).as_array();
-    for (auto& ordJson : json) {
-        ordJson.as_object()["orderID"] = web::json::value::string(std::to_string(++_oidSeed));
-        auto order = std::make_shared<model::Order>();
-        order->setClOrdID(ordJson.at("clOrdID").as_string());
-        order->fromJson(ordJson);
-        add_order(order);
-        validateOrder(order);
-        /// TODO this is not atomic some orders will be placed?
-        outOrders.push_back(order);
-    }
-    auto tsk = pplx::task_from_result(outOrders);
-    return tsk;
-}
 
 #define CHECK_VAL(val1, val2)                                                                  \
     if (val1 != val2) {                                                                        \
@@ -280,26 +278,11 @@ std::shared_ptr<model::Order> TestOrdersApi::operator>>(const std::string &outEv
         CHECK_VAL(orderCancel->getSymbol(), expectedOrder->getSymbol());
         return orderCancel;
     }
-    failMessage << "Must specify event type - One of \"ORDER_NEW\", \"ORDER_AMEND\", \"ORDER_CANCEL\"";
+    failMessage << R"(Must specify event type - One of "ORDER_NEW", "ORDER_AMEND", "ORDER_CANCEL")";
     throw std::runtime_error(failMessage.str());
 }
 
-std::shared_ptr<model::Order> TestOrdersApi::checkOrderExists(const std::shared_ptr<model::Order> &order) {
-    // hack storing orders under both id's.
-    if (_orders.find(order->getClOrdID()) != _orders.end()
-        || _orders.find(order->getOrigClOrdID()) != _orders.end()) {
-        // is amend
-        return _orders.find(order->getClOrdID()) != _orders.end() ? _orders[order->getClOrdID()] : _orders[order->getOrigClOrdID()];
-    } else {
-        // reject amend request, fail test
-        std::stringstream str;
-        str << "Original order " << LOG_NVP("OrderID",order->getOrderID())
-            << LOG_NVP("ClOrdID", order->getClOrdID())
-            << LOG_NVP("OrigClOrdID", order->getOrigClOrdID()) << " not found.";
-        throw std::runtime_error(str.str());
-    }
 
-}
 
 void TestOrdersApi::add_order(const std::shared_ptr<model::Order> &order_) {
     _oidSeed++;
@@ -312,6 +295,26 @@ void TestOrdersApi::add_order(const std::shared_ptr<model::Order> &order_) {
     _newOrders.push(order_);
     _allEvents.push(order_);
 
+}
+
+
+void TestOrdersApi::amend_order(const std::shared_ptr<model::Order>& amendRequest_,
+                                const std::shared_ptr<model::Order>& originalOrder_
+                                ) {
+    originalOrder_->setOrdStatus(originalOrder_->getCumQty() > 0.0 ? "PartiallyFilled" : "New");
+    originalOrder_->setClOrdID(amendRequest_->getClOrdID());
+    originalOrder_->setOrigClOrdID(amendRequest_->getOrigClOrdID());
+    if (amendRequest_->priceIsSet()) {
+        originalOrder_->setPrice(amendRequest_->getPrice());
+    }
+    if (amendRequest_->leavesQtyIsSet()) {
+        auto qtyChange = amendRequest_->getLeavesQty() - originalOrder_->getLeavesQty();
+        originalOrder_->setOrderQty(originalOrder_->getOrderQty() + qtyChange);
+    }
+    _orders.erase(originalOrder_->getOrigClOrdID());
+    _orders[originalOrder_->getClOrdID()] = originalOrder_;
+    _orderAmends.push(amendRequest_);
+    _allEvents.push(amendRequest_);
 }
 
 void TestOrdersApi::operator>>(std::vector<std::shared_ptr<model::ModelBase>>& outVec) {
@@ -425,6 +428,25 @@ void TestOrdersApi::setMargin(const std::shared_ptr<model::Margin> &margin_) {
     _margin = margin_;
 }
 
+std::shared_ptr<model::Order> TestOrdersApi::checkOrderExists(const std::shared_ptr<model::Order> &order) {
+    // hack storing orders under both id's.
+    if (_orders.find(order->getClOrdID()) != _orders.end()
+        || _orders.find(order->getOrigClOrdID()) != _orders.end()) {
+        // is amend
+        return _orders.find(order->getClOrdID()) != _orders.end() ? _orders[order->getClOrdID()] : _orders[order->getOrigClOrdID()];
+    } else {
+        // reject amend request, fail test
+        std::stringstream str;
+        auto content = std::make_shared<std::istringstream>(order->toJson().serialize());
+        str << "Original order " << LOG_NVP("OrderID",order->getOrderID())
+            << LOG_NVP("ClOrdID", order->getClOrdID())
+            << LOG_NVP("OrigClOrdID", order->getOrigClOrdID()) << " not found.";
+        throw api::ApiException(404, str.str(), content);
+    }
+
+}
+
+
 /*
  * Check order is valid given current status of margin and that parameters are correct.
  */
@@ -455,15 +477,65 @@ bool TestOrdersApi::validateOrder(const std::shared_ptr<model::Order> &order_) {
     return true;
 }
 
+
+bool TestOrdersApi::checkValidAmend(std::shared_ptr<model::Order> requestedAmend,
+                                    std::shared_ptr<model::Order> originalOrder) {
+
+    if (requestedAmend->leavesQtyIsSet() and requestedAmend->orderQtyIsSet()) {
+        auto msg = requestedAmend->toJson().serialize();
+        auto content = std::make_shared<std::istringstream>(msg);
+        throw api::ApiException(
+            400, "Cannot specify both OrderQty and LeavesQty", content);
+    }
+    if ((requestedAmend->leavesQtyIsSet() || requestedAmend->orderQtyIsSet())
+         && requestedAmend->priceIsSet()) {
+        auto msg = requestedAmend->toJson().serialize();
+        auto content = std::make_shared<std::istringstream>(msg);
+        throw api::ApiException(
+            400, "Cannot specify both Qty and Price amend",
+            content);
+    }
+    if (requestedAmend->orderQtyIsSet()) {
+        throw std::runtime_error("Order amends via OrderQty not implemented.");
+    }
+    if (requestedAmend->leavesQtyIsSet() &&
+        requestedAmend->getLeavesQty() > originalOrder->getLeavesQty()) {
+        auto additionalCost = 1/(requestedAmend->getLeavesQty() - originalOrder->getLeavesQty()) * originalOrder->getPrice();
+        if (additionalCost > _margin->getWalletBalance()) {
+            auto msg = requestedAmend->toJson().serialize();
+            auto content = std::make_shared<std::istringstream>(msg);
+            throw api::ApiException(
+                400, "Insufficient funds available for amend.",
+                content);
+        }
+    } else if (requestedAmend->leavesQtyIsSet() &&
+               almost_equal(originalOrder->getLeavesQty(), 0.0)) {
+        // too late
+        auto msg = requestedAmend->toJson().serialize();
+        auto content = std::make_shared<std::istringstream>(msg);
+        throw api::ApiException(
+            400, "Insufficient funds available for amend.",
+            content);
+
+    } else if (requestedAmend->priceIsSet()) {
+    } else {
+        throw std::runtime_error("Couldn't determine amend action.");
+    }
+    return true;
+}
+
+
 void TestOrdersApi::init(std::shared_ptr<Config> config_) {
     _config = config_;
     _leverage = std::atof(_config->get("leverage", "10").c_str());
     _leverageType = _config->get("leverageType", "ISOLATED");
 }
 
+
 const std::shared_ptr<MarginCalculator>& TestOrdersApi::getMarginCalculator() const {
     return _marginCalculator;
 }
+
 
 void TestOrdersApi::setMarginCalculator(const std::shared_ptr<MarginCalculator>& marginCalculator) {
     _marginCalculator = marginCalculator;

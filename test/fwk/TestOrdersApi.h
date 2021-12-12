@@ -59,7 +59,12 @@ private:
 
     // functional helpers
     void add_order(const std::shared_ptr<model::Order>& order_);
+    void amend_order(const std::shared_ptr<model::Order>& amendRequest_,
+                     const std::shared_ptr<model::Order>& originalOrder_);
     bool validateOrder(const std::shared_ptr<model::Order>& order_);
+    std::shared_ptr<model::Order> checkOrderExists(const std::shared_ptr<model::Order>& order);
+    bool checkValidAmend(std::shared_ptr<model::Order> amendRequest,
+                         std::shared_ptr<model::Order> originalOrder);
 
     // API
 public:
@@ -79,10 +84,6 @@ public:
             boost::optional<double> stopPx,
             boost::optional<double> pegOffsetValue,
             boost::optional<utility::string_t> text
-    );
-
-    pplx::task<std::vector<std::shared_ptr<model::Order>>> order_amendBulk(
-            boost::optional<utility::string_t> orders
     );
 
     pplx::task<std::vector<std::shared_ptr<model::Order>>> order_cancel(
@@ -135,13 +136,9 @@ public:
             boost::optional<utility::string_t> text
     );
 
-    pplx::task<std::vector<std::shared_ptr<model::Order>>> order_newBulk(
-            boost::optional<utility::string_t> orders
-    );
-
     // Testing helpers
 private:
-    std::shared_ptr<model::Order> checkOrderExists(const std::shared_ptr<model::Order>& order);
+
     bool hasMatchingOrder(const std::shared_ptr<model::Trade>& trade_);
 public:
     void addExecToPosition(const std::shared_ptr<model::Execution>& exec_);
@@ -155,6 +152,8 @@ public:
     void operator << (const utility::datetime& time_);
 
     std::map<std::string, std::shared_ptr<model::Order>>& orders() { return _orders; }
+
+
 };
 
 

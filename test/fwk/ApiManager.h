@@ -50,6 +50,33 @@ struct ApiManager {
         return lis.serialize();
     }
 
+    void send_orders(const web::json::array& orders) {
+
+        for (auto order_json: orders) {
+            auto order = std::make_shared<model::Order>();
+            order_json.as_object();
+            order->fromJson(order_json);
+            orderApi
+                ->order_new(order->getSymbol(), order->getSide(),
+                            boost::none, // simpleOrderQty
+                            order->getOrderQty(), order->getPrice(),
+                            boost::none, // displayQty
+                            boost::none, // stopPx
+                            order->getClOrdID(),
+                            boost::none, // clOrdLinkId
+                            boost::none, // pegOffsetValue
+                            boost::none, // pegPriceType
+                            order->getOrdType(), order->getTimeInForce(),
+                            boost::none, // execInst
+                            boost::none, // contingencyType
+                            boost::none  // text
+                )
+                .then([](const pplx::task<std::shared_ptr<model::Order>>& order_) {
+                  std::cout << order_.get()->toJson().serialize() << '\n';
+                });
+        }
+    }
+
 };
 
 #endif

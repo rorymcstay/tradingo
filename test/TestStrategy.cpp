@@ -22,12 +22,12 @@ TEST(StrategyApi, smooke)
 
     auto strategy = env.strategy();
     strategy->allocations()->addAllocation(10, 100.0);
-    strategy->placeAllocations();
+    strategy->allocations()->placeAllocations();
     env >> "ORDER_NEW price=10 orderQty=100 symbol=XBTUSD  side=Buy orderID=1" LN;
     strategy->allocations()->addAllocation(11,100.0);
     strategy->allocations()->addAllocation(9,-100.0);
     strategy->allocations()->addAllocation(10,-100.0);
-    strategy->placeAllocations();
+    strategy->allocations()->placeAllocations();
     env >> "ORDER_NEW Price=9 OrderQty=100 CumQty=0 LeavesQty=100 OrderID=4 ClOrdID=MCST1 OrigClOrdID= OrdStatus=New Side=Sell symbol=XBTUSD" LN;
     env >> "ORDER_CANCEL Price=10 OrderQty=0 CumQty=0 LeavesQty=0 OrderID=6 ClOrdID=MCST3 OrigClOrdID= OrdStatus=New Side=Buy symbol=XBTUSD" LN;
     env >> "ORDER_NEW price=11 orderQty=100 side=Buy symbol=XBTUSD orderID=3 clOrdID=MCST3" LN;
@@ -46,10 +46,10 @@ TEST(Strategy, changing_sides) {
 
     auto strategy = env.strategy();
     strategy->allocations()->addAllocation(10, 100.0);
-    strategy->placeAllocations();
+    strategy->allocations()->placeAllocations();
     env >> "ORDER_NEW price=10 orderQty=100 symbol=XBTUSD  side=Buy orderID=1" LN;
     strategy->allocations()->addAllocation(10,-200);
-    strategy->placeAllocations();
+    strategy->allocations()->placeAllocations();
     env >> "ORDER_NEW Price=10 OrderQty=100 CumQty=0 LeavesQty=100 OrderID=4 ClOrdID=MCST1 OrigClOrdID= OrdStatus=New Side=Sell Symbol=XBTUSD" LN;
     env >> "ORDER_CANCEL Price=10 OrderQty=0 CumQty=0 LeavesQty=0 OrderID=2 ClOrdID=MCST0 OrigClOrdID= OrdStatus=Canceled Side=Buy Symbol=XBTUSD" LN;
     env >> "NONE" LN;
@@ -68,16 +68,16 @@ TEST(Strategy, amend_order_more_than_once)
 
     auto strategy = env.strategy();
     strategy->allocations()->addAllocation(10, 100.0);
-    strategy->placeAllocations();
+    strategy->allocations()->placeAllocations();
     env >> "ORDER_NEW price=10 orderQty=100 symbol=XBTUSD  side=Buy orderID=1 clOrdID=MCST0" LN;
     strategy->allocations()->addAllocation(10,100);
-    strategy->placeAllocations();
+    strategy->allocations()->placeAllocations();
     env >> "ORDER_AMEND price=10 orderQty=200 symbol=XBTUSD  side=Buy clOrdID=MCST1" LN;
     strategy->allocations()->addAllocation(10,100);
-    strategy->placeAllocations();
+    strategy->allocations()->placeAllocations();
     env >> "ORDER_AMEND price=10 orderQty=300 symbol=XBTUSD  side=Buy clOrdID=MCST2" LN;
     strategy->allocations()->addAllocation(10,100);
-    strategy->placeAllocations();
+    strategy->allocations()->placeAllocations();
     env >> "ORDER_AMEND price=10 orderQty=400 symbol=XBTUSD  side=Buy clOrdID=MCST3" LN;
 }
 
@@ -134,7 +134,7 @@ TEST(Strategy, balance_is_updated_during_test) {
 
     auto strategy = env.strategy();
     strategy->allocations()->addAllocation(10, 100.0);
-    strategy->placeAllocations();
+    strategy->allocations()->placeAllocations();
     env >> "ORDER_NEW price=10 orderQty=100 symbol=XBTUSD  side=Buy orderID=1" LN;
     env >> "NONE" LN;
     env << "EXECUTION side=Buy lastPx=9.99 lastQty=100 clOrdID=1 execType=Trade" LN;
