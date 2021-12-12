@@ -282,6 +282,7 @@ void Allocations<TOrdApi>::placeAllocations() {
                 allocation->cancelDelta();
             }
             try {
+                order->setSymbol(_symbol);
                 auto task = _orderApi->order_new(
                     order->getSymbol(),
                     order->getSide(),
@@ -378,6 +379,7 @@ void Allocations<TOrdApi>::placeAllocations() {
                               + "_v"
                               + std::to_string(allocation->getVersion()));
             try {
+                order->setSymbol(_symbol);
                 _orderApi->order_new(
                     order->getSymbol(),
                     order->getSide(),

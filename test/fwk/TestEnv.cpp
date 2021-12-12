@@ -175,7 +175,7 @@ void TestEnv::playback(const std::string& tradeFile_, const std::string& quoteFi
             auto time = quote->getTimestamp();
             // QUOTE
             // TODO: env << "EXEC Price=..."
-            dispatch(time, quote, nullptr, nullptr);
+            dispatch(time, quote, nullptr, nullptr, nullptr);
             // set the quote for next iteration.
             quote = getEvent<model::Quote>(quoteFile);
             // record replay actions to a file.
@@ -233,7 +233,7 @@ void TestEnv::playback(const std::string& tradeFile_, const std::string& quoteFi
                         << LOG_NVP("LeavesQty", order.second->getLeavesQty())
                         << LOG_NVP("OrdStatus", order.second->getOrdStatus())
                         << AixLog::Color::none);
-                    dispatch(exec->getTimestamp(), nullptr, exec, order.second);
+                    dispatch(exec->getTimestamp(), nullptr, exec, order.second, nullptr);
                     if (exec->getOrdStatus() == "Filled") {
                         LOGDEBUG("Filled order");
                     }
