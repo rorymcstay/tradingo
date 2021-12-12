@@ -31,6 +31,7 @@ int main(int argc, char **argv) {
     auto env = TestEnv(defaults);
     auto trade = defaults->get("tickStorage") + "/trades_XBTUSD.json";
     auto quotes = defaults->get("tickStorage") + "/quotes_XBTUSD.json";
-    env.playback(trade, quotes);
+    auto instruments = defaults->get("tickStorage") + "/instruments_XBTUSD.json";
+    env.playback(trade, quotes, instruments);
     LOGINFO("Replay Finished");
 }

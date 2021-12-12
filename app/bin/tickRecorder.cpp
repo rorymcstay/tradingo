@@ -53,8 +53,27 @@ int main(int argc, char **argv) {
         return order_->toJson().serialize();
     };
     // enable file rotation for batch writers
-    auto trades = std::make_shared<ModelBatchWriter>("trades", symbol, storage, 100, printer, true);
-    auto quotes = std::make_shared<ModelBatchWriter>("quotes", symbol, storage, 1000, printer, true);
+    auto trades = std::make_shared<ModelBatchWriter>(
+        "trades",
+        symbol,
+        storage,
+        std::stoi(config->get("tradesBatchSize", "100")),
+        printer,
+        true);
+    auto quotes = std::make_shared<ModelBatchWriter>(
+        "quotes",
+        symbol,
+        storage,
+        std::stoi(config->get("quotesBatchSize", "1000")),
+        printer,
+        true);
+    auto instruments = std::make_shared<ModelBatchWriter>(
+        "instruments",
+        symbol,
+        storage,
+        std::stoi(config->get("instrumentsBatchSize", "1000")),
+        printer,
+        true);
 
     while (marketData)
     {
@@ -69,6 +88,11 @@ int main(int argc, char **argv) {
                 case EventType::TradeUpdate: {
                     auto trd = data->getTrade();
                     trades->write(trd);
+                    break;
+                }
+                case EventType::Instrument: {
+                    auto inst = data->getInstrumentDelta();
+                    instruments->write(inst);
                     break;
                 }
             }

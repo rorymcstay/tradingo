@@ -61,6 +61,12 @@ std::vector<std::shared_ptr<T>>  getData(web::json::array& data_, ObjPool& pool_
     return out_data_;
 }
 
+struct InstrumentReleaser {
+    void operator () (model::Instrument* instrument_) {
+
+    }
+};
+
 struct TradeReleaser {
 
    void operator () (model::Trade* model_) {
@@ -193,12 +199,14 @@ protected:
     cache::ObjectPool<model::Execution, 1, ExecutionReleaser> _execPool;
     cache::ObjectPool<model::Order, 1, OrderReleaser> _orderPool;
     cache::ObjectPool<model::Margin, 1, MarginReleaser> _marginPool;
+    cache::ObjectPool<model::Instrument, 1, InstrumentReleaser> _instrumentPool;
 
     std::queue<std::shared_ptr<model::Execution>> _executions;
     std::unordered_map<std::string, std::shared_ptr<model::Position>> _positions;
     std::unordered_map<std::string, std::shared_ptr<model::Order>> _orders;
     std::shared_ptr<model::Quote> _quote;
     std::shared_ptr<model::Margin> _margin;
+    std::unordered_map<std::string, std::shared_ptr<model::Instrument>> _instruments;
     model::Instrument _instrument;
     std::shared_ptr<InstrumentService> _instSvc;
 
@@ -214,6 +222,8 @@ protected:
     void handleOrders(std::vector<std::shared_ptr<model::Order>>& orders_, const std::string& action_);
     /// handle updates to margin and balance
     void handleMargin(std::vector<std::shared_ptr<model::Margin>> margin_, const std::string& action_);
+    /// handle instruments
+    void handleInstruments(const std::vector<std::shared_ptr<model::Instrument>>& instruments_, const std::string& action_);
     /// evaluate callback linked to self. i.e signals
     void callback() {
         _callback();

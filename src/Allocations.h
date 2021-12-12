@@ -130,6 +130,7 @@ void Allocations<TOrdApi>::addAllocation(price_t price_, qty_t qty_, const std::
         allocation = std::make_shared<Allocation>(price_, qty_);
     } else {
         allocation->setTargetDelta(qty_ + allocation->getTargetDelta());
+        allocation->getOrder()->setSymbol(_symbol);
     }
 }
 
@@ -252,6 +253,7 @@ void Allocations<TOrdApi>::placeAllocations() {
         std::stringstream actionMessage;
         actionMessage << LOG_NVP("ClOrdID", order->getClOrdID())
                       << LOG_NVP("OrigClOrdID",order->getOrigClOrdID())
+                      << LOG_NVP("Symbol", order->getSymbol())
                       << LOG_NVP("OrdStatus", order->getOrdStatus())
                       << LOG_NVP("OrderQty", order->getOrderQty())
                       << LOG_NVP("Price",order->getPrice());

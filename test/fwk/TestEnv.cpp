@@ -124,11 +124,14 @@ std::shared_ptr<model::Execution> canTrade(const std::shared_ptr<model::Order>& 
 
 }
 
-void TestEnv::playback(const std::string& tradeFile_, const std::string& quoteFile_) {
+void TestEnv::playback(const std::string& tradeFile_, const std::string& quoteFile_,
+                       const std::string& instrumentsFile_) {
     std::ifstream tradeFile;
     std::ifstream quoteFile;
+    std::ifstream instrumentsFile;
     tradeFile.open(tradeFile_);
     quoteFile.open(quoteFile_);
+    instrumentsFile.open(quoteFile_);
     if (not tradeFile.is_open()) {
         std::stringstream msg;
         msg << "File " << LOG_VAR(tradeFile_) << " does not exist.";
@@ -139,9 +142,14 @@ void TestEnv::playback(const std::string& tradeFile_, const std::string& quoteFi
         msg << "File " << LOG_VAR(tradeFile_) << " does not exist.";
         throw std::runtime_error(msg.str());
     }
+    if (not instrumentsFile.is_open()) {
+        std::stringstream msg;
+        LOGWARN("File " << LOG_VAR(tradeFile_) << " does not exist.");
+    }
     bool stop = false;
     auto quote = getEvent<model::Quote>(quoteFile);
     auto trade = getEvent<model::Trade>(tradeFile);
+    auto instrument = getEvent<model::Instrument>(instrumentsFile);
     bool hasTrades = true;
 
     std::vector<std::shared_ptr<model::ModelBase>> outBuffer;
@@ -175,6 +183,12 @@ void TestEnv::playback(const std::string& tradeFile_, const std::string& quoteFi
 
             if (not quote) {
                 stop = true;
+            }
+            // update instrument:
+            {
+                if (instrument and instrument->getTimestamp() < quote->getTimestamp()) {
+                    dispatch(time, nullptr, nullptr, nullptr, instrument);
+                }
             }
 
             // TODO: void liquidatePositions(positions)
@@ -297,8 +311,11 @@ void TestEnv::init() {
 
 }
 
-void TestEnv::dispatch(utility::datetime time_, const std::shared_ptr<model::Quote> &quote_,
-                       const std::shared_ptr<model::Execution> exec_, const std::shared_ptr<model::Order> order_) {
+void TestEnv::dispatch(utility::datetime time_,
+                       const std::shared_ptr<model::Quote> &quote_,
+                       const std::shared_ptr<model::Execution>& exec_,
+                       const std::shared_ptr<model::Order>& order_,
+                       const std::shared_ptr<model::Instrument>& instrument_) {
 
     // default behaviour is not to sleep
     if (_realtime) {
@@ -319,6 +336,8 @@ void TestEnv::dispatch(utility::datetime time_, const std::shared_ptr<model::Quo
         *_context->marketData() << exec_;
         *_context->marketData() << order_;
         *_context->marketData() << _context->orderApi()->getPosition();
+    } else if (instrument_) {
+        *_context->marketData() << instrument_;
     }
 }
 

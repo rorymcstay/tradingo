@@ -93,8 +93,11 @@ void MarketData::init() {
                     } else if (table == "margin") {
                         auto margins = getData<model::Margin, decltype(_marginPool)>(data, _marginPool);
                         handleMargin(margins, action);
+                    } else if (table == "instrument") {
+                        auto instruments = getData<model::Instrument, decltype(_instrumentPool)>(data, _instrumentPool);
+                        handleInstruments(instruments, action);
                     }
-                } else if (msgJson.has_field("info")) {
+            } else if (msgJson.has_field("info")) {
                     LOGINFO("Connection response: " << msgJson.serialize());
                     _initialised = true;
                     return;
@@ -162,7 +165,9 @@ void MarketData::subscribe() {
     };
     std::vector<std::string> noAuthTopics = {
             "quote:"+_symbol,
-            "trade:"+_symbol
+            "trade:"+_symbol,
+            "instrument:"+_symbol
+
     };
     auto payload = web::json::value::parse(R"({"op": "subscribe", "args": []})");
     int num = 0;
@@ -201,7 +206,14 @@ void MarketDataInterface::update(const std::vector<std::shared_ptr<T>> &data_) {
     for (const auto& row : data_) {
         _eventBuffer.push(std::make_shared<Event>(row));
     }
+}
 
+template<>
+void MarketDataInterface::update(const std::vector<std::shared_ptr<model::Instrument>> &data_) {
+    for (const auto& row : data_) {
+        auto instrument = _instruments[row->getSymbol()];
+        _eventBuffer.push(std::make_shared<Event>(instrument, row));
+    }
 }
 
 void MarketDataInterface::updatePositions(const std::vector<std::shared_ptr<model::Position>>& positions_) {
@@ -280,7 +292,24 @@ void MarketDataInterface::handleOrders(std::vector<std::shared_ptr<model::Order>
     } else if (action_ == "delete") {
         removeOrders(orders_);
     }
+}
 
+
+void MarketDataInterface::handleInstruments(
+    const std::vector<std::shared_ptr<model::Instrument>>& instruments_,
+    const std::string& action_) {
+    for (auto& instrument : instruments_) {
+        auto symbol = instrument->getSymbol();
+        if (action_ == "update" and _instruments.find(symbol) != _instruments.end()) {
+            auto update_json = instrument->toJson();
+            _instruments[symbol]->fromJson(update_json);
+        } else if (action_ == "insert" or action_ == "update") {
+            _instruments[symbol] = instrument;
+        } else if (action_ == "delete") {
+            _instruments.erase(symbol);
+        }
+    }
+    update(instruments_);
 }
 
 void MarketDataInterface::removeOrders(const std::vector<std::shared_ptr<model::Order>> &orders_) {
@@ -351,6 +380,7 @@ void MarketDataInterface::setCallback(const std::function<void()> &callback) {
 MarketDataInterface::MarketDataInterface() {
 
 }
+
 
 std::string getPositionKey(const std::shared_ptr<model::Position> &pos_) {
     return pos_->getSymbol();

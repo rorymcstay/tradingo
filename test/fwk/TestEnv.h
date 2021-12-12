@@ -78,10 +78,12 @@ public:
 
     void init();
 
-    void playback(const std::string& tradeFile_, const std::string& quoteFile_);
+    void playback(const std::string& tradeFile_, const std::string& quoteFile_,
+                  const std::string& instrumentsFile_);
 
     void dispatch(utility::datetime time, const std::shared_ptr<model::Quote>& quote,
-                  const std::shared_ptr<model::Execution> exec_, const std::shared_ptr<model::Order> order_);
+                  const std::shared_ptr<model::Execution>& exec_, const std::shared_ptr<model::Order>& order_,
+                  const std::shared_ptr<model::Instrument>& instrument_);
 
     void operator << (const std::string& value_);
     std::shared_ptr<model::Order> operator >> (const std::string& value_);
