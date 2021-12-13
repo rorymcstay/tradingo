@@ -51,8 +51,9 @@ void TestEnv::operator<<(const std::string &value_) {
 
 std::shared_ptr<model::Order> TestEnv::operator>>(const std::string &value_) {
     try {
-        auto order = *_context->orderApi() >> value_;
-        return order;
+        *_context->orderApi() >> value_;
+        auto eventType = getEventTypeFromString(value_);
+        return _context->orderApi()->getEvent(eventType);
     } catch (std::runtime_error& ex) {
         std::stringstream error_msg;
         error_msg << "TEST Exception: " << ex.what() << " during event >>\n\n      " << value_;

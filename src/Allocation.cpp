@@ -48,15 +48,17 @@ std::string Allocation::getSide() const {
 
 void Allocation::setTargetDelta(qty_t delta_) {
     _targetDelta = delta_;
-    if (_size == 0) {
+    if (almost_equal(delta_,0.0)) {
+        return;
+    }
+    if (almost_equal(_size,  0.0)) { // isNew()
         // order is pending new
         _order->setOrderQty(std::abs(_targetDelta));
         _order->setPrice(_price);
         _order->setSide(_targetDelta >= 0 ? "Buy" : "Sell");
         _order->setOrdStatus("PendingNew");
         _order->setLeavesQty(std::abs(_targetDelta));
-    }
-    if (isAmendUp() || isAmendDown()) {
+    } else if (isAmendUp() || isAmendDown()) {
         _version++;
         _order->setOrdStatus("PendingAmend");
         double newLeavesQty = _order->getLeavesQty();
@@ -67,7 +69,8 @@ void Allocation::setTargetDelta(qty_t delta_) {
         _order->setOrdStatus("PendingCancel");
         _order->setLeavesQty(0.0);
     } else if (isChangingSide()) {
-        _order->setSide(std::abs(_targetDelta) >= 0 ? "Buy" : "Sell");
+        double tgtQty = getTargetDelta();
+        _order->setSide(targetSide());
         _order->setOrderQty(std::abs(_size + _targetDelta));
         _order->setOrigClOrdID(_order->getClOrdID());
         _order->setOrdStatus("ChangingSides");

@@ -76,12 +76,15 @@ TestOrdersApi::order_cancel(boost::optional<utility::string_t> orderID,
         throw api::ApiException(404, "Order not found to cancel", content);
     } else {
         _orders[clOrdID.value()]->setOrdStatus("Canceled");
+        auto event_order = std::make_shared<model::Order>();
+        auto event_json = _orders[clOrdID.value()]->toJson();
+        event_order->fromJson(event_json);
         _orders[clOrdID.value()]->setOrderQty(0.0);
         _orders[clOrdID.value()]->setLeavesQty(0.0);
         set_order_timestamp(_orders[clOrdID.value()]);
         ordersRet.push_back(_orders[clOrdID.value()]);
-        _orderCancels.push(_orders[clOrdID.value()]);
-        _allEvents.push(_orders[clOrdID.value()]);
+        _orderCancels.push(event_order);
+        _allEvents.push(event_order);
         _orders.erase(clOrdID.value());
     }
     return pplx::task_from_result(ordersRet);
@@ -93,10 +96,13 @@ TestOrdersApi::order_cancelAll(boost::optional<utility::string_t> symbol, boost:
     std::vector<std::shared_ptr<model::Order>> out = {};
     for (auto& orders : _orders) {
         orders.second->setOrdStatus("Canceled");
-        _orderCancels.push(orders.second);
+        auto event_order = std::make_shared<model::Order>();
+        auto event_json = orders.second->toJson();
+        event_order->fromJson(event_json);
+        _orderCancels.push(event_order);
         out.push_back(orders.second);
         set_order_timestamp(orders.second);
-        _allEvents.push(orders.second);
+        _allEvents.push(event_order);
         set_order_timestamp(orders.second);
     }
     return pplx::task_from_result(out);
@@ -150,6 +156,7 @@ TestOrdersApi::order_new(utility::string_t symbol,
     order->setLeavesQty(orderQty.value());
     order->setPrice(price.value());
     order->setOrdType(ordType.value());
+    order->setOrderQty(orderQty.value());
     order->setTimeInForce(timeInForce.value());
     if (displayQty.has_value())
         order->setDisplayQty(displayQty.value());
@@ -176,12 +183,12 @@ TestOrdersApi::order_new(utility::string_t symbol,
 #define CHECK_VAL(val1, val2)                                                                  \
     if (val1 != val2) {                                                                        \
         std::stringstream ss;                                                                  \
-        ss << "The values " << LOG_NVP(#val1, val1) << " and " << LOG_NVP(#val2, val2) << " ";\
-        throw std::runtime_error(ss.str());                                                    \
+        ss << " The values " << LOG_NVP(#val1, val1) << " and " << LOG_NVP(#val2, val2) << " "; \
+        FAIL() << failMessage.str() << ss.str();                                                        \
     }
 
 #define PVAR(order, name_)  #name_ "="  << (order)->get##name_() << " "
-std::shared_ptr<model::Order> TestOrdersApi::operator>>(const std::string &outEvent_) {
+void TestOrdersApi::operator >> (const std::string &outEvent_) {
     auto eventType = getEventTypeFromString(outEvent_);
 
     std::stringstream failMessage;
@@ -239,49 +246,44 @@ std::shared_ptr<model::Order> TestOrdersApi::operator>>(const std::string &outEv
                 _orderCancels.pop();
             }
         }
-        return nullptr;
+        return;
     }
     auto params = Params(outEvent_);
     auto expectedOrder = fromJson<model::Order>(params.asJson());
     if (eventType == "ORDER_NEW") {
         if (_newOrders.empty()) {
-            failMessage << "No new orders created.";
+            FAIL() << failMessage.str() << "No new orders created.";
+            return;
         }
         auto latestOrder = _newOrders.front();
         CHECK_VAL(latestOrder->getPrice(), expectedOrder->getPrice());
         CHECK_VAL(latestOrder->getSide(), expectedOrder->getSide());
         CHECK_VAL(latestOrder->getOrderQty(), expectedOrder->getOrderQty());
         CHECK_VAL(latestOrder->getSymbol(), expectedOrder->getSymbol());
-        _newOrders.pop();
-        return latestOrder;
     } else if (eventType == "ORDER_AMEND") {
         checkOrderExists(expectedOrder);
         if (_orderAmends.empty()) {
-            failMessage << "No amends made for any orders";
+            FAIL() << failMessage.str() << "No amends made for any orders";
+            return;
         }
         auto orderAmend = _orderAmends.front();
-        _orderAmends.pop();
         CHECK_VAL(orderAmend->getPrice(), expectedOrder->getPrice());
         CHECK_VAL(orderAmend->getSide(), expectedOrder->getSide());
         CHECK_VAL(orderAmend->getOrderQty(), expectedOrder->getOrderQty());
         CHECK_VAL(orderAmend->getSymbol(), expectedOrder->getSymbol());
-        return orderAmend;
     } else if (eventType == "ORDER_CANCEL") {
         if (_orderCancels.empty()) {
-            failMessage << "No expectedOrder cancels";
+            FAIL() << failMessage.str() << "No expectedOrder cancels";
+            return;
         }
         auto orderCancel = _orderCancels.front();
-        _orderCancels.pop();
         CHECK_VAL(orderCancel->getPrice(), expectedOrder->getPrice());
-        CHECK_VAL(orderCancel->getSide(), expectedOrder->getSide());
-        CHECK_VAL(orderCancel->getOrderQty(), expectedOrder->getOrderQty());
         CHECK_VAL(orderCancel->getSymbol(), expectedOrder->getSymbol());
-        return orderCancel;
+        CHECK_VAL(orderCancel->getOrderID(), expectedOrder->getOrderID());
+    } else {
+        FAIL() << failMessage.str() << R"(Must specify event type - One of "ORDER_NEW", "ORDER_AMEND", "ORDER_CANCEL")";
     }
-    failMessage << R"(Must specify event type - One of "ORDER_NEW", "ORDER_AMEND", "ORDER_CANCEL")";
-    throw std::runtime_error(failMessage.str());
 }
-
 
 
 void TestOrdersApi::add_order(const std::shared_ptr<model::Order> &order_) {
@@ -539,4 +541,23 @@ const std::shared_ptr<MarginCalculator>& TestOrdersApi::getMarginCalculator() co
 
 void TestOrdersApi::setMarginCalculator(const std::shared_ptr<MarginCalculator>& marginCalculator) {
     _marginCalculator = marginCalculator;
+}
+std::shared_ptr<model::Order>
+TestOrdersApi::getEvent(const std::string& event_) {
+    std::shared_ptr<model::Order> order;
+    if (event_ == "NONE") {
+        return nullptr;
+    } else if (event_ == "ORDER_NEW") {
+        order = _newOrders.front();
+        _newOrders.pop();
+    } else if (event_ == "ORDER_AMEND") {
+        order = _orderAmends.front();
+        _orderAmends.pop();
+    } else if (event_ == "ORDER_CANCEL") {
+        order = _orderCancels.front();
+        _orderCancels.pop();
+    } else {
+        throw std::runtime_error("Unrecognized event type " + event_);
+    }
+    return order;
 }

@@ -145,11 +145,13 @@ public:
     void addExecToMargin(const std::shared_ptr<model::Execution>& exec_);
 
 public:
-    std::shared_ptr<model::Order> operator >> (const std::string& outEvent_);
+    void operator >> (const std::string& outEvent_);
     void operator >> (std::vector<std::shared_ptr<model::ModelBase>>& outBuffer_);
     void operator >> (Writer& outBuffer_);
 
     void operator << (const utility::datetime& time_);
+
+    std::shared_ptr<model::Order> getEvent(const std::string& event_);
 
     std::map<std::string, std::shared_ptr<model::Order>>& orders() { return _orders; }
 

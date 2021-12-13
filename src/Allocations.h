@@ -209,15 +209,17 @@ void Allocations<TOrdApi>::cancel(const std::function<bool(const std::shared_ptr
 template<typename TOrdApi>
 void Allocations<TOrdApi>::cancelOrders(const std::function<bool(const std::shared_ptr<Allocation>&)>& predicate_) {
 
-    std::for_each(_data.begin(), _data.end(), [predicate_](const std::shared_ptr<Allocation>& alloc_ ) {
-      alloc_->setTargetDelta(-alloc_->getSize());
-      if (predicate_(alloc_))
+    std::for_each(_data.begin(), _data.end(), [this, predicate_](const std::shared_ptr<Allocation>& alloc_ ) {
+      if (predicate_(alloc_)) {
+          alloc_->setTargetDelta(-alloc_->getSize());
           LOGINFO("cancelOrders: Cancelling allocation orders "
-                      << LOG_NVP("Price",alloc_->getPrice())
-                      << LOG_NVP("Side", alloc_->getSide())
-                      << LOG_NVP("Size", alloc_->getSize()));
+                  << LOG_NVP("Price", alloc_->getPrice())
+                  << LOG_NVP("Side", alloc_->getSide())
+                  << LOG_NVP("Size", alloc_->getSize()));
+          _modified = true;
+      }
     });
-    _modified = true;
+
 }
 
 
@@ -257,8 +259,45 @@ void Allocations<TOrdApi>::placeAllocations() {
                       << LOG_NVP("OrdStatus", order->getOrdStatus())
                       << LOG_NVP("OrderQty", order->getOrderQty())
                       << LOG_NVP("Price",order->getPrice());
-        if (allocation->isChangingSide()) {
+        if (allocation->isNew()) {
+            actionMessage << " PLACING_NEW ";
+            order->setSymbol(_symbol);
+            order->setClOrdID(_clOrdIdPrefix +
+                              std::to_string(allocation->getPrice()) + "_v" +
+                              std::to_string(allocation->getVersion()));
+            try {
+                order->setSymbol(_symbol);
+                _orderApi
+                    ->order_new(order->getSymbol(), order->getSide(),
+                                boost::none, // simpleOrderQty
+                                order->getOrderQty(),
+                                order->getPrice(),
+                                boost::none, // displayQty
+                                boost::none, // stopPx
+                                order->getClOrdID(),
+                                boost::none, // clOrdLinkId
+                                boost::none, // pegOffsetValue
+                                boost::none, // pegPriceType
+                                order->getOrdType(), order->getTimeInForce(),
+                                boost::none, // execInst
+                                boost::none, // contingencyType
+                                boost::none  // text
+                                )
+                    .then([this, allocation, &order](
+                              const pplx::task<std::shared_ptr<model::Order>>&
+                                  order_) {
+                        this->updateFromTask(allocation, order_.get());
+                    });
+            } catch (api::ApiException& ex_) {
+                LOGERROR("Error placing new order "
+                         << LOG_NVP("response", ex_.getContent()->rdbuf())
+                         << LOG_VAR(ex_.what())
+                         << LOG_NVP("action", actionMessage.str()));
+                allocation->cancelDelta();
+            }
+        } else if (allocation->isChangingSide()) {
             actionMessage << " CHANGING_SIDES ";
+            auto newQty = order->getOrderQty();
             order->setClOrdID(_clOrdIdPrefix
                               + std::to_string(allocation->getPrice())
                               + "_v"
@@ -285,9 +324,9 @@ void Allocations<TOrdApi>::placeAllocations() {
                 order->setSymbol(_symbol);
                 auto task = _orderApi->order_new(
                     order->getSymbol(),
-                    order->getSide(),
+                    allocation->targetSide(),
                     boost::none, // simpleOrderQty
-                    order->getOrderQty(),
+                    newQty,
                     order->getPrice(),
                     boost::none, // displayQty
                     boost::none, // stopPx
@@ -356,7 +395,7 @@ void Allocations<TOrdApi>::placeAllocations() {
             try {
                 auto task = _orderApi->order_cancel(
                     boost::none, // orderId
-                    order->getOrigClOrdID(),
+                    order->getClOrdID(),
                     boost::none  // text
                 ).then(
                     [this, allocation, &order](const pplx::task<std::vector<std::shared_ptr<model::Order>>> &order_) {
@@ -366,51 +405,15 @@ void Allocations<TOrdApi>::placeAllocations() {
                 task.wait();
             } catch (api::ApiException &ex_) {
                 LOGERROR("Error cancelling order "
-                             << LOG_NVP("response", ex_.getContent()->rdbuf())
-                             << LOG_VAR(ex_.what())
-                             << LOG_NVP("action", actionMessage.str()));
-                allocation->cancelDelta();
-            }
-        } else if (allocation->isNew()) {
-            actionMessage << " PLACING_NEW ";
-            order->setSymbol(_symbol);
-            order->setClOrdID(_clOrdIdPrefix
-                              + std::to_string(allocation->getPrice())
-                              + "_v"
-                              + std::to_string(allocation->getVersion()));
-            try {
-                order->setSymbol(_symbol);
-                _orderApi->order_new(
-                    order->getSymbol(),
-                    order->getSide(),
-                    boost::none, // simpleOrderQty
-                    order->getOrderQty(),
-                    order->getPrice(),
-                    boost::none, // displayQty
-                    boost::none, // stopPx
-                    order->getClOrdID(),
-                    boost::none, // clOrdLinkId
-                    boost::none, // pegOffsetValue
-                    boost::none, // pegPriceType
-                    order->getOrdType(),
-                    order->getTimeInForce(),
-                    boost::none, // execInst
-                    boost::none, // contingencyType
-                    boost::none  // text
-                ).then(
-                    [this, allocation, &order](const pplx::task<std::shared_ptr<model::Order>> &order_) {
-                      this->updateFromTask(allocation, order_.get());
-                    });
-            } catch (api::ApiException& ex_) {
-                LOGERROR("Error placing new order "
-                             << LOG_NVP("response", ex_.getContent()->rdbuf())
-                             << LOG_VAR(ex_.what())
-                             << LOG_NVP("action", actionMessage.str()));
+                         << LOG_NVP("response", ex_.getContent()->rdbuf())
+                         << LOG_VAR(ex_.what())
+                         << LOG_NVP("action", actionMessage.str()));
                 allocation->cancelDelta();
             }
         } else {
             LOGERROR("Couldn't determine action for " << actionMessage.str());
         }
+
         LOGINFO(actionMessage.str());
     }
 
@@ -426,6 +429,11 @@ void Allocations<TOrdApi>::updateFromTask(const std::shared_ptr<Allocation>& all
                         << LOG_NVP("orderQty", order_->getOrderQty())
                         << LOG_NVP("leavesQty",order_->getLeavesQty())
                         << LOG_NVP("cumQty", order_->getCumQty()));
+    if (allocation_->isChangingSide() and order_->getOrdStatus() == "Cancelled") {
+        allocation_->setTargetDelta(allocation_->getSize() + allocation_->getTargetDelta());
+    } if (allocation_->isCancel()) {
+        allocation_->setSize(0.0);
+    }
 
 }
 

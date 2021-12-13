@@ -283,8 +283,6 @@ void MarketDataInterface::handleExecutions(std::vector<std::shared_ptr<model::Ex
 }
 
 void MarketDataInterface::handleOrders(std::vector<std::shared_ptr<model::Order>>& orders_, const  std::string &action_) {
-
-
     if (action_ == "partial" or action_ == "insert") {
         insertOrders(orders_);
     } else if (action_ == "update") {
