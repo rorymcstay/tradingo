@@ -207,7 +207,6 @@ protected:
     std::shared_ptr<model::Quote> _quote;
     std::shared_ptr<model::Margin> _margin;
     std::unordered_map<std::string, std::shared_ptr<model::Instrument>> _instruments;
-    model::Instrument _instrument;
     std::shared_ptr<InstrumentService> _instSvc;
 
     /// handle quote update after data is read from socket.
@@ -230,7 +229,6 @@ protected:
     }
     /// load the instrument static data from instrument service.
     void init() {
-        _instrument = _instSvc->get(_symbol);
     }
 
 protected:
@@ -264,7 +262,7 @@ public:
     /// get current quote.
     const std::shared_ptr<model::Quote> quote() const;
     /// get instrument static.
-    const model::Instrument& instrument() const;
+    const std::shared_ptr<model::Instrument>& instrument() const;
 
 };
 

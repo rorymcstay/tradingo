@@ -41,9 +41,11 @@ TestOrdersApi::order_amend(boost::optional<utility::string_t> orderID,
     order->setOrdStatus("PendingNew");
     order->setClOrdID(clOrdID.value());
     order->setOrigClOrdID(origClOrdID.value());
-    order->setLeavesQty(orderQty.value());
+    order->setLeavesQty(leavesQty.value());
     if (orderID.has_value())
         order->setOrderID(orderID.value());
+    if (orderQty.has_value())
+        order->setOrderQty(orderQty.value());
     if (price.has_value())
         order->setPrice(price.value());
     if (stopPx.has_value())
@@ -259,6 +261,7 @@ void TestOrdersApi::operator >> (const std::string &outEvent_) {
         CHECK_VAL(latestOrder->getPrice(), expectedOrder->getPrice());
         CHECK_VAL(latestOrder->getSide(), expectedOrder->getSide());
         CHECK_VAL(latestOrder->getOrderQty(), expectedOrder->getOrderQty());
+        CHECK_VAL(latestOrder->getLeavesQty(), expectedOrder->getLeavesQty());
         CHECK_VAL(latestOrder->getSymbol(), expectedOrder->getSymbol());
     } else if (eventType == "ORDER_AMEND") {
         checkOrderExists(expectedOrder);
@@ -267,19 +270,24 @@ void TestOrdersApi::operator >> (const std::string &outEvent_) {
             return;
         }
         auto orderAmend = _orderAmends.front();
-        CHECK_VAL(orderAmend->getPrice(), expectedOrder->getPrice());
-        CHECK_VAL(orderAmend->getSide(), expectedOrder->getSide());
-        CHECK_VAL(orderAmend->getOrderQty(), expectedOrder->getOrderQty());
-        CHECK_VAL(orderAmend->getSymbol(), expectedOrder->getSymbol());
+        if (orderAmend->priceIsSet()) {
+            CHECK_VAL(orderAmend->getPrice(), expectedOrder->getPrice());
+        } else if (orderAmend->leavesQtyIsSet()) {
+            CHECK_VAL(orderAmend->getLeavesQty(), expectedOrder->getLeavesQty());
+        } else {
+            throw std::runtime_error("Only Price or Qty amend supported at this time.");
+        }
+        CHECK_VAL(orderAmend->getOrderID(), expectedOrder->getOrderID());
+
     } else if (eventType == "ORDER_CANCEL") {
         if (_orderCancels.empty()) {
             FAIL() << failMessage.str() << "No expectedOrder cancels";
             return;
         }
         auto orderCancel = _orderCancels.front();
-        CHECK_VAL(orderCancel->getPrice(), expectedOrder->getPrice());
         CHECK_VAL(orderCancel->getSymbol(), expectedOrder->getSymbol());
         CHECK_VAL(orderCancel->getOrderID(), expectedOrder->getOrderID());
+        CHECK_VAL(orderCancel->getClOrdID(), expectedOrder->getClOrdID());
     } else {
         FAIL() << failMessage.str() << R"(Must specify event type - One of "ORDER_NEW", "ORDER_AMEND", "ORDER_CANCEL")";
     }
@@ -294,8 +302,11 @@ void TestOrdersApi::add_order(const std::shared_ptr<model::Order> &order_) {
     order_->setLeavesQty(order_->getOrderQty());
     order_->setCumQty(0.0);
     set_order_timestamp(order_);
-    _newOrders.push(order_);
-    _allEvents.push(order_);
+    auto event_order = std::make_shared<model::Order>();
+    auto event_json = order_->toJson();
+    event_order->fromJson(event_json);
+    _newOrders.push(event_order);
+    _allEvents.push(event_order);
 
 }
 
@@ -306,12 +317,14 @@ void TestOrdersApi::amend_order(const std::shared_ptr<model::Order>& amendReques
     originalOrder_->setOrdStatus(originalOrder_->getCumQty() > 0.0 ? "PartiallyFilled" : "New");
     originalOrder_->setClOrdID(amendRequest_->getClOrdID());
     originalOrder_->setOrigClOrdID(amendRequest_->getOrigClOrdID());
+    amendRequest_->setOrderID(originalOrder_->getOrderID());
     if (amendRequest_->priceIsSet()) {
         originalOrder_->setPrice(amendRequest_->getPrice());
-    }
-    if (amendRequest_->leavesQtyIsSet()) {
+    } else if (amendRequest_->leavesQtyIsSet()) {
         auto qtyChange = amendRequest_->getLeavesQty() - originalOrder_->getLeavesQty();
         originalOrder_->setOrderQty(originalOrder_->getOrderQty() + qtyChange);
+    } else {
+        throw std::runtime_error("Only price and quantity amends supported currently.");
     }
     _orders.erase(originalOrder_->getOrigClOrdID());
     _orders[originalOrder_->getClOrdID()] = originalOrder_;
@@ -376,32 +389,67 @@ void TestOrdersApi::addExecToPosition(const std::shared_ptr<model::Execution>& e
                     << LOG_NVP("OrderID", exec_->getOrderID())
                     << LOG_NVP("Side", exec_->getSide())
                     << LOG_NVP("OrderQty", exec_->getOrderQty())
-                    << LOG_NVP("Price", exec_->getPrice())
                     << LOG_NVP("LastQty", exec_->getLastQty())
                     << LOG_NVP("LastPx", exec_->getLastPx())
                     << AixLog::Color::none);
 
-    auto lastQty = exec_->getLastQty();
-    auto lastPx = exec_->getLastPx();
-    auto dirMx = (exec_->getSide() == "Buy") ? -1 : +1;
-    auto cost = lastQty * lastPx *dirMx;
-    auto newBalance = cost + _margin->getWalletBalance();
-    _margin->setWalletBalance(newBalance);
-    auto marginBalance = newBalance + _position->getUnrealisedPnl();
-    _margin->setMarginBalance(marginBalance);
-    double maintenanceMargin = _marginCalculator->getMarginAmount(_position);
-    _position->setMaintMarginReq(maintenanceMargin);
-    _margin->setMaintMargin(maintenanceMargin);
+    assert(exec_->lastPxIsSet() && exec_->lastQtyIsSet()
+           && "LastPx and LastQty must be specified for executions");
 
-    qty_t newPosition = _position->getCurrentQty() + ((exec_->getSide() == "Buy") ? exec_->getLastQty() : -exec_->getLastQty());
-    qty_t newCost = _position->getCurrentCost() + ((1/exec_->getPrice() * exec_->getLastQty())*(exec_->getSide()=="Buy" ? 1 : -1));
-    _position->setCurrentQty(newPosition);
-    _position->setCurrentCost(newCost);
-    auto unrealisedPnl = _marginCalculator->getUnrealisedPnL(_position);
-    _position->setUnrealisedPnl(unrealisedPnl);
+    { // wallet balance
+        auto lastQty = exec_->getLastQty();
+        auto lastPx = exec_->getLastPx();
+        auto dirMx = (exec_->getSide() == "Buy") ? -1 : +1;
+        auto cost = 1 / lastQty * lastPx * dirMx;
+        auto newBalance = cost + _margin->getWalletBalance();
+        _margin->setWalletBalance(newBalance);
+    }
+    { // update the order
+        auto order = _orders.at(exec_->getClOrdID());
+        order->setCumQty(order->getCumQty() + exec_->getLastQty());
+        order->setLeavesQty(order->getLeavesQty() - exec_->getLastQty());
+        auto newQty = order->getCumQty();
+        auto oldQty = newQty - exec_->getLastQty();
+        auto newAvgPx = (order->getAvgPx() * oldQty/newQty) + (exec_->getLastQty() * exec_->getLastQty()/newQty);
+        order->setAvgPx(newAvgPx);
+    }
+    { // update costs and quantity
+        price_t currentCost = _position->getCurrentCost();
+        qty_t currentSize = _position->getCurrentQty();
+        price_t costDelta = (1 / exec_->getLastPx() * exec_->getLastQty()) *
+                            (exec_->getSide() == "Buy" ? 1 : -1);
+        qty_t positionDelta = (exec_->getSide() == "Buy")
+                                  ? exec_->getLastQty()
+                                  : -exec_->getLastQty();
+        qty_t newPosition = currentSize + positionDelta;
+        price_t newCost = currentCost + costDelta;
+        _position->setCurrentQty(newPosition);
+        _position->setCurrentCost(newCost);
+    }
+    { // set the breakeven price
+        auto bkevenPrice = _position->getCurrentQty()/_position->getCurrentCost();
+        _position->setBreakEvenPrice(bkevenPrice);
+    }
+    { // unrealised pnl calculation
+        auto unrealisedPnl = _marginCalculator->getUnrealisedPnL(_position);
+        _position->setUnrealisedPnl(unrealisedPnl);
+    }
+    { // update the margin
+        auto marginBalance = _margin->getWalletBalance() + _position->getUnrealisedPnl();
+        _margin->setMarginBalance(marginBalance);
+        double maintenanceMargin = _marginCalculator->getMarginAmount(_position);
+        _position->setMaintMarginReq(maintenanceMargin);
+        _margin->setMaintMargin(maintenanceMargin);
+        _margin->setAvailableMargin(_margin->getWalletBalance() - maintenanceMargin);
+    }
+    { // liquidation price
+        auto liqPrice = _marginCalculator->getLiquidationPrice(_position,
+                                                               _margin->getWalletBalance());
+        _position->setLiquidationPrice(liqPrice);
+    }
+    // timestamp
     _position->setTimestamp(exec_->getTimestamp());
-    auto liqPrice = _marginCalculator->getLiquidationPrice(_position, newBalance);
-    _position->setLiquidationPrice(liqPrice);
+
     LOGINFO(AixLog::Color::GREEN
                     << "New Position: "
                     << LOG_NVP("CurrentCost", _position->getCurrentCost())
@@ -410,10 +458,6 @@ void TestOrdersApi::addExecToPosition(const std::shared_ptr<model::Execution>& e
                     << AixLog::Color::none);
 }
 
-void TestOrdersApi::addExecToMargin(const std::shared_ptr<model::Execution>& exec_) {
-
-
-}
 
 const std::shared_ptr<model::Position> &TestOrdersApi::getPosition() const {
     return _position;
@@ -436,16 +480,19 @@ std::shared_ptr<model::Order> TestOrdersApi::checkOrderExists(const std::shared_
         || _orders.find(order->getOrigClOrdID()) != _orders.end()) {
         // is amend
         return _orders.find(order->getClOrdID()) != _orders.end() ? _orders[order->getClOrdID()] : _orders[order->getOrigClOrdID()];
-    } else {
-        // reject amend request, fail test
-        std::stringstream str;
-        auto content = std::make_shared<std::istringstream>(order->toJson().serialize());
-        str << "Original order " << LOG_NVP("OrderID",order->getOrderID())
-            << LOG_NVP("ClOrdID", order->getClOrdID())
-            << LOG_NVP("OrigClOrdID", order->getOrigClOrdID()) << " not found.";
-        throw api::ApiException(404, str.str(), content);
     }
-
+    for (auto ord_kvp : _orders) {
+        if (ord_kvp.second->getOrigClOrdID() == order->getClOrdID()) {
+            return ord_kvp.second;
+        }
+    }
+        // reject amend request, fail test
+    std::stringstream str;
+    auto content = std::make_shared<std::istringstream>(order->toJson().serialize());
+    str << "Original order " << LOG_NVP("OrderID",order->getOrderID())
+        << LOG_NVP("ClOrdID", order->getClOrdID())
+        << LOG_NVP("OrigClOrdID", order->getOrigClOrdID()) << " not found.";
+    throw api::ApiException(404, str.str(), content);
 }
 
 
@@ -507,21 +554,11 @@ bool TestOrdersApi::checkValidAmend(std::shared_ptr<model::Order> requestedAmend
             auto msg = requestedAmend->toJson().serialize();
             auto content = std::make_shared<std::istringstream>(msg);
             throw api::ApiException(
-                400, "Insufficient funds available for amend.",
+                400, "Insufficient funds available for amend. additionalCost="
+                            + std::to_string(additionalCost)
+                            + ", balance=" + std::to_string(_margin->getWalletBalance()),
                 content);
         }
-    } else if (requestedAmend->leavesQtyIsSet() &&
-               almost_equal(originalOrder->getLeavesQty(), 0.0)) {
-        // too late
-        auto msg = requestedAmend->toJson().serialize();
-        auto content = std::make_shared<std::istringstream>(msg);
-        throw api::ApiException(
-            400, "Insufficient funds available for amend.",
-            content);
-
-    } else if (requestedAmend->priceIsSet()) {
-    } else {
-        throw std::runtime_error("Couldn't determine amend action.");
     }
     return true;
 }

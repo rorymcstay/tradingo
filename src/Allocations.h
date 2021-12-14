@@ -258,6 +258,7 @@ void Allocations<TOrdApi>::placeAllocations() {
                       << LOG_NVP("Symbol", order->getSymbol())
                       << LOG_NVP("OrdStatus", order->getOrdStatus())
                       << LOG_NVP("OrderQty", order->getOrderQty())
+                      << LOG_NVP("LeavesQty", order->getLeavesQty())
                       << LOG_NVP("Price",order->getPrice());
         if (allocation->isNew()) {
             actionMessage << " PLACING_NEW ";

@@ -15,7 +15,6 @@ TestEnv::TestEnv(const std::shared_ptr<Config> &config_)
 ,   _lastDispatch()
 ,   _realtime(false)
 ,   _events(0)
-,   _marginCalculator(std::make_shared<MarginCalculator>(_config))
 {
     init();
 }
@@ -28,7 +27,6 @@ TestEnv::TestEnv(std::initializer_list<std::pair<std::string,std::string>> confi
 ,   _lastDispatch()
 ,   _realtime(false)
 ,   _events(0)
-,   _marginCalculator(std::make_shared<MarginCalculator>(_config))
 {
     init();
 }
@@ -40,6 +38,13 @@ void TestEnv::operator<<(const std::string &value_) {
             sleep(_context->marketData()->time());
             _lastDispatch.actual_time = utility::datetime::utc_now();
             _lastDispatch.mkt_time = _context->marketData()->time();
+        }
+        if (getEventTypeFromString(value_) == "EXECUTION") {
+            auto params = Params(value_);
+            auto exec = std::make_shared<model::Execution>();
+            auto json = params.asJson();
+            exec->fromJson(json);
+            _context->orderApi()->addExecToPosition(exec);
         }
         _events++;
         _context->strategy()->evaluate();
@@ -73,6 +78,15 @@ std::shared_ptr<T> getEvent(std::ifstream &fileHandle_) {
     auto json = web::json::value::parse(str);
     quote->fromJson(json);
     return quote;
+}
+std::string format(const std::string& test_message_,
+                   const std::shared_ptr<model::Order>& order_) {
+    std::stringstream ss;
+    ss << test_message_ << " OrderID=" << order_->getOrderID()
+        << " ClOrdID=" << order_->getClOrdID();
+       if (order_->origClOrdIDIsSet())
+           ss << " OrigClOrdID=" << order_->getOrigClOrdID();
+    return ss.str();
 }
 
 /// if trade may not occur, return nullptr, else return exec report and modify order.
@@ -277,12 +291,17 @@ void TestEnv::init() {
     auto tickSize = std::atof(_config->get("tickSize", "0.5").c_str());
     auto referencePrice = std::atof(_config->get("referencePrice").c_str());
     auto lotSize = std::atof(_config->get("lotSize", "100").c_str());
+    auto fairPrice = std::atof(_config->get("fairPrice").c_str());
     auto instSvc = std::shared_ptr<InstrumentService>(nullptr);
     auto instrument = std::make_shared<model::Instrument>();
+    auto maintMargin = std::atof(_config->get("maintMargin", "0.035").c_str());
+    instrument->setFairPrice(fairPrice);
     instrument->setSymbol(_config->get("symbol"));
     instrument->setPrevPrice24h(referencePrice);
     instrument->setTickSize(tickSize);
     instrument->setLotSize(lotSize);
+    instrument->setMaintMargin(maintMargin);
+    *_context->marketData() << instrument;
     _context->instrumentService()->add(instrument);
 
     // initialise strategy
@@ -299,7 +318,9 @@ void TestEnv::init() {
     _context->marketData()->addPosition(_position);
 
     // set up initial margin
-    _context->orderApi()->setMarginCalculator(_marginCalculator);
+    _context->orderApi()->setMarginCalculator(
+        std::make_shared<MarginCalculator>(_config, _context->marketData())
+    );
     _margin->setWalletBalance(std::atof(_config->get("startingBalance").c_str()));
     _margin->setMaintMargin(0.0);
     _margin->setAvailableMargin(_margin->getWalletBalance());

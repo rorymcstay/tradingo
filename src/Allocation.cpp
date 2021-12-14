@@ -62,7 +62,7 @@ void Allocation::setTargetDelta(qty_t delta_) {
         _version++;
         _order->setOrdStatus("PendingAmend");
         double newLeavesQty = _order->getLeavesQty();
-        newLeavesQty += ((isAmendUp()) ? -1 : 1)* std::abs(_targetDelta);
+        newLeavesQty += ((isAmendUp()) ? 1 : -1)* std::abs(_targetDelta);
         _order->setLeavesQty(newLeavesQty);
         _order->setOrigClOrdID(_order->getClOrdID());
     } else if (isCancel()) {

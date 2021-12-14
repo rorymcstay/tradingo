@@ -356,8 +356,8 @@ const std::shared_ptr<model::Quote> MarketDataInterface::quote() const {
     return _quote;
 }
 
-const model::Instrument& MarketDataInterface::instrument() const {
-    return _instrument;
+const std::shared_ptr<model::Instrument>& MarketDataInterface::instrument() const {
+    return _instruments.at(_symbol);
 }
 
 
@@ -365,7 +365,6 @@ MarketDataInterface::MarketDataInterface(const std::shared_ptr<Config>& config_,
                                          std::shared_ptr<InstrumentService>  instSvc_)
 :   _instSvc(std::move(instSvc_))
 ,   _symbol(config_->get("symbol"))
-,   _instrument()
 ,   _callback([]() {}) {
 
 
