@@ -30,6 +30,7 @@ add_executable(testTradingo
         strategy/TestBreakOutStrategy.cpp
 
         test_api_OrderApi.cpp
+        test_api_PositionApi.cpp
         TestSimpleMovingAverage.cpp
         TestBatchWriter.cpp
         TestAllocations.cpp
