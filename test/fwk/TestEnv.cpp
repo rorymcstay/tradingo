@@ -203,6 +203,7 @@ void TestEnv::playback(const std::string& tradeFile_, const std::string& quoteFi
             {
                 if (instrument and instrument->getTimestamp() < quote->getTimestamp()) {
                     dispatch(time, nullptr, nullptr, nullptr, instrument);
+                    instrument = getEvent<model::Instrument>(instrumentsFile);
                 }
             }
 
