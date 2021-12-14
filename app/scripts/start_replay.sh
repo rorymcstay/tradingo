@@ -19,10 +19,10 @@ replay_tradingo_on() {
     if [[ ! -f $tick_location/quotes_$SYMBOL.json ]]; then
         aws s3 cp "s3://$BUCKET_NAME/tickRecorder/storage/$1/quotes_$SYMBOL.json" $tick_location
     fi
-    if [[ !-f $tick_location/trades_$SYMBOL.json ]]; then
+    if [[ ! -f $tick_location/trades_$SYMBOL.json ]]; then
         aws s3 cp "s3://$BUCKET_NAME/tickRecorder/storage/$1/trades_$SYMBOL.json" $tick_location
     fi
-    if [[ !-f $tick_location/instruments_$SYMBOL.json ]]; then
+    if [[ ! -f $tick_location/instruments_$SYMBOL.json ]]; then
         aws s3 cp "s3://$BUCKET_NAME/tickRecorder/storage/$1/instruments_$SYMBOL.json" $tick_location
     fi
 
