@@ -22,6 +22,9 @@ replay_tradingo_on() {
     if [[ !-f $tick_location/trades_$SYMBOL.json ]]; then
         aws s3 cp "s3://$BUCKET_NAME/tickRecorder/storage/$1/trades_$SYMBOL.json" $tick_location
     fi
+    if [[ !-f $tick_location/instruments_$SYMBOL.json ]]; then
+        aws s3 cp "s3://$BUCKET_NAME/tickRecorder/storage/$1/instruments_$SYMBOL.json" $tick_location
+    fi
 
     config_file=$REPLAY_STORAGE/$RUN_ID/tradingo.cfg
     echo "config_file="$config_file
