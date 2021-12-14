@@ -19,7 +19,8 @@
 #include "api/PositionApi.h"
 
 
-template<typename TOrdApi, typename TPositionApi>
+template<typename TOrdApi,
+    typename TPositionApi>
 class Strategy {
     /*
      * Base strategy class for trading strategies.
@@ -29,17 +30,16 @@ class Strategy {
      */
 
     using OrderPtr = std::shared_ptr<model::Order>;
+    using TAllocations =Allocations<TOrdApi>;
 
     std::shared_ptr<MarketDataInterface> _marketData;
     std::shared_ptr<TOrdApi>             _orderEngine;
     std::shared_ptr<TPositionApi>        _positionApi;
 
     std::string                          _clOrdIdPrefix;
-    int                                  _oidSeed;
     std::shared_ptr<Config>              _config;
 
-    std::shared_ptr<Allocations>         _allocations;
-    std::unordered_map<long, OrderPtr>   _orders;
+    std::shared_ptr<TAllocations>        _allocations;
 
     std::unordered_map<std::string, std::shared_ptr<Signal>> _timed_signals;
     std::unordered_map<std::string, std::shared_ptr<Signal>> _callback_signals;
@@ -52,10 +52,6 @@ class Strategy {
     virtual void onTrade(const std::shared_ptr<Event>& event_) = 0;
     /// bbo update hanlder method
     virtual void onBBO(const std::shared_ptr<Event>& event_) = 0;
-    /// create a new order from an allocation
-    std::shared_ptr<model::Order> createOrder(const std::shared_ptr<Allocation>& allocation_);
-    /// update orders after call to api.
-    void updateFromTask(const pplx::task<std::vector<std::shared_ptr<model::Order>>>& task_);
 
 public:
     Strategy(std::shared_ptr<MarketDataInterface> md_,
@@ -73,7 +69,7 @@ public:
     virtual bool shouldEval();
     /// the strategies allocations, in the future, might be need for > 1 set of allocations. i.e multi instrument
     /// strategies
-    const std::shared_ptr<Allocations>& allocations() { return _allocations; }
+    const std::shared_ptr<TAllocations>& allocations() { return _allocations; }
     /// market data accessor
     std::shared_ptr<MarketDataInterface> getMD() const { return _marketData; }
     /// conduct function_ on each signal. Optionally only evaluate on callback types
@@ -97,15 +93,12 @@ private:
 protected:
     // allocation api
     std::string _symbol;
-    price_t _balance{};
     /// add a signal to strategy
     void addSignal(const std::shared_ptr<Signal>& signal_);
 
 public:
     /// instrument accessor
     std::shared_ptr<model::Instrument> instrument() const { return _instrument; }
-    /// reflect current allocations onto exchange
-    void placeAllocations();
 };
 
 template<typename TOrdApi, typename TPositionApi>
@@ -118,7 +111,7 @@ Strategy<TOrdApi, TPositionApi>::Strategy(std::shared_ptr<MarketDataInterface> m
 ,   _positionApi(std::move(posApi_))
 ,   _allocations(nullptr)
 ,   _instrumentService(std::move(instrumentSvc_))
-,   _oidSeed(std::chrono::system_clock::now().time_since_epoch().count()) {
+{
 
 }
 
@@ -143,17 +136,13 @@ void Strategy<TOrdApi, TPositionApi>::evaluate() {
     } else if (event->eventType() == EventType::TradeUpdate) {
         onTrade(event);
     } else if (event->eventType() == EventType::Exec) {
-        _allocations->update(event->getExec());
         auto exec = event->getExec();
-        if (exec->getExecType() == "Trade") {
-            // TODO calculate/update balance private method.
-            _balance += (1/ exec->getLastPx() * exec->getLastQty() * ((exec->getSide() == "Buy") ? -1 : 1));
-        }
+        _allocations->update(exec);
         onExecution(event);
     }
 
     if (allocations()->modified()) {
-        placeAllocations();
+        _allocations->placeAllocations();
     }
     LOGDEBUG(AixLog::Color::YELLOW << "======== FINISH Evaluate ========" << AixLog::Color::none);
 }
@@ -169,24 +158,27 @@ void Strategy<TOrdApi, TPositionApi>::init(const std::shared_ptr<Config>& config
     _config = config_;
 
     _symbol = _config->get("symbol");
-    _clOrdIdPrefix = _config->get("clOrdPrefix");
 
-    auto cloidSeed = _config->get("cloidSeed", "");
-    if (!cloidSeed.empty()) {
-        _oidSeed = std::stoi(cloidSeed);
-    }
     auto instrument = _instrumentService->get(_symbol);
     auto tickSize = instrument.getTickSize();
     auto referencePrice = instrument.getPrevPrice24h();
     auto lotSize = instrument.getLotSize();
-    _balance = std::atof(_config->get("balance", "0.01").c_str());
 
     LOGINFO("Initialising allocations with " << LOG_VAR(referencePrice) << LOG_VAR(tickSize));
-    _allocations = std::make_shared<Allocations>(referencePrice, tickSize, lotSize);
+    int cloidSeed = std::chrono::system_clock::now().time_since_epoch().count();
+    if (not _config->get("cloidSeed", "").empty()) {
+        cloidSeed = std::stoi(_config->get("cloidSeed"));
+    }
+    _clOrdIdPrefix = _config->get("clOrdPrefix");
+    _allocations = std::make_shared<TAllocations>(_orderEngine,
+                                                  _symbol,
+                                                  _clOrdIdPrefix,
+                                                  cloidSeed,
+                                                  referencePrice,
+                                                  tickSize, lotSize);
  
     double initialLeverage = std::atof(_config->get("initialLeverage", "10.0").c_str());
-    _positionApi->position_updateLeverage(_symbol, initialLeverage); 
-
+    setLeverage(initialLeverage);
 }
 
 template<typename TOrdApi, typename TPositionApi>
@@ -194,181 +186,6 @@ bool Strategy<TOrdApi, TPositionApi>::shouldEval() {
     return true;
 }
 
-
-template<typename TOrdApi, typename TPositionApi>
-void Strategy<TOrdApi, TPositionApi>::placeAllocations() {
-    std::vector<std::shared_ptr<model::Order>> _amends;
-    std::vector<std::shared_ptr<model::Order>> _newOrders;
-    std::vector<std::shared_ptr<model::Order>> _cancels;
-    _amends.clear(); _newOrders.clear(); _cancels.clear();
-    // TODO use ranges ontop of *_allocations iterator. - occupied price level view
-    for (auto& allocation : *_allocations) {
-        if (!allocation) {
-            continue;
-        }
-        if (almost_equal(allocation->getTargetDelta(), 0.0)) {
-            continue;
-        }
-        LOGDEBUG("Processing allocation " << LOG_NVP("targetDelta",allocation->getTargetDelta())
-                << LOG_NVP("currentSize", allocation->getSize()) << LOG_NVP("price",allocation->getPrice()));
-
-        std::shared_ptr<model::Order> order = createOrder(allocation);
-        size_t priceIndex = _allocations->allocIndex(order->getPrice());
-        auto& currentOrder = _orders[priceIndex];
-        if (currentOrder) {
-            LOGINFO("Price level is occupied " << LOG_VAR(order->getPrice())
-                    << LOG_VAR(order->getOrderQty())
-                    << LOG_VAR(currentOrder->getOrderQty())
-                    << LOG_VAR(currentOrder->getPrice())
-                    << LOG_VAR(currentOrder->getOrderID()));
-            // ApiException: {"error":{"message":"You may send orderID or origClOrdID, but not both.","name":"ValidationError"}}
-            order->setOrigClOrdID(currentOrder->getClOrdID());
-            //assert(currentOrder->getLeavesQty() == allocation->getSize() && "Allocation + LeavesQty out of sync");
-            // we have an order at this price level
-            if (allocation->isChangingSide()) {
-                LOGINFO("Chaging sides");
-                currentOrder->setOrdStatus("PendingCancel");
-                currentOrder->setOrderQty(0.0);
-                _cancels.push_back(currentOrder);
-                order->setOrderID("");
-                order->unsetOrigClOrdID();
-                _newOrders.push_back(order);
-
-            } else if (allocation->isAmendDown()) {
-                LOGINFO("Amending down: " << LOG_VAR(order->getClOrdID()) << LOG_VAR(order->getPrice())
-                                          << LOG_VAR(order->getOrderQty()));
-                order->setOrdStatus("PendingAmend");
-                _amends.push_back(order);
-            } else if (allocation->isAmendUp()) {
-                LOGINFO("Amending up: " << LOG_VAR(order->getClOrdID()) << LOG_VAR(order->getPrice())
-                                        << LOG_VAR(order->getOrderQty()));
-                order->setOrdStatus("PendingAmend");
-                _amends.push_back(order);
-            } else if (allocation->isCancel()) {
-                LOGINFO("Cancelling: " << LOG_VAR(order->getClOrdID()) << LOG_VAR(order->getPrice())
-                                       << LOG_VAR(order->getOrderQty()));
-                currentOrder->setOrdStatus("PendingCancel");
-                currentOrder->setOrderQty(0);
-                _cancels.push_back(order);
-            } else if (allocation->isNew()) {
-                LOGWARN("Order present but new allocation.");
-                _newOrders.push_back(order);
-            } else {
-                LOGWARN("Couldn't determine action");
-            }
-        } else if (allocation->isNew()) {
-            _newOrders.push_back(order);
-            LOGINFO("Placing new allocation: " << LOG_VAR(order->getClOrdID()) << LOG_VAR(order->getPrice())
-                        << LOG_VAR(order->getOrderQty()));
-        } else {
-            LOGWARN("Missing order: " << LOG_NVP("Price", allocation->getPrice())
-                << LOG_NVP("Size", allocation->getSize())
-                << LOG_NVP("TargetDelta", allocation->getTargetDelta()));
-            _newOrders.push_back(order);
-        }
-    }
-
-    // make cancels first
-    // TODO cannot do error handling for changingSide - why not cancel or reset allocation on ack.
-    // TODO placeCancels method.
-    for (auto& toSend : _cancels) {
-        if (!_cancels.empty()) {
-            try {
-                auto task = _orderEngine->order_cancel(boost::none,
-                                           toSend->origClOrdIDIsSet() ? toSend->getOrigClOrdID() : toSend->getClOrdID(),
-                                           std::string("")).then(
-                    [this, &toSend](const pplx::task<std::vector<std::shared_ptr<model::Order>>> &orders_) {
-                        this->updateFromTask(orders_);
-                    });
-                task.wait();
-
-            } catch (api::ApiException &ex_) {
-                LOGERROR("Error cancelling order " << ex_.getContent()->rdbuf() << LOG_VAR(ex_.what())
-                                                   << LOG_NVP("order", toSend->toJson().serialize()));
-                _allocations->get(toSend->getPrice())->cancelDelta();
-            }
-
-        }
-    }
-
-    // TODO placeOrderAmends method
-    auto jsList = web::json::value::array();
-    int count = 0;
-    for (auto& toSend : _amends) {
-        jsList.as_array()[count++] = toSend->toJson();
-    }
-    // and then amends
-    if (!_amends.empty()) {
-        try {
-            auto task = _orderEngine->order_amendBulk(jsList.serialize()).then(
-                [this, &_amends](const pplx::task<std::vector<std::shared_ptr<model::Order>>>& orders_) {
-                    this->updateFromTask(orders_);
-                });
-            task.wait();
-        } catch (api::ApiException &ex_) {
-            LOGERROR("Error amending orders: " << ex_.getContent()->rdbuf() << LOG_VAR(ex_.what()));
-            _allocations->cancel([](const std::shared_ptr<Allocation> &alloc_) {
-                return alloc_->isAmendDown() || alloc_->isAmendUp();
-            });
-        }
-    }
-
-    // TODO: placeNewOrders method.
-    jsList = web::json::value::array();
-    count = 0;
-    for (auto& toSend : _newOrders) {
-        jsList.as_array()[count++] = toSend->toJson();
-    }
-    if (!_newOrders.empty()) {
-        try {
-            auto task = _orderEngine->order_newBulk(jsList.serialize()).then(
-                [this, &_newOrders](const pplx::task<std::vector<std::shared_ptr<model::Order>>>& orders_) {
-                        this->updateFromTask(orders_);
-            });
-            task.wait();
-        } catch (api::ApiException &ex_) {
-            LOGERROR("Error placing new orders " << ex_.getContent()->rdbuf() << LOG_VAR(ex_.what()));
-            _allocations->cancel([](const std::shared_ptr<Allocation>& alloc_) { return alloc_->isNew() || alloc_->isChangingSide(); });
-        }
-    }
-
-    LOGINFO("Allocations have been reflected. " << LOG_NVP("amend", _amends.size())
-            << LOG_NVP("new", _newOrders.size()) << LOG_NVP("cancel", _cancels.size()));
-    _allocations->restAll();
-    _cancels.clear();
-    _newOrders.clear();
-    _amends.clear();
-
-}
-
-template<typename TOrdApi, typename TPositionApi>
-std::shared_ptr<model::Order> Strategy<TOrdApi, TPositionApi>::createOrder(const std::shared_ptr<Allocation> &allocation_) {
-    auto newOrder = std::make_shared<model::Order>();
-    newOrder->setPrice(allocation_->getPrice());
-    newOrder->setSide(allocation_->targetSide());
-    newOrder->setOrderQty(std::abs(allocation_->getSize()+allocation_->getTargetDelta()));
-    newOrder->setClOrdID(_clOrdIdPrefix + std::to_string(_oidSeed++));
-    newOrder->setSymbol(_symbol);
-    return newOrder;
-}
-
-template<typename TOrdApi, typename TPositionApi>
-void Strategy<TOrdApi, TPositionApi>::updateFromTask(const pplx::task<std::vector<std::shared_ptr<model::Order>>>& task_) {
-    for (auto& order : task_.get()) {
-        long index = _allocations->allocIndex(order->getPrice());
-        LOGINFO("Success: " << LOG_NVP("price", order->getPrice())
-                << LOG_NVP("ordStatus", order->getOrdStatus())
-                << LOG_NVP("orderQty", order->getOrderQty())
-                << LOG_NVP("leavesQty",order->getLeavesQty())
-                << LOG_NVP("cumQty", order->getCumQty()));
-        _orders[index] = order;
-
-        if (order->getOrdStatus() == "Canceled") {
-            long priceIndex = _allocations->allocIndex(order->getPrice());
-            _orders.erase(priceIndex);
-        }
-    }
-}
 
 template<typename TOrdApi, typename TPositionApi>
 void Strategy<TOrdApi, TPositionApi>::updateSignals() {

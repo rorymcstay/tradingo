@@ -6,7 +6,6 @@ WORKDIR /usr/src/tradingo
 ADD . .
 RUN git submodule update --init
 RUN mkdir build.release \
-    && mkdir build.release \
     && cd build.release \
     && cmake -DCMAKE_BUILD_TYPE=Release \
         -DCPPREST_ROOT=${install_base}/cpprest \

@@ -15,7 +15,6 @@ TestEnv::TestEnv(const std::shared_ptr<Config> &config_)
 ,   _lastDispatch()
 ,   _realtime(false)
 ,   _events(0)
-,   _marginCalculator(std::make_shared<MarginCalculator>(_config))
 {
     init();
 }
@@ -28,7 +27,6 @@ TestEnv::TestEnv(std::initializer_list<std::pair<std::string,std::string>> confi
 ,   _lastDispatch()
 ,   _realtime(false)
 ,   _events(0)
-,   _marginCalculator(std::make_shared<MarginCalculator>(_config))
 {
     init();
 }
@@ -41,6 +39,13 @@ void TestEnv::operator<<(const std::string &value_) {
             _lastDispatch.actual_time = utility::datetime::utc_now();
             _lastDispatch.mkt_time = _context->marketData()->time();
         }
+        if (getEventTypeFromString(value_) == "EXECUTION") {
+            auto params = Params(value_);
+            auto exec = std::make_shared<model::Execution>();
+            auto json = params.asJson();
+            exec->fromJson(json);
+            _context->orderApi()->addExecToPosition(exec);
+        }
         _events++;
         _context->strategy()->evaluate();
         // TODO make TestException class
@@ -51,8 +56,9 @@ void TestEnv::operator<<(const std::string &value_) {
 
 std::shared_ptr<model::Order> TestEnv::operator>>(const std::string &value_) {
     try {
-        auto order = *_context->orderApi() >> value_;
-        return order;
+        *_context->orderApi() >> value_;
+        auto eventType = getEventTypeFromString(value_);
+        return _context->orderApi()->getEvent(eventType);
     } catch (std::runtime_error& ex) {
         std::stringstream error_msg;
         error_msg << "TEST Exception: " << ex.what() << " during event >>\n\n      " << value_;
@@ -72,6 +78,15 @@ std::shared_ptr<T> getEvent(std::ifstream &fileHandle_) {
     auto json = web::json::value::parse(str);
     quote->fromJson(json);
     return quote;
+}
+std::string format(const std::string& test_message_,
+                   const std::shared_ptr<model::Order>& order_) {
+    std::stringstream ss;
+    ss << test_message_ << " OrderID=" << order_->getOrderID()
+        << " ClOrdID=" << order_->getClOrdID();
+       if (order_->origClOrdIDIsSet())
+           ss << " OrigClOrdID=" << order_->getOrigClOrdID();
+    return ss.str();
 }
 
 /// if trade may not occur, return nullptr, else return exec report and modify order.
@@ -124,11 +139,14 @@ std::shared_ptr<model::Execution> canTrade(const std::shared_ptr<model::Order>& 
 
 }
 
-void TestEnv::playback(const std::string& tradeFile_, const std::string& quoteFile_) {
+void TestEnv::playback(const std::string& tradeFile_, const std::string& quoteFile_,
+                       const std::string& instrumentsFile_) {
     std::ifstream tradeFile;
     std::ifstream quoteFile;
+    std::ifstream instrumentsFile;
     tradeFile.open(tradeFile_);
     quoteFile.open(quoteFile_);
+    instrumentsFile.open(quoteFile_);
     if (not tradeFile.is_open()) {
         std::stringstream msg;
         msg << "File " << LOG_VAR(tradeFile_) << " does not exist.";
@@ -139,9 +157,14 @@ void TestEnv::playback(const std::string& tradeFile_, const std::string& quoteFi
         msg << "File " << LOG_VAR(tradeFile_) << " does not exist.";
         throw std::runtime_error(msg.str());
     }
+    if (not instrumentsFile.is_open()) {
+        std::stringstream msg;
+        LOGWARN("File " << LOG_VAR(tradeFile_) << " does not exist.");
+    }
     bool stop = false;
     auto quote = getEvent<model::Quote>(quoteFile);
     auto trade = getEvent<model::Trade>(tradeFile);
+    auto instrument = getEvent<model::Instrument>(instrumentsFile);
     bool hasTrades = true;
 
     std::vector<std::shared_ptr<model::ModelBase>> outBuffer;
@@ -167,7 +190,7 @@ void TestEnv::playback(const std::string& tradeFile_, const std::string& quoteFi
             auto time = quote->getTimestamp();
             // QUOTE
             // TODO: env << "EXEC Price=..."
-            dispatch(time, quote, nullptr, nullptr);
+            dispatch(time, quote, nullptr, nullptr, nullptr);
             // set the quote for next iteration.
             quote = getEvent<model::Quote>(quoteFile);
             // record replay actions to a file.
@@ -175,6 +198,13 @@ void TestEnv::playback(const std::string& tradeFile_, const std::string& quoteFi
 
             if (not quote) {
                 stop = true;
+            }
+            // update instrument:
+            {
+                if (instrument and instrument->getTimestamp() < quote->getTimestamp()) {
+                    dispatch(time, nullptr, nullptr, nullptr, instrument);
+                    instrument = getEvent<model::Instrument>(instrumentsFile);
+                }
             }
 
             // TODO: void liquidatePositions(positions)
@@ -184,6 +214,7 @@ void TestEnv::playback(const std::string& tradeFile_, const std::string& quoteFi
                 auto position = md->getPositions().at(symbol);
                 auto liqPrice = position->getLiquidationPrice();
                 auto qty = position->getCurrentQty();
+
                 auto margin = md->getMargin();
                 auto markPrice = mc->getMarkPrice();
 
@@ -199,7 +230,6 @@ void TestEnv::playback(const std::string& tradeFile_, const std::string& quoteFi
                     LOGINFO("Auto liquidation triggered: "
                                     << LOG_VAR(liqPrice) << LOG_VAR(markPrice) << LOG_VAR(qty)
                                     << LOG_NVP("balance", margin->getWalletBalance()));
-                    *(_context->marketData()) << position;
                 }
             }
         } else { // send the trade.
@@ -219,7 +249,7 @@ void TestEnv::playback(const std::string& tradeFile_, const std::string& quoteFi
                         << LOG_NVP("LeavesQty", order.second->getLeavesQty())
                         << LOG_NVP("OrdStatus", order.second->getOrdStatus())
                         << AixLog::Color::none);
-                    dispatch(exec->getTimestamp(), nullptr, exec, order.second);
+                    dispatch(exec->getTimestamp(), nullptr, exec, order.second, nullptr);
                     if (exec->getOrdStatus() == "Filled") {
                         LOGDEBUG("Filled order");
                     }
@@ -262,12 +292,17 @@ void TestEnv::init() {
     auto tickSize = std::atof(_config->get("tickSize", "0.5").c_str());
     auto referencePrice = std::atof(_config->get("referencePrice").c_str());
     auto lotSize = std::atof(_config->get("lotSize", "100").c_str());
+    auto fairPrice = std::atof(_config->get("fairPrice").c_str());
     auto instSvc = std::shared_ptr<InstrumentService>(nullptr);
     auto instrument = std::make_shared<model::Instrument>();
+    auto maintMargin = std::atof(_config->get("maintMargin", "0.035").c_str());
+    instrument->setFairPrice(fairPrice);
     instrument->setSymbol(_config->get("symbol"));
     instrument->setPrevPrice24h(referencePrice);
     instrument->setTickSize(tickSize);
     instrument->setLotSize(lotSize);
+    instrument->setMaintMargin(maintMargin);
+    *_context->marketData() << instrument;
     _context->instrumentService()->add(instrument);
 
     // initialise strategy
@@ -284,7 +319,9 @@ void TestEnv::init() {
     _context->marketData()->addPosition(_position);
 
     // set up initial margin
-    _context->orderApi()->setMarginCalculator(_marginCalculator);
+    _context->orderApi()->setMarginCalculator(
+        std::make_shared<MarginCalculator>(_config, _context->marketData())
+    );
     _margin->setWalletBalance(std::atof(_config->get("startingBalance").c_str()));
     _margin->setMaintMargin(0.0);
     _margin->setAvailableMargin(_margin->getWalletBalance());
@@ -297,9 +334,11 @@ void TestEnv::init() {
 
 }
 
-
-void TestEnv::dispatch(utility::datetime time_, const std::shared_ptr<model::Quote> &quote_,
-                       const std::shared_ptr<model::Execution> exec_, const std::shared_ptr<model::Order> order_) {
+void TestEnv::dispatch(utility::datetime time_,
+                       const std::shared_ptr<model::Quote> &quote_,
+                       const std::shared_ptr<model::Execution>& exec_,
+                       const std::shared_ptr<model::Order>& order_,
+                       const std::shared_ptr<model::Instrument>& instrument_) {
 
     // default behaviour is not to sleep
     if (_realtime) {
@@ -320,9 +359,10 @@ void TestEnv::dispatch(utility::datetime time_, const std::shared_ptr<model::Quo
         *_context->marketData() << exec_;
         *_context->marketData() << order_;
         *_context->marketData() << _context->orderApi()->getPosition();
+    } else if (instrument_) {
+        *_context->marketData() << instrument_;
     }
 }
-
 
 void TestEnv::sleep(const utility::datetime& time_) const {
     if (_events == 0) {

@@ -119,7 +119,7 @@ Context<TMarketData, TOrderApi, TPositionApi>::Context(std::shared_ptr<Config> c
 
 {
 
-    _apiConfig->setBaseUrl(_config->get("baseUrl", "NO HTTP"));
+    _apiConfig->setBaseUrl(_config->get("baseUrl", "http://localhost:8080"));
     _apiConfig->setApiKey("api-key", _config->get("apiKey", "NO AUTH"));
     _apiConfig->setApiKey("api-secret", _config->get("apiSecret", "NO AUTH"));
     _apiConfig->setHttpConfig(_httpConfig);

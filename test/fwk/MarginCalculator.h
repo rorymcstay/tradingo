@@ -11,10 +11,12 @@
 #include <model/Position.h>
 #include <model/Quote.h>
 #include <model/Funding.h>
+#include <model/Instrument.h>
 
 #include "Allocation.h"
 #include "Utils.h"
 #include "Config.h"
+#include "fwk/TestMarketData.h"
 
 using namespace io::swagger::client;
 
@@ -27,9 +29,11 @@ class MarginCalculator {
     double _maintenanceMargin;
     double _leverage;
     std::string _leverageType;
+    std::shared_ptr<TestMarketData> _marketData;
 
 public:
-    explicit MarginCalculator(const std::shared_ptr<Config>& config_);
+    MarginCalculator(const std::shared_ptr<Config>& config_,
+                    std::shared_ptr<TestMarketData> marketData_);
     void operator()(const std::shared_ptr<model::Quote>& quote_);
     double getUnrealisedPnL(const std::shared_ptr<model::Position>& position_) const;
     double getMarkPrice() const;

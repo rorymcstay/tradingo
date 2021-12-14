@@ -71,26 +71,31 @@ void TestMarketData::init() {
 
 void TestMarketData::operator<<(const std::shared_ptr<model::Quote> &quote_) {
     std::vector<std::shared_ptr<model::Quote>> quotes = {quote_};
-    MarketDataInterface::handleQuotes(quotes, "INSERT");
+    MarketDataInterface::handleQuotes(quotes, "insert");
     set_time(quote_, _time);
     callback();
 }
 
 void TestMarketData::operator<<(const std::shared_ptr<model::Trade> &trade_) {
     std::vector<std::shared_ptr<model::Trade>> trades = {trade_};
-    MarketDataInterface::handleTrades(trades, "INSERT");
+    MarketDataInterface::handleTrades(trades, "insert");
     callback();
 }
 
 void TestMarketData::operator<<(const std::shared_ptr<model::Execution> &exec_) {
     std::vector<std::shared_ptr<model::Execution>> execs = {exec_};
-    MarketDataInterface::handleExecutions(execs, "INSERT");
+    MarketDataInterface::handleExecutions(execs, "insert");
     callback();
 }
 
 void TestMarketData::operator<<(const std::shared_ptr<model::Position> &pos_) {
     std::vector<std::shared_ptr<model::Position>> positions = {pos_};
-    MarketDataInterface::handlePositions(positions, "INSERT");
+    MarketDataInterface::handlePositions(positions, "insert");
+}
+
+void TestMarketData::operator<<(const std::shared_ptr<model::Instrument> &instrument_) {
+    std::vector<std::shared_ptr<model::Instrument>> insts = {instrument_};
+    MarketDataInterface::handleInstruments(insts, "update");
 }
 
 void TestMarketData::operator<<(const std::shared_ptr<model::Order> &order_) {

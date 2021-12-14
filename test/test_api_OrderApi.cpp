@@ -34,11 +34,11 @@ TEST(TestStrategyInterface, DISABLED_smoke_test) {
     context->initStrategy();
     context->strategy()->allocations()->addAllocation(ORDER_PRICE, ORDER_QTY);
     context->strategy()->allocations()->addAllocation(ORDER_PRICE, ORDER_QTY);
-    context->strategy()->placeAllocations();
+    context->strategy()->allocations()->placeAllocations();
     std::this_thread::sleep_for(std::chrono::seconds(1));
     // results in an amend
     context->strategy()->allocations()->addAllocation(ORDER_PRICE, 2*ORDER_QTY);
-    context->strategy()->placeAllocations();
+    context->strategy()->allocations()->placeAllocations();
     // this loops over every price level, need to keep an 'occupied' index to loop over which are indices of the price
     // level vector. also provide a default to cancel all orders rather than passing an always true predicate.
     context->strategy()->allocations()->cancelOrders([](const std::shared_ptr<Allocation>& alloc_) { return true; } /* all */);
@@ -48,52 +48,49 @@ TEST(TestStrategyInterface, DISABLED_smoke_test) {
 TEST(OrderApi, DISABLED_order_newBulk) {
 
     ApiManager om {};
-
-    std::string orders = R"([{"clOrdID":"MCST0","orderID":"","orderQty":100,"price":33709.5,"side":"Buy","symbol":"XBTUSD"},{"clOrdID":"MCST1","orderID":"","orderQty":50,"price":33710,"side":"Sell","symbol":"XBTUSD"}])";
-    auto newOrders = om.orderApi->order_newBulk(orders).then(
-            [](const std::vector<std::shared_ptr<model::Order>> &orders_) {
-                for (const auto& order : orders_) {
-                    std::cout << order->toJson().serialize() << '\n';
-                }
-            }
-    );
-    newOrders.get();
+    auto orders = web::json::value::parse(R"([
+        {
+            "clOrdID":"MCST0",
+            "orderID":"",
+            "orderQty":100,
+            "price":33709.5,
+            "side":"Buy",
+            "symbol":"XBTUSD"
+        },
+        {
+            "clOrdID":"MCST1",
+            "orderID":"",
+            "orderQty":50,
+            "price":33710,
+            "side":"Sell",
+            "symbol":"XBTUSD"
+        }
+    ])").as_array();
+    om.send_orders(orders);
 }
 
-TEST(OrderApi, order_newBulk_throws_ApiException) {
+TEST(OrderApi, DISABLED_order_newBulk_throws_ApiException) {
 
     ApiManager om {};
 
-    model::Order order1 {};
-    order1.setOrderQty(100);
-    order1.setPrice(33370.5);
-    order1.setSide("Buy");
-    order1.setClOrdID(std::to_string(om.oidSeed));
-    order1.setSymbol("XBTUSD");
-    model::Order order2 {};
+    auto orders = web::json::value::parse(R"([
+        {
+            "clOrdID":"MCST0",
+            "orderID":"",
+            "orderQty":100,
+            "price":33709.5,
+            "side":"Buy",
+            "symbol":"XBTUSD"
+        },
+        {
+            "clOrdID":"MCST0",
+            "orderID":"",
+            "orderQty":50,
+            "price":33710,
+            "side":"Sell",
+            "symbol":"XBTUSD"
+        }
+    ])").as_array();
+    om.send_orders(orders);
 
-    // create second order with duplicate ClOrdID
-    order2.setOrderQty(100);
-    order2.setPrice(33370.5);
-    order2.setSide("Buy");
-    order2.setClOrdID(std::to_string(om.oidSeed)); // duplicate cloordid
-    order2.setSymbol("XBTUSD");
-
-    std::error_code res;
-    try {
-        auto newOrders = om.orderApi->order_newBulk(om.to_string({order1, order2})).then(
-            [](const std::vector<std::shared_ptr<model::Order>> &orders_) {
-                for (const auto& order : orders_) {
-                    std::cout << order->toJson().serialize() << '\n';
-                }
-            }
-        );
-        newOrders.get();
-    } catch (api::ApiException& ex_ ) {
-        res = ex_.error_code();
-        LOGINFO("ApiException: " << ex_.getContent()->rdbuf());
-    } catch (web::http::http_exception ex_) {
-        LOGINFO("Httpexception!");
-    }
-    LOGINFO(LOG_VAR(res));
 }

@@ -3,18 +3,21 @@
 //
 #include "MarginCalculator.h"
 #include <memory>
+#include <utility>
 
 #define _TURN_OFF_PLATFORM_STRING
 #include <model/Funding.h>
 
 #include "Config.h"
 
-
-MarginCalculator::MarginCalculator(const std::shared_ptr<Config>& config_)
+MarginCalculator::MarginCalculator(
+    const std::shared_ptr<Config>& config_,
+    std::shared_ptr<TestMarketData>  marketData_)
 :   _indexPrice()
 ,   _interestRate()
 ,   _leverageType(config_->get("leverageType", "ISOLATED"))
 ,   _leverage(std::atof(config_->get("leverage", "10").c_str()))
+,   _marketData(std::move(marketData_))
 {
 
 }
@@ -28,11 +31,12 @@ void MarginCalculator::operator()(const std::shared_ptr<model::Quote>& quote_) {
 }
 
 double MarginCalculator::getMarkPrice() const {
-    return _indexPrice;
+    return _marketData->instrument()->getFairPrice();
 }
 
 double MarginCalculator::getMarginAmount(const std::shared_ptr<model::Position>& position_) const {
-    return _maintenanceMargin * position_->getCurrentQty() * (1/_indexPrice);
+    auto mainMargin = _marketData->instrument()->getMaintMargin();
+    return mainMargin * position_->getCurrentQty() * (1/getMarkPrice());
 }
 
 double MarginCalculator::getLiquidationPrice(const std::shared_ptr<model::Position>& position_, double balance) const {

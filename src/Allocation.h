@@ -23,6 +23,11 @@ class Allocation {
     qty_t _size;
     /// the desired change in size.
     qty_t _targetDelta;
+    /// incremented in the case of an amend.
+    int _version;
+
+    /// reduce an allocations size by amount_
+    void reduce(qty_t amount_) { _size -= amount_; }
 public:
     /// the implied direction of the allocation
     std::string getSide() const;
@@ -37,10 +42,10 @@ public:
     void setPrice(price_t price) { _price = price; }
     qty_t getSize() const { return _size; }
     void setSize(qty_t size) { _size = size; }
-    void setTargetDelta(qty_t delta_) { _targetDelta = delta_; }
+    void setTargetDelta(qty_t delta_);
     qty_t getTargetDelta() const { return _targetDelta; }
-    /// reduce an allocations size by amount_
-    void reduce(qty_t amount_) { _size -= amount_; }
+    int getVersion() const { return _version; }
+
     /// declare an allocation reflected onto the exchange.
     void rest();
     /// cancel the change in size.
@@ -55,6 +60,8 @@ public:
     bool isAmendDown() const {return !isCancel() && !isChangingSide() && std::abs(_targetDelta+_size) < std::abs(_size); };
     /// is an exit of allocation.
     bool isCancel() const { return almost_equal(_targetDelta + _size, 0.0); };
+    void update(const std::shared_ptr<model::Execution>& exec_);
+
 
 public:
     Allocation();
