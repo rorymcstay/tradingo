@@ -43,11 +43,16 @@ replay_tradingo_on() {
     LIB_NAME_PREFIX="test" \
     REALTIME=${REALTIME:-false} \
     INSTALL_LOCATION=$INSTALL_LOCATION \
+    STARTING_BALANCE=${STARTING_BALANCE:-0.01} \
+    INITIAL_LEVERAGE=${INITIAL_LEVERAGE:-15} \
+    LEVERAGE_tYPE=${LEVERAGE_TYPE:-ISOLATED} \
+    MAINT_MARGIN=${MAINT_MARGIN:-0.035} \
         envsubst < $INSTALL_LOCATION/etc/config/replayTradingo.cfg  \
     >> $config_file
 
     populate_common_params $config_file
-    populate_strategy_params $INSTALL_LOCATION/etc/config/strategy/${STRATEGY}.cfg $config_file
+    LIB_NAME_PREFIX="test_" \
+        populate_strategy_params $INSTALL_LOCATION/etc/config/strategy/${STRATEGY}.cfg $config_file
     cat $config_file
     # run the replay
     cd $STORAGE
