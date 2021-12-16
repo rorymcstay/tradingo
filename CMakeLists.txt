@@ -20,6 +20,7 @@ endif(BOOST_ASIO_DISABLE_CONCEPTS)
 add_subdirectory(thirdparty)
 add_subdirectory(src)
 add_subdirectory(app)
+enable_testing()
 add_subdirectory(test)
 
 message(STATUS "CPPRESTSDK_INCLUDE_DIR = ${CPPREST_ROOT}/include")

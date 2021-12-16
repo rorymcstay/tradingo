@@ -17,7 +17,7 @@ TEST(TestPositionApi, test_update_leverage) {
 }
 
 
-TEST(TestPositionApi, parse_json_float) {
+TEST(TestPositionApi, DISABLED_test_parse_invalid_json) {
     
     std::cout << web::json::value::parse("10.0000").serialize() << '\n';
 

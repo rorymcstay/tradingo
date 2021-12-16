@@ -4,8 +4,6 @@ source "$(dirname ${BASH_SOURCE[0]})/profile.env"
 trade_date=$1
 
 replay_tradingo_on() {
-    # exit on first failure
-    set -e
 
     # params
     export DATESTR=$1
@@ -16,14 +14,19 @@ replay_tradingo_on() {
     mkdir -p "$TICK_STORAGE/$DATESTR"
     tick_location="$TICK_STORAGE/$DATESTR/"
 
+    # do this and do not fail if unsuccesful.
+    if [[ ! -f $tick_location/instruments_$SYMBOL.json ]]; then
+        aws s3 cp "s3://$BUCKET_NAME/tickRecorder/storage/$1/instruments_$SYMBOL.json" $tick_location
+    fi
+
+    # exit on first failure
+    set -e
+
     if [[ ! -f $tick_location/quotes_$SYMBOL.json ]]; then
         aws s3 cp "s3://$BUCKET_NAME/tickRecorder/storage/$1/quotes_$SYMBOL.json" $tick_location
     fi
     if [[ ! -f $tick_location/trades_$SYMBOL.json ]]; then
         aws s3 cp "s3://$BUCKET_NAME/tickRecorder/storage/$1/trades_$SYMBOL.json" $tick_location
-    fi
-    if [[ ! -f $tick_location/instruments_$SYMBOL.json ]]; then
-        aws s3 cp "s3://$BUCKET_NAME/tickRecorder/storage/$1/instruments_$SYMBOL.json" $tick_location
     fi
 
     config_file=$REPLAY_STORAGE/$RUN_ID/tradingo.cfg
