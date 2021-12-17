@@ -403,6 +403,7 @@ void TestOrdersApi::addExecToPosition(const std::shared_ptr<model::Execution>& e
         auto cost = 1 / lastQty * lastPx * dirMx;
         auto newBalance = cost + _margin->getWalletBalance();
         _margin->setWalletBalance(newBalance);
+
     }
     { // update the order
         auto order = _orders.at(exec_->getClOrdID());
@@ -441,6 +442,8 @@ void TestOrdersApi::addExecToPosition(const std::shared_ptr<model::Execution>& e
         _position->setMaintMarginReq(maintenanceMargin);
         _margin->setMaintMargin(maintenanceMargin);
         _margin->setAvailableMargin(_margin->getWalletBalance() - maintenanceMargin);
+    }
+    { // update 
     }
     { // liquidation price
         auto liqPrice = _marginCalculator->getLiquidationPrice(_position,

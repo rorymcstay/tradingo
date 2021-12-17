@@ -3,6 +3,7 @@
 //
 #include "MarginCalculator.h"
 #include <memory>
+#include <stdexcept>
 #include <utility>
 
 #define _TURN_OFF_PLATFORM_STRING
@@ -31,7 +32,7 @@ void MarginCalculator::operator()(const std::shared_ptr<model::Quote>& quote_) {
 }
 
 double MarginCalculator::getMarkPrice() const {
-    return _marketData->instrument()->getFairPrice();
+    return _marketData->instrument()->getMarkPrice();
 }
 
 double MarginCalculator::getMarginAmount(const std::shared_ptr<model::Position>& position_) const {
@@ -39,11 +40,36 @@ double MarginCalculator::getMarginAmount(const std::shared_ptr<model::Position>&
     return mainMargin * position_->getCurrentQty() * (1/getMarkPrice());
 }
 
-double MarginCalculator::getLiquidationPrice(const std::shared_ptr<model::Position>& position_, double balance) const {
-    auto symbol = position_->getSymbol();
-    auto size = position_->getCurrentQty();
-    auto entryPrice = position_->getAvgEntryPrice();
-    auto leverage = position_->getLeverage();
-    // TODO Calculate liquidation price given margin
-    return _indexPrice;
+double MarginCalculator::getLiquidationPrice(
+            double leverage_,
+            const std::string& leverageType_,
+            price_t fairPrice_,
+            qty_t qty_,
+            qty_t balance_) const {
+    auto maintMargin = _marketData->instrument()->getMaintMargin();
+    auto posValue = 1/fairPrice_ * qty_;
+    if (leverageType_ == "ISOLATED") {
+        auto maint_margin_amount = maintMargin * posValue/leverage_;
+        auto liqPricePct = 1 - ((posValue - maint_margin_amount)/posValue);
+        return liqPricePct * fairPrice_;
+    } else if (leverageType_ == "CROSSED") {
+        auto maint_margin_amount = maintMargin * posValue/leverage_ + balance_;
+        auto liqPricePct = 1 - ((posValue - maint_margin_amount)/posValue);
+        return liqPricePct * fairPrice_;
+    }
+    else {
+        throw std::runtime_error("leverageType_ not recognised " + leverageType_);
+    }
+
 }
+
+
+double MarginCalculator::getOrderCost(double price_, double qty_) const {
+    return price_ * qty_;
+}
+
+double MarginCalculator::getInitialMargin(double price_, double qty_, double leverage_) {
+    auto value = getOrderCost(price_, qty_);
+    return 1/leverage_ * value;
+}
+

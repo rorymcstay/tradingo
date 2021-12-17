@@ -38,7 +38,14 @@ public:
     double getUnrealisedPnL(const std::shared_ptr<model::Position>& position_) const;
     double getMarkPrice() const;
     double getMarginAmount(const std::shared_ptr<model::Position>& position_) const;
-    double getLiquidationPrice(const std::shared_ptr<model::Position>& position_, double balance_) const;
+    double getLiquidationPrice(
+            double leverage_,
+            const std::string& leverageType_,
+            price_t price_,
+            qty_t qty_,
+            qty_t balance_) const;
+    double getOrderCost(double price_, double qty_) const;
+    double getInitialMargin(double price_, double qty_, double leverage_) const;
 
 };
 

@@ -210,19 +210,23 @@ void TestEnv::playback(const std::string& tradeFile_, const std::string& quoteFi
             // TODO: void liquidatePositions(positions)
             {
                 std::shared_ptr<MarginCalculator> mc = _context->orderApi()->getMarginCalculator();
+               
                 auto md = _context->strategy()->getMD();
+                
                 auto position = md->getPositions().at(symbol);
-                auto liqPrice = position->getLiquidationPrice();
-                auto qty = position->getCurrentQty();
 
+                auto qty = position->getCurrentQty();
                 auto margin = md->getMargin();
+                auto liqPrice = mc->getLiquidationPrice(position_);
                 auto markPrice = mc->getMarkPrice();
 
                 if (not almost_equal(qty, 0.0) and ((qty > 0 and markPrice > liqPrice)
                     or (qty < 0 and markPrice < liqPrice))) {
 
                     position->setCurrentQty(0);
-                    position->setUnrealisedPnl(-1);
+                    position->setUnrealisedPnl(0.0);
+                    auto liquidationValue = position->getBankruptPrice()*qty;
+                    position->setRealisedPnl(liquidationValue - position->getCurrentCost());
                     auto cost_to_balance = position->getCurrentCost();
                     if (leverageType == "CROSSED")
                         margin->setWalletBalance(margin->getWalletBalance() - cost_to_balance);
@@ -302,6 +306,7 @@ void TestEnv::init() {
     instrument->setTickSize(tickSize);
     instrument->setLotSize(lotSize);
     instrument->setMaintMargin(maintMargin);
+    instrument->setMarkPrice(fairPrice);
     *_context->marketData() << instrument;
     _context->instrumentService()->add(instrument);
 

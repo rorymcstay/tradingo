@@ -45,7 +45,7 @@ replay_tradingo_on() {
     INSTALL_LOCATION=$INSTALL_LOCATION \
     STARTING_BALANCE=${STARTING_BALANCE:-0.01} \
     INITIAL_LEVERAGE=${INITIAL_LEVERAGE:-15} \
-    LEVERAGE_tYPE=${LEVERAGE_TYPE:-ISOLATED} \
+    LEVERAGE_TYPE=${LEVERAGE_TYPE:-ISOLATED} \
     MAINT_MARGIN=${MAINT_MARGIN:-0.035} \
         envsubst < $INSTALL_LOCATION/etc/config/replayTradingo.cfg  \
     >> $config_file
