@@ -9,6 +9,7 @@ TEST(TestPositionApi, test_formatting_params) {
     body_data["symbol"] = web::json::value::parse(R"({"symbol": "XBTUSD"})");
 }
 
+
 TEST(TestPositionApi, test_update_leverage) {
 
     ApiManager apiMgr{};

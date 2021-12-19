@@ -23,22 +23,27 @@ MarginCalculator::MarginCalculator(
 
 }
 
+
 double MarginCalculator::getUnrealisedPnL(const std::shared_ptr <model::Position>& position_) const {
-    return (_indexPrice*position_->getCurrentQty()) - position_->getCurrentCost();
+    return (getMarkPrice()*position_->getCurrentQty()) - position_->getCurrentCost();
 }
+
 
 void MarginCalculator::operator()(const std::shared_ptr<model::Quote>& quote_) {
     _indexPrice = (quote_->getBidPrice() + quote_->getBidPrice())/2.0;
 }
 
+
 double MarginCalculator::getMarkPrice() const {
     return _marketData->instrument()->getMarkPrice();
 }
+
 
 double MarginCalculator::getMarginAmount(const std::shared_ptr<model::Position>& position_) const {
     auto mainMargin = _marketData->instrument()->getMaintMargin();
     return mainMargin * position_->getCurrentQty() * (1/getMarkPrice());
 }
+
 
 double MarginCalculator::getLiquidationPrice(
             double leverage_,
@@ -64,12 +69,23 @@ double MarginCalculator::getLiquidationPrice(
 }
 
 
+
 double MarginCalculator::getOrderCost(double price_, double qty_) const {
     return price_ * qty_;
 }
 
-double MarginCalculator::getInitialMargin(double price_, double qty_, double leverage_) {
+
+double MarginCalculator::getInitialMargin(double price_, double qty_, double leverage_) const {
     auto value = getOrderCost(price_, qty_);
     return 1/leverage_ * value;
 }
 
+
+const std::string& MarginCalculator::leverageType() const {
+    return _leverageType;
+}
+
+
+void MarginCalculator::setLeverageType(const std::string& leverageType_) {
+    _leverageType = leverageType_;
+}

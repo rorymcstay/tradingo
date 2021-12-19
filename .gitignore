@@ -25,4 +25,9 @@ install_manifest.txt
 compile_commands.json
 CTestTestfile.cmake
 _deps
+*.orig
+*_BACKUP_*
+*_BASE_*
+*_LOCAL_*
+*_REMOTE_*
 install

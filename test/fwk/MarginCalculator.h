@@ -47,6 +47,10 @@ public:
     double getOrderCost(double price_, double qty_) const;
     double getInitialMargin(double price_, double qty_, double leverage_) const;
 
+    // accessor funcs
+    const std::string& leverageType() const { return _leverageType; }
+    void setLeverageType(const std::string& leverageType_) { _leverageType = leverageType_; }
+
 };
 
 

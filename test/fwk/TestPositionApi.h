@@ -10,10 +10,12 @@
 using namespace io::swagger::client;
 class TestPositionApi {
 
-    std::unordered_map<std::string, double> _leverages;
+    std::unordered_map<std::string, std::shared_ptr<model::Position>> _positions;
 
 public:
-    double getLeverage(const std::string& symbol_) const { return _leverages.at(symbol_); }
+    double addPosition(const std::shared_ptr<model::Position> position_) {
+        return _positions[position_->getSymbol()] = position_;
+    }
 
 public: 
 

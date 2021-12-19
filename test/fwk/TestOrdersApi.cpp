@@ -446,9 +446,16 @@ void TestOrdersApi::addExecToPosition(const std::shared_ptr<model::Execution>& e
     { // update 
     }
     { // liquidation price
-        auto liqPrice = _marginCalculator->getLiquidationPrice(_position,
-                                                               _margin->getWalletBalance());
+        auto leverageType = "ISOLATED";
+        auto liqPrice = _marginCalculator->getLiquidationPrice(
+                _position->getLeverage(),
+                leverageType,
+                _marginCalculator->getMarkPrice(),
+                _position->getCurrentQty(),
+                _margin->getWalletBalance()
+        );
         _position->setLiquidationPrice(liqPrice);
+        _position->setExecQty(exec_->getLastQty());
     }
     // timestamp
     _position->setTimestamp(exec_->getTimestamp());
@@ -473,6 +480,7 @@ void TestOrdersApi::setPosition(const std::shared_ptr<model::Position> &position
 const std::shared_ptr<model::Margin>& TestOrdersApi::getMargin() const {
     return _margin;
 }
+
 void TestOrdersApi::setMargin(const std::shared_ptr<model::Margin> &margin_) {
     _margin = margin_;
 }

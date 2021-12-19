@@ -217,7 +217,7 @@ void TestEnv::playback(const std::string& tradeFile_, const std::string& quoteFi
 
                 auto qty = position->getCurrentQty();
                 auto margin = md->getMargin();
-                auto liqPrice = mc->getLiquidationPrice(position_);
+                auto liqPrice = position->getLiquidationPrice();
                 auto markPrice = mc->getMarkPrice();
 
                 if (not almost_equal(qty, 0.0) and ((qty > 0 and markPrice > liqPrice)
@@ -321,6 +321,7 @@ void TestEnv::init() {
     _position->setCurrentCost(0.0);
     _position->setUnrealisedPnl(0.0);
     _context->orderApi()->setPosition(_position);
+    _context->positionApi()->addPosition(_position);
     _context->marketData()->addPosition(_position);
 
     // set up initial margin
