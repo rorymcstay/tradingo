@@ -5,6 +5,7 @@
 
 #define _TURN_OFF_PLATFORM_STRING
 #include <ApiClient.h>
+#include <model/Position.h>
 
 
 using namespace io::swagger::client;
@@ -13,8 +14,8 @@ class TestPositionApi {
     std::unordered_map<std::string, std::shared_ptr<model::Position>> _positions;
 
 public:
-    double addPosition(const std::shared_ptr<model::Position> position_) {
-        return _positions[position_->getSymbol()] = position_;
+    void addPosition(const std::shared_ptr<model::Position> position_) {
+        _positions[position_->getSymbol()] = std::move(position_);
     }
 
 public: 
