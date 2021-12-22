@@ -161,7 +161,6 @@ qty_t BreakOutStrategy<TOrdApi, TPositionApi>::getQtyToTrade(const std::string& 
     if (std::abs(StrategyApi::allocations()->totalAllocated()) > _displaySize) {
         return 0;
     }
-    auto currentlyAllocated = StrategyApi::allocations()->totalAllocated();
     if (side_ == "Buy") {
         // if we are buying
         if (greater_equal(_longExpose, currentSize)) {
@@ -169,28 +168,11 @@ qty_t BreakOutStrategy<TOrdApi, TPositionApi>::getQtyToTrade(const std::string& 
         } else {
             return 0;
         }
-        auto toMakeUp = _longExpose - currentSize;
-        if (toMakeUp < 0) {
-            //
-            return 0;
-        } else if (greater_equal(currentlyAllocated, toMakeUp)) {
-            return 0;
-        } else {
-            return toMakeUp;
-        }
     } else {
         if (greater_equal(currentSize, _shortExpose)) {
             return -100;
         } else {
             return 0;
-        }
-        auto toMakeUp = (_shortExpose - currentSize);
-        if (toMakeUp > 0) {
-            return 0;
-        } else if (less_equal(currentlyAllocated, toMakeUp)) {
-            return 0;
-        } else {
-            return toMakeUp;
         }
     }
 }

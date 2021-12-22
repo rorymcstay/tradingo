@@ -274,6 +274,7 @@ void TestEnv::playback(const std::string& tradeFile_, const std::string& quoteFi
 }
 
 void TestEnv::init() {
+
     _config->set("baseUrl", "https://localhost:8888/api/v1");
     _config->set("apiKey", "dummy");
     _config->set("apiSecret", "dummy");
@@ -283,12 +284,14 @@ void TestEnv::init() {
     _config->set("tickSize", "0.5");
     _config->set("lotSize", "100");
     _config->set("callback-signals", "true");
+    _config->set("cloidSeed", "0");
+
     if (_config->get("realtime", "false") == "true") {
         _realtime = true;
     }
     if (_config->get("logLevel", "").empty())
         _config->set("logLevel", "debug");
-    _config->set("cloidSeed", "0");
+
 
     _context = std::make_shared<Context<TestMarketData, OrderApi, TestPositionApi>>(_config);
 
@@ -310,12 +313,7 @@ void TestEnv::init() {
     *_context->marketData() << instrument;
     _context->instrumentService()->add(instrument);
 
-    // initialise strategy
-    _context->init();
-    _context->initStrategy();
-
     // setup initial positoin
-
     _position->setSymbol(_config->get("symbol"));
     _position->setCurrentQty(0.0);
     _position->setCurrentCost(0.0);
@@ -335,8 +333,11 @@ void TestEnv::init() {
     _margin->setCurrency("XBt");
     _context->marketData()->setMargin(_margin);
     _context->orderApi()->setMargin(_margin);
-
     _context->orderApi()->init(_config);
+
+    // initialise strategy as the very last thing we do
+    _context->init();
+    _context->initStrategy();
 
 }
 

@@ -1,6 +1,5 @@
 #!/bin/bash
 
-
 source "$(dirname ${BASH_SOURCE[0]})/profile.env"
 
 version=$(get_version $1)
@@ -11,6 +10,7 @@ remote_tag=rmcstay95/"$(if [[ $component == "tradingo" ]]; then echo tradingo; e
 
 docker_file=$(if [[ $component == "tradingo" ]]; then echo "tradingo.dockerfile"; else echo "tradingo-$component.dockerfile"; fi)
 
+set -e
 docker build -f docker/$docker_file --tag $local_tag $ROOT_DIR
 
 set -x

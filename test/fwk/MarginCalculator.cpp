@@ -20,7 +20,6 @@ MarginCalculator::MarginCalculator(
 ,   _leverage(std::atof(config_->get("leverage", "10").c_str()))
 ,   _marketData(std::move(marketData_))
 {
-
 }
 
 

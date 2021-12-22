@@ -1,4 +1,3 @@
-
 FROM rmcstay95/tradingo-base:0ee37ab-dirty as builder
 
 # build tradingo
