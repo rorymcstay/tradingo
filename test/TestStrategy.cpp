@@ -145,7 +145,7 @@ TEST(Strategy, balance_is_updated_during_test) {
     ASSERT_DOUBLE_EQ(position->getCurrentQty(), 100);
     ASSERT_DOUBLE_EQ(position->getBankruptPrice(), 0.0);
     ASSERT_DOUBLE_EQ(position->getBreakEvenPrice(), 9.99);
-    ASSERT_DOUBLE_EQ(position->getLiquidationPrice(), 0.0);
+    ASSERT_DOUBLE_EQ(position->getLiquidationPrice(), 0.23333333333332984);
     auto margin = env.strategy()->getMD()->getMargin();
     ASSERT_DOUBLE_EQ(margin->getWalletBalance(), 0.00010000000000000286);
     ASSERT_DOUBLE_EQ(margin->getMaintMargin(), 0.035000000000000003);
