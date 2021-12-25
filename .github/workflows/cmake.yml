@@ -12,42 +12,22 @@ env:
 
 jobs:
   build:
-    # The CMake configure and build commands are platform agnostic and should work equally
-    # well on Windows or Mac.  You can convert this to a matrix build if you need
-    # cross-platform coverage.
-    # See: https://docs.github.com/en/free-pro-team@latest/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
-    runs-on: ubuntu-latest
+    runs-on: rmcstay95/tradingo-base:0ee37ab-dirty
 
     steps:
     - uses: actions/checkout@v2
-    - name:  Install dependencies
-      # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
-      # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
-      run: |
-        sudo apt-get update && sudo apt-get -y install cmake libcpprest-dev libgtest-dev libboost-program-options-dev \
-          && git clone https://github.com/google/benchmark.git /tmp/src/benchmark \
-          && mkdir -p /tmp/src/benchmark/build \
-          && /bin/sh -c 'cd /tmp/src/benchmark/build && \
-            cmake -DBENCHMARK_DOWNLOAD_DEPENDENCIES=on \
-            -DCMAKE_BUILD_TYPE=Release /tmp/src/benchmark \
-            && sudo make install -j3 '
     - name: Clone thirdparty modules
       run: git submodule init && git submodule update
 
     - name: Configure CMake
-      # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
-      # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
       run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=Release -DCPPREST_ROOT=/usr/local -DCMAKE_INSTALL_PREFIX=${{github.workspace}}/install
 
     - name: Build
-      # Build your program with the given configuration
       run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
 
     - name: Install
-      # Build your program with the given configuration
       run: cmake --install ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
 
     - name: Test
       working-directory: ${{github.workspace}}/build/
-      # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
       run: ctest -C ${{env.BUILD_TYPE}} --verbose
