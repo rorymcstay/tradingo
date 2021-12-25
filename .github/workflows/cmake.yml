@@ -12,7 +12,7 @@ env:
 
 jobs:
   build:
-    runs-on: rmcstay95/tradingo-base:0ee37ab-dirty
+    runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v2
