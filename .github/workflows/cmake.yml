@@ -16,6 +16,15 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
+    - name:  Install dependencies
+      run: |
+        sudo apt-get update && sudo apt-get -y install cmake libcpprest-dev libgtest-dev libboost-program-options-dev \
+          && git clone https://github.com/google/benchmark.git /tmp/src/benchmark \
+          && mkdir -p /tmp/src/benchmark/build \
+          && /bin/sh -c 'cd /tmp/src/benchmark/build && \
+            cmake -DBENCHMARK_DOWNLOAD_DEPENDENCIES=on \
+            -DCMAKE_BUILD_TYPE=Release /tmp/src/benchmark \
+            && sudo make install -j3 '
     - name: Clone thirdparty modules
       run: git submodule init && git submodule update
 
