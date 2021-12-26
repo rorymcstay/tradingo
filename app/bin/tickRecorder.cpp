@@ -4,6 +4,7 @@
 
 #include <boost/program_options.hpp>
 #include <api/OrderApi.h>
+#include <api/PositionApi.h>
 
 #include "MarketData.h"
 #include "Event.h"
@@ -18,9 +19,22 @@ namespace po = boost::program_options;
 
 using ModelBatchWriter = BatchWriter<std::shared_ptr<model::ModelBase>>;
 
+bool should_run(std::chrono::system_clock::time_point started_at_) {
+    auto started_at_t = std::chrono::system_clock::to_time_t(started_at_);
+    auto current_t = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+    auto started_at = localtime(&started_at_t);
+    auto current = localtime(&current_t);
+    auto current_day = current->tm_mday;
+    auto started_day = started_at->tm_mday;
+    if (current_day != started_day)
+        return false;
+    return true;
+
+}
+
 int main(int argc, char **argv) {
 
-
+    auto started_at = std::chrono::system_clock::now();
     po::options_description desc("Allowed options");
     desc.add_options()
             ("help", "produce help message")
@@ -40,7 +54,7 @@ int main(int argc, char **argv) {
     } else {
         return 1;
     }
-    auto context = std::make_shared<Context<MarketData, io::swagger::client::api::OrderApi>>(config);
+    auto context = std::make_shared<Context<MarketData, io::swagger::client::api::OrderApi, io::swagger::client::api::PositionApi>>(config);
     context->init();
 
     auto marketData = context->marketData();
@@ -52,11 +66,30 @@ int main(int argc, char **argv) {
         return order_->toJson().serialize();
     };
     // enable file rotation for batch writers
-    auto trades = std::make_shared<ModelBatchWriter>("trades", symbol, storage, 100, printer, true);
-    auto quotes = std::make_shared<ModelBatchWriter>("quotes", symbol, storage, 1000, printer, true);
+    auto trades = std::make_shared<ModelBatchWriter>(
+        "trades",
+        symbol,
+        storage,
+        std::stoi(config->get("tradesBatchSize", "100")),
+        printer,
+        false);
+    auto quotes = std::make_shared<ModelBatchWriter>(
+        "quotes",
+        symbol,
+        storage,
+        std::stoi(config->get("quotesBatchSize", "1000")),
+        printer,
+        false);
+    auto instruments = std::make_shared<ModelBatchWriter>(
+        "instruments",
+        symbol,
+        storage,
+        std::stoi(config->get("instrumentsBatchSize", "1000")),
+        printer,
+        false);
 
-    while (marketData)
-    {
+    // only run for the current date
+    while (should_run(started_at)) {
         auto data = marketData->read();
         if (data) {
             switch (data->eventType()) {
@@ -70,11 +103,16 @@ int main(int argc, char **argv) {
                     trades->write(trd);
                     break;
                 }
+                case EventType::Instrument: {
+                    auto inst = data->getInstrumentDelta();
+                    instruments->write(inst);
+                    break;
+                }
             }
         }
     }
     trades->write_batch();
     quotes->write_batch();
+    instruments->write_batch();
     return 0;
 }
-

@@ -1,4 +1,5 @@
 .idea/
+.gdb_history
 cmake-build-*/
 *.csv
 build/
@@ -6,7 +7,10 @@ build/
 .cache/
 .aws
 .env
+*.swp
 thirdparty/googletest/
+build.release
+build.debug
 tmp
 wip
 test.cfg
@@ -23,3 +27,11 @@ CTestTestfile.cmake
 _deps
 install
 build*
+*.orig
+*_BACKUP_*
+*_BASE_*
+*_LOCAL_*
+*_REMOTE_*
+
+*.log
+tags

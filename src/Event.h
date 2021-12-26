@@ -30,6 +30,7 @@ class Event
 private:
     // TODO add execution, remove _instrument
     std::shared_ptr<io::swagger::client::model::Instrument> _instrument;
+    std::shared_ptr<io::swagger::client::model::Instrument> _instrumentDelta;
     std::shared_ptr<io::swagger::client::model::Trade> _trade;
     std::shared_ptr<io::swagger::client::model::Quote> _quote;
     std::shared_ptr<io::swagger::client::model::Execution> _exec;
@@ -38,8 +39,10 @@ private:
     std::chrono::system_clock::time_point _timeStamp;
 
 public:
-    Event(std::shared_ptr<model::Instrument> instr_)
+    Event(std::shared_ptr<model::Instrument> instr_,
+        std::shared_ptr<model::Instrument> delta_)
             :   _instrument(std::move(instr_))
+            ,   _instrumentDelta(std::move(delta_))
             ,   _trade(nullptr)
             ,   _quote(nullptr)
             ,   _exec(nullptr)
@@ -47,6 +50,7 @@ public:
 
     Event(std::shared_ptr<model::Trade> trade_)
             :   _instrument(nullptr)
+            ,   _instrumentDelta(nullptr)
             ,   _trade(std::move(trade_))
             ,   _quote(nullptr)
             ,   _exec(nullptr)
@@ -54,6 +58,7 @@ public:
 
     Event(std::shared_ptr<model::Quote> quote_)
             :   _instrument(nullptr)
+            ,   _instrumentDelta(nullptr)
             ,   _trade(nullptr)
             ,   _quote(std::move(quote_))
             ,   _exec(nullptr)
@@ -61,6 +66,7 @@ public:
 
     Event(std::shared_ptr<model::Execution> exec_)
             :   _instrument(nullptr)
+            ,   _instrumentDelta(nullptr)
             ,   _trade(nullptr)
             ,   _quote(nullptr)
             ,   _exec(std::move(exec_))
@@ -69,6 +75,7 @@ public:
     void setEventType(EventType eventType_) { _eventType = eventType_; }
     void setAction(const std::string& action_);
     const std::shared_ptr<model::Instrument>& getInstrument() const { return _instrument; }
+    const std::shared_ptr<model::Instrument>& getInstrumentDelta() const { return _instrumentDelta; }
     const std::shared_ptr<model::Trade>& getTrade() const { return _trade; }
     const std::shared_ptr<model::Quote>& getQuote() const { return _quote; }
     const std::shared_ptr<model::Execution>& getExec() const { return _exec; }

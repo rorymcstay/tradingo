@@ -3,6 +3,8 @@
 //
 
 #include <gtest/gtest.h>
+
+#define _TURN_OFF_PLATFORM_STRING
 #include <model/Order.h>
 
 #include "fwk/TempStorage.h"

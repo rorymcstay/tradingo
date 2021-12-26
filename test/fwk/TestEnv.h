@@ -11,6 +11,8 @@
 
 #include "TestMarketData.h"
 #include "TestOrdersApi.h"
+#include "TestPositionApi.h"
+#include "MarginCalculator.h"
 
 #include "Strategy.h"
 #include "OrderInterface.h"
@@ -33,9 +35,9 @@ struct Dispatch {
         {"symbol", "XBTUSD"},\
         {"clOrdPrefix", "MCST"},\
         {"factoryMethod", "RegisterBreakOutStrategy"},\
-        {"startingAmount", "1000"},\
         {"displaySize", "200"},\
         {"referencePrice", "35000"},\
+        {"fairPrice", "35000"},\
         {"shortTermWindow", "1000"},\
         {"longTermWindow", "8000"},\
         {"moving_average_crossover-interval", "1000"},\
@@ -43,7 +45,9 @@ struct Dispatch {
         {"logLevel", "debug"},\
         {"moving_average_crossover-callback", "false"}, \
         {"realtime", "false"},                         \
-        {"override-signal-callback", "true"},            \
+        {"override-signal-callback", "true"},         \
+        {"startingBalance", "0.001"}, \
+        {"initialLeverage", "15.0"}, \
         {"libraryLocation", LIBRARY_LOCATION"/libtest_trading_strategies.so" }, \
         {"storage", "./"},   \
         {"tickStorage", "./"}
@@ -56,32 +60,43 @@ struct Dispatch {
 class TestEnv
 {
     using OrderApi = TestOrdersApi;
-    using TStrategy = Strategy<OrderApi>;
+    using PositionApi = TestPositionApi;
+    using TStrategy = Strategy<OrderApi, PositionApi>;
+    using TContext = std::shared_ptr<Context<TestMarketData, OrderApi, TestPositionApi>>;
 
     std::shared_ptr<Config> _config;
-    std::shared_ptr<Context<TestMarketData, OrderApi>> _context;
+    std::shared_ptr<Context<TestMarketData, OrderApi, PositionApi>> _context;
     std::shared_ptr<model::Position> _position;
-    Dispatch _lastDispatch; // first is time, second is mkttime
+    std::shared_ptr<model::Margin> _margin;
+    Dispatch _lastDispatch;
     bool _realtime;
     long _events;
 public:
     const std::shared_ptr<TStrategy>& strategy() const { return _context->strategy(); }
-    const std::shared_ptr<Context<TestMarketData, OrderApi>>& context() const { return _context; }
+    const TContext& context() const { return _context; }
     TestEnv(std::initializer_list<std::pair<std::string, std::string>>);
     TestEnv(const std::shared_ptr<Config>& config_);
 
     void init();
 
-    void playback(const std::string& tradeFile_, const std::string& quoteFile_);
+    void playback(const std::string& tradeFile_,
+                  const std::string& quoteFile_,
+                  const std::string& instrumentsFile_);
 
-    void dispatch(utility::datetime time, const std::shared_ptr<model::Quote>& quote,
-                  const std::shared_ptr<model::Execution> exec_, const std::shared_ptr<model::Order> order_);
+    /// exec & order, or one of quote or instrument.
+    void dispatch(utility::datetime time,
+                  const std::shared_ptr<model::Quote>& quote,
+                  const std::shared_ptr<model::Execution>& exec_,
+                  const std::shared_ptr<model::Order>& order_,
+                  const std::shared_ptr<model::Instrument>& instrument_);
 
     void operator << (const std::string& value_);
-    void operator >> (const std::string& value_);
+    std::shared_ptr<model::Order> operator >> (const std::string& value_);
     void sleep(const utility::datetime& time_) const;
 };
 template<typename T> std::shared_ptr<T> getEvent(std::ifstream& fileHandle_);
+
+std::string format(const std::string& test_message_, const std::shared_ptr<model::Order>& order_);
 
 
 #endif //TRADINGO_TESTENV_H

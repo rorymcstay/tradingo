@@ -5,7 +5,7 @@
 #include "Config.h"
 #include "MarketData.h"
 #include <openssl/hmac.h>
-//#include "CPPLogger.hpp"
+#include "api/PositionApi.h"
 
 #include <cpprest/oauth2.h>
 #include <Context.h>
@@ -34,7 +34,7 @@ int main(int argc, char **argv) {
 
     // parse config and create context.
     auto config = std::make_shared<Config>(vm.at("config").as<std::string>());
-    auto context = std::make_shared<Context<MarketData, api::OrderApi>>(config);
+    auto context = std::make_shared<Context<MarketData, api::OrderApi, api::PositionApi>>(config);
     context->init();
     context->initStrategy();
 

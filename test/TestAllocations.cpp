@@ -3,9 +3,13 @@
 //
 #include <gtest/gtest.h>
 #include "Allocations.h"
+#include "fwk/TestOrdersApi.h"
 
 TEST(Allocations, initialisation) {
-    auto allocs =  std::make_shared<Allocations>(10, 0.5, 100);
+    auto oapi = std::make_shared<TestOrdersApi>(nullptr);
+    auto allocs =  std::make_shared<Allocations<TestOrdersApi>>(
+        oapi, "XBTUSD", "MCST", 0,
+        10, 0.5, 100);
     ASSERT_EQ(allocs->allocations().size(), 2*(10/0.5));
     price_t price = 0;
     for (auto& alloc : *allocs) {

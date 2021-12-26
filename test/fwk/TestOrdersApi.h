@@ -8,21 +8,23 @@
 
 #include <gtest/gtest.h>
 #include <boost/optional.hpp>
+
 #define _TURN_OFF_PLATFORM_STRING
 #include <model/Order.h>
+#include <model/Margin.h>
 #include <Object.h>
 #include <ApiClient.h>
 #include <model/Position.h>
-#include <BatchWriter.h>
-
-#include "Config.h"
 
 // src
+#include "BatchWriter.h"
+#include "Config.h"
 #include "Utils.h"
 
 // test/fwk
 #include "TestUtils.h"
 #include "Params.h"
+#include "MarginCalculator.h"
 
 using namespace io::swagger::client;
 
@@ -38,18 +40,31 @@ private:
     long _oidSeed;
     utility::datetime _time;
     std::shared_ptr<model::Position> _position;
+    std::shared_ptr<model::Margin> _margin;
     std::shared_ptr<Config> _config;
-public:
-    using Writer = BatchWriter<std::shared_ptr<model::ModelBase>>;
-    const std::shared_ptr<model::Position> &getPosition() const;
+    std::shared_ptr<MarginCalculator> _marginCalculator;
+    double _leverage;
+    std::string _leverageType;
 
-    void setPosition(const std::shared_ptr<model::Position> &position);
+public:
+    const std::shared_ptr<MarginCalculator>& getMarginCalculator() const;
+    void setMarginCalculator(const std::shared_ptr<MarginCalculator>& marginCalculator);
+    using Writer = BatchWriter<std::shared_ptr<model::ModelBase>>;
+    const std::shared_ptr<model::Position>& getPosition() const;
+    void setPosition(const std::shared_ptr<model::Position>& position_);
+    const std::shared_ptr<model::Margin>& getMargin() const;
+    void setMargin(const std::shared_ptr<model::Margin>& margin_);
 
 private:
 
     // functional helpers
     void add_order(const std::shared_ptr<model::Order>& order_);
+    void amend_order(const std::shared_ptr<model::Order>& amendRequest_,
+                     const std::shared_ptr<model::Order>& originalOrder_);
     bool validateOrder(const std::shared_ptr<model::Order>& order_);
+    std::shared_ptr<model::Order> checkOrderExists(const std::shared_ptr<model::Order>& order);
+    bool checkValidAmend(std::shared_ptr<model::Order> amendRequest,
+                         std::shared_ptr<model::Order> originalOrder);
 
     // API
 public:
@@ -69,10 +84,6 @@ public:
             boost::optional<double> stopPx,
             boost::optional<double> pegOffsetValue,
             boost::optional<utility::string_t> text
-    );
-
-    pplx::task<std::vector<std::shared_ptr<model::Order>>> order_amendBulk(
-            boost::optional<utility::string_t> orders
     );
 
     pplx::task<std::vector<std::shared_ptr<model::Order>>> order_cancel(
@@ -125,13 +136,9 @@ public:
             boost::optional<utility::string_t> text
     );
 
-    pplx::task<std::vector<std::shared_ptr<model::Order>>> order_newBulk(
-            boost::optional<utility::string_t> orders
-    );
-
     // Testing helpers
 private:
-    std::shared_ptr<model::Order> checkOrderExists(const std::shared_ptr<model::Order>& order);
+
     bool hasMatchingOrder(const std::shared_ptr<model::Trade>& trade_);
 public:
     void addExecToPosition(const std::shared_ptr<model::Execution>& exec_);
@@ -143,7 +150,11 @@ public:
 
     void operator << (const utility::datetime& time_);
 
+    std::shared_ptr<model::Order> getEvent(const std::string& event_);
+
     std::map<std::string, std::shared_ptr<model::Order>>& orders() { return _orders; }
+
+
 };
 
 
