@@ -4,6 +4,7 @@
 
 #ifndef TRADING_BOT_MARKETDATA_H
 #define TRADING_BOT_MARKETDATA_H
+#include <memory>
 #include <thread>
 #include <model/Trade.h>
 #include <model/Instrument.h>
@@ -11,6 +12,7 @@
 #include <model/Position.h>
 #include <model/Order.h>
 #include <model/Execution.h>
+#include <model/Margin.h>
 #include <mutex>
 #include <cpprest/json.h>
 #include <cpprest/ws_client.h>
@@ -58,6 +60,12 @@ std::vector<std::shared_ptr<T>>  getData(web::json::array& data_, ObjPool& pool_
     }
     return out_data_;
 }
+
+struct InstrumentReleaser {
+    void operator () (model::Instrument* instrument_) {
+
+    }
+};
 
 struct TradeReleaser {
 
@@ -107,6 +115,21 @@ struct PositionReleaser {
     }
 };
 
+struct MarginReleaser {
+    void operator() (model::Margin* margin_) {
+        margin_->unsetAction();
+        margin_->unsetAmount();
+        margin_->unsetAvailableMargin();
+        margin_->unsetCommission();
+        margin_->unsetConfirmedDebit();
+        margin_->unsetExcessMargin();
+        margin_->unsetExcessMarginPcnt();
+        margin_->unsetGrossComm();
+        margin_->unsetGrossExecCost();
+        // ...
+    }
+};
+
 struct ExecutionReleaser {
     void operator() (model::Execution* exec_) {
         exec_->unsetWorkingIndicator();
@@ -144,6 +167,7 @@ public:
     using TradePtr = std::shared_ptr<model::Trade>;
     using QuotePtr = std::shared_ptr<model::Quote>;
     using ExecPtr = std::shared_ptr<model::Execution>;
+    using MarginPtr = std::shared_ptr<model::Margin>;
 
     std::function<void()> _callback;
 
@@ -174,12 +198,15 @@ protected:
     cache::ObjectPool<model::Position, 1, PositionReleaser> _positionPool;
     cache::ObjectPool<model::Execution, 1, ExecutionReleaser> _execPool;
     cache::ObjectPool<model::Order, 1, OrderReleaser> _orderPool;
+    cache::ObjectPool<model::Margin, 1, MarginReleaser> _marginPool;
+    cache::ObjectPool<model::Instrument, 1, InstrumentReleaser> _instrumentPool;
 
     std::queue<std::shared_ptr<model::Execution>> _executions;
     std::unordered_map<std::string, std::shared_ptr<model::Position>> _positions;
     std::unordered_map<std::string, std::shared_ptr<model::Order>> _orders;
     std::shared_ptr<model::Quote> _quote;
-    model::Instrument _instrument;
+    std::shared_ptr<model::Margin> _margin;
+    std::unordered_map<std::string, std::shared_ptr<model::Instrument>> _instruments;
     std::shared_ptr<InstrumentService> _instSvc;
 
     /// handle quote update after data is read from socket.
@@ -192,13 +219,16 @@ protected:
     void handleExecutions(std::vector<std::shared_ptr<model::Execution>>& execs_, const std::string& action_);
     /// handle order update after data is read from socket.
     void handleOrders(std::vector<std::shared_ptr<model::Order>>& orders_, const std::string& action_);
+    /// handle updates to margin and balance
+    void handleMargin(std::vector<std::shared_ptr<model::Margin>> margin_, const std::string& action_);
+    /// handle instruments
+    void handleInstruments(const std::vector<std::shared_ptr<model::Instrument>>& instruments_, const std::string& action_);
     /// evaluate callback linked to self. i.e signals
     void callback() {
         _callback();
     }
     /// load the instrument static data from instrument service.
     void init() {
-        _instrument = _instSvc->get(_symbol);
     }
 
 protected:
@@ -227,10 +257,12 @@ public:
     const std::queue<ExecPtr>& getExecutions() const;
     /// get current positions.
     const std::unordered_map<std::string, PositionPtr>& getPositions() const;
+    /// get current margin.
+    const MarginPtr& getMargin() const;
     /// get current quote.
     const std::shared_ptr<model::Quote> quote() const;
     /// get instrument static.
-    const model::Instrument& instrument() const;
+    const std::shared_ptr<model::Instrument>& instrument() const;
 
 };
 

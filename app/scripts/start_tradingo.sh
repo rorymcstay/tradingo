@@ -5,6 +5,8 @@ start_tradingo() {
     # exit on first failure
 
     set -e
+    ping -c 5 testnet.bitmex.com
+    ping -c 5 bitmex.com
     config_file=$STORAGE/${RUN_ID}/tradingo.cfg
     mkdir -p $STORAGE/$RUN_ID
 

@@ -16,8 +16,6 @@ InstrumentService::InstrumentService(const std::shared_ptr<api::ApiClient>& apiC
 ,   _instruments()
 ,   _config(std::move(config_)) {
 
-    _instruments[_config->get("symbol")] = func::get_instrument(_instrumentApi, _config->get("symbol"));
-
 }
 
 const model::Instrument& InstrumentService::get(const std::string& symbol_, bool reload) {

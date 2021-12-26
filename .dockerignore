@@ -3,11 +3,11 @@ cmake-build-*
 build
 build*
 data
-.github
-.gitignore
-.gitmodules
+tmp
+wip
+docker
 .cache
-.git
+*.swp
 compile_commands.json
 CMakeCache.txt
 CMakeFiles
@@ -23,3 +23,4 @@ install_manifest.txt
 compile_commands.json
 CTestTestfile.cmake
 _deps
+docker
