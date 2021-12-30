@@ -9,6 +9,7 @@
 #define _TURN_OFF_PLATFORM_STRING
 #include <model/Funding.h>
 
+#include "Utils.h"
 #include "Config.h"
 
 MarginCalculator::MarginCalculator(
@@ -52,6 +53,9 @@ double MarginCalculator::getLiquidationPrice(
             qty_t balance_) const {
     auto maintMargin = _marketData->instrument()->getMaintMargin();
     auto posValue = 1/fairPrice_ * qty_;
+    if (almost_equal(posValue, 0.0)) {
+        return 0.0;
+    }
     if (leverageType_ == "ISOLATED") {
         auto maint_margin_amount = maintMargin * posValue/leverage_;
         auto liqPricePct = 1 - ((posValue - maint_margin_amount)/posValue);

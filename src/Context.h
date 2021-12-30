@@ -117,7 +117,6 @@ Context<TMarketData, TOrderApi, TPositionApi>::Context(std::shared_ptr<Config> c
 :   _config(std::move(config_))
 ,   _apiConfig(std::make_shared<api::ApiConfiguration>())
 ,   _httpConfig(web::http::client::http_client_config())
-
 {
     auto pplxThreadCount = std::stoi(_config->get("pplxThreadCount", "4"));
     crossplat::threadpool::initialize_with_threads(pplxThreadCount);

@@ -26,11 +26,11 @@ TEST(TestConfig, plus_equal_operator) {
 TEST(Config, read_from_file) {
     auto storage = TempStorage();
     std::ofstream configFile;
-    configFile.open(storage.name() + "config.cfg");
+    configFile.open(storage.name() + "/config.cfg");
     configFile.write(
             "val1=10\n"
             "val2=20", std::ios::app);
-    auto config = Config(storage.name() + "config.cfg");
+    auto config = Config(storage.name() + "/config.cfg");
     ASSERT_EQ(config.get("val1"), "10");
-    ASSERT_EQ(config.get("val2"), "10");
+    ASSERT_EQ(config.get("val2"), "20");
 }
