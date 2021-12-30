@@ -103,7 +103,6 @@ TestOrdersApi::order_cancelAll(boost::optional<utility::string_t> symbol, boost:
         event_order->fromJson(event_json);
         _orderCancels.push(event_order);
         out.push_back(orders.second);
-        set_order_timestamp(orders.second);
         _allEvents.push(event_order);
         set_order_timestamp(orders.second);
     }
@@ -442,8 +441,6 @@ void TestOrdersApi::addExecToPosition(const std::shared_ptr<model::Execution>& e
         _position->setMaintMarginReq(maintenanceMargin);
         _margin->setMaintMargin(maintenanceMargin);
         _margin->setAvailableMargin(_margin->getWalletBalance() - maintenanceMargin);
-    }
-    { // update 
     }
     { // liquidation price
         auto leverageType = "ISOLATED";

@@ -96,6 +96,7 @@ void BatchWriter<T>::write(T item_) {
         write_batch();
 }
 
+
 template<typename T>
 void BatchWriter<T>::write_batch() {
     LOGINFO("Writing batch " << LOG_VAR(_tableName) << " to " << LOG_VAR(_fileLocation));
