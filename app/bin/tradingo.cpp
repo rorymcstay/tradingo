@@ -5,6 +5,7 @@
 #include "Config.h"
 #include "MarketData.h"
 #include <openssl/hmac.h>
+#include <pplx/threadpool.h>
 #include "api/PositionApi.h"
 
 #include <cpprest/oauth2.h>
@@ -38,6 +39,8 @@ int main(int argc, char **argv) {
     context->init();
     context->initStrategy();
 
+    auto pplxThreadCount = std::stoi(config->get("pplxThreadCount", "4"));
+    crossplat::threadpool::initialize_with_threads(pplxThreadCount);
     // running loop
      while (context->strategy()->shouldEval()) {
          //LOGINFO(AixLog::Color::YELLOW << "======== START Evaluate ========" << AixLog::Color::none);

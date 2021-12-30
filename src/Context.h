@@ -12,7 +12,7 @@
 #include <filesystem>
 
 #include <api/OrderApi.h>
-#include <pplx/threadpool.h>
+
 
 #include "MarketData.h"
 #include "ApiConfiguration.h"
@@ -118,8 +118,6 @@ Context<TMarketData, TOrderApi, TPositionApi>::Context(std::shared_ptr<Config> c
 ,   _apiConfig(std::make_shared<api::ApiConfiguration>())
 ,   _httpConfig(web::http::client::http_client_config())
 {
-    auto pplxThreadCount = std::stoi(_config->get("pplxThreadCount", "4"));
-    crossplat::threadpool::initialize_with_threads(pplxThreadCount);
     _apiConfig->setBaseUrl(_config->get("baseUrl", "http://localhost:8080"));
     _apiConfig->setApiKey("api-key", _config->get("apiKey", "NO AUTH"));
     _apiConfig->setApiKey("api-secret", _config->get("apiSecret", "NO AUTH"));
