@@ -2,6 +2,9 @@
 #include <string>
 #include <filesystem>
 
+// cpprestsdk
+#include <pplx/threadpool.h>
+
 #include <boost/program_options.hpp>
 #include <api/OrderApi.h>
 #include <api/PositionApi.h>
@@ -60,6 +63,9 @@ int main(int argc, char **argv) {
     auto marketData = context->marketData();
 
     LOGINFO("Starting tick recording with " << LOG_VAR(symbol) << LOG_VAR(storage));
+
+    auto pplxThreadCount = std::stoi(config->get("pplxThreadCount", "4"));
+    crossplat::threadpool::initialize_with_threads(pplxThreadCount);
 
     // table writers
     auto printer = [](const std::shared_ptr<model::ModelBase>& order_) {

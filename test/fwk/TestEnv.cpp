@@ -139,7 +139,8 @@ std::shared_ptr<model::Execution> canTrade(const std::shared_ptr<model::Order>& 
 
 }
 
-void TestEnv::playback(const std::string& tradeFile_, const std::string& quoteFile_,
+void TestEnv::playback(const std::string& tradeFile_,
+                       const std::string& quoteFile_,
                        const std::string& instrumentsFile_) {
     std::ifstream tradeFile;
     std::ifstream quoteFile;
@@ -174,11 +175,11 @@ void TestEnv::playback(const std::string& tradeFile_, const std::string& quoteFi
     };
     auto batchWriter = TestOrdersApi::Writer("replay_orders",
                                              _context->config()->get("symbol"),
-                                             _context->config()->get("storage"), 5,
+                                             _context->config()->get("storage"), 1,
                                              printer, /*rotate=*/false);
     auto positionWriter = TestOrdersApi::Writer("replay_positions",
                                                 _context->config()->get("symbol"),
-                                                _context->config()->get("storage"), 5,
+                                                _context->config()->get("storage"), 1,
                                                 printer, /*rotate=*/false);
     _lastDispatch.mkt_time = quote->getTimestamp();
     auto leverageType = _config->get("leverageType", "ISOLATED");
@@ -227,6 +228,7 @@ void TestEnv::playback(const std::string& tradeFile_, const std::string& quoteFi
                     position->setUnrealisedPnl(0.0);
                     auto liquidationValue = position->getBankruptPrice()*qty;
                     position->setRealisedPnl(liquidationValue - position->getCurrentCost());
+                    position->setTimestamp(time);
                     auto cost_to_balance = position->getCurrentCost();
                     if (leverageType == "CROSSED")
                         margin->setWalletBalance(margin->getWalletBalance() - cost_to_balance);
@@ -238,13 +240,12 @@ void TestEnv::playback(const std::string& tradeFile_, const std::string& quoteFi
             }
         } else { // send the trade.
             // TODO Check if trade can match on what we have? then send EXECUTION
+            auto trade_time = trade->getTimestamp();
             for (auto& order : _context->orderApi()->orders()) {
-
                 auto exec = canTrade(order.second, trade);
                 // TODO: env << "EXEC Price=..."
                 if (exec) {
-                    _context->orderApi()->set_order_timestamp(order.second);
-                    exec->setTimestamp(order.second->getTimestamp());
+                    exec->setTimestamp(trade_time);
                     // put resultant execution into marketData.
                     LOGINFO(LOG_NVP("OrderID", order.second->getOrderID())
                         << AixLog::Color::GREEN
@@ -253,11 +254,13 @@ void TestEnv::playback(const std::string& tradeFile_, const std::string& quoteFi
                         << LOG_NVP("LeavesQty", order.second->getLeavesQty())
                         << LOG_NVP("OrdStatus", order.second->getOrdStatus())
                         << AixLog::Color::none);
-                    dispatch(exec->getTimestamp(), nullptr, exec, order.second, nullptr);
+                    dispatch(trade_time, nullptr, exec, order.second, nullptr);
                     if (exec->getOrdStatus() == "Filled") {
                         LOGDEBUG("Filled order");
                     }
-                    positionWriter.write(_context->orderApi()->getPosition());
+                    auto position = _context->orderApi()->getPosition();
+                    position->setTimestamp(trade_time);
+                    positionWriter.write(position);
                 }
             }
             _context->strategy()->evaluate();
@@ -271,6 +274,7 @@ void TestEnv::playback(const std::string& tradeFile_, const std::string& quoteFi
 
     }
     batchWriter.write_batch();
+    positionWriter.write_batch();
 }
 
 void TestEnv::init() {
@@ -291,7 +295,6 @@ void TestEnv::init() {
     }
     if (_config->get("logLevel", "").empty())
         _config->set("logLevel", "debug");
-
 
     _context = std::make_shared<Context<TestMarketData, OrderApi, TestPositionApi>>(_config);
 
@@ -359,7 +362,6 @@ void TestEnv::dispatch(utility::datetime time_,
         *_context->orderApi() << time_;
         *_context->marketData() << quote_;
         _context->strategy()->updateSignals();
-        _context->strategy()->evaluate();
     } else if (exec_ and order_) {
         LOGDEBUG(AixLog::Color::blue << "order event: " << LOG_NVP("time",time_.to_string(utility::datetime::ISO_8601)) << AixLog::Color::none);
         _context->orderApi()->addExecToPosition(exec_);
@@ -385,13 +387,14 @@ void TestEnv::sleep(const utility::datetime& time_) const {
     auto timeSinceLastDispatch = time_diff(now, _lastDispatch.actual_time);
 
     if (timeSinceLastDispatch < mktTimeDiff /*the amount of time passed, is less than in the market*/) {
-        LOGDEBUG(LOG_NVP("TimeNow",now.to_string(utility::datetime::ISO_8601))
-                         << LOG_NVP("MktTime",time_.to_string(utility::datetime::ISO_8601)));
-        LOGDEBUG(LOG_NVP("LastDispatch",_lastDispatch.actual_time.to_string(utility::datetime::ISO_8601))
-                         << LOG_NVP("LastDispatchMktTime",_lastDispatch.mkt_time.to_string(utility::datetime::ISO_8601)));
-        LOGDEBUG(LOG_VAR(mktTimeDiff) << LOG_VAR(timeSinceLastDispatch));
         auto sleep_for = mktTimeDiff-timeSinceLastDispatch;
-        LOGDEBUG(LOG_VAR(sleep_for));
+        LOGDEBUG(LOG_NVP("TimeNow", now.to_string(utility::datetime::ISO_8601))
+              << LOG_NVP("MktTime", time_.to_string(utility::datetime::ISO_8601))
+              << LOG_NVP("LastDispatch", _lastDispatch.actual_time.to_string(utility::datetime::ISO_8601))
+              << LOG_NVP("LastDispatchMktTime", _lastDispatch.mkt_time.to_string(utility::datetime::ISO_8601))
+              << LOG_VAR(mktTimeDiff)
+              << LOG_VAR(timeSinceLastDispatch)
+              << LOG_VAR(sleep_for));
         std::this_thread::sleep_for(std::chrono::milliseconds(mktTimeDiff-timeSinceLastDispatch));
     }
 

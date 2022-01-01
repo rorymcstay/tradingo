@@ -29,12 +29,12 @@ add_executable(testTradingo
         # test files
         strategy/TestBreakOutStrategy.cpp
 
-
         TestSimpleMovingAverage.cpp
         TestBatchWriter.cpp
         TestAllocations.cpp
         TestStrategy.cpp
         TestMarketData.cpp
+        TestConfig.cpp
 
         test_api_OrderApi.cpp
         test_api_PositionApi.cpp

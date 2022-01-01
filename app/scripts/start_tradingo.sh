@@ -24,7 +24,7 @@ start_tradingo() {
     cat $config_file
 
     # start tradingo
-    cd $STORAGE
+    cd $STORAGE/$RUN_ID
     set +e
     tradingo --config $config_file
     aws s3 sync "$STORAGE/" "s3://$BUCKET_NAME/tradingo/"

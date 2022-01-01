@@ -54,8 +54,8 @@ replay_tradingo_on() {
     LIB_NAME_PREFIX="test_" \
         populate_strategy_params $INSTALL_LOCATION/etc/config/strategy/${STRATEGY}.cfg $config_file
     cat $config_file
-    # run the replay
-    cd $STORAGE
+    # run the replay in the RUN_ID directory to capture core files.
+    cd $STORAGE/$RUN_ID
     set +e
     replayTradingo --config $config_file
     aws s3 sync "$STORAGE" "s3://$BUCKET_NAME/replays/"

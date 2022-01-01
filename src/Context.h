@@ -13,6 +13,7 @@
 
 #include <api/OrderApi.h>
 
+
 #include "MarketData.h"
 #include "ApiConfiguration.h"
 #include "ApiClient.h"
@@ -116,9 +117,7 @@ Context<TMarketData, TOrderApi, TPositionApi>::Context(std::shared_ptr<Config> c
 :   _config(std::move(config_))
 ,   _apiConfig(std::make_shared<api::ApiConfiguration>())
 ,   _httpConfig(web::http::client::http_client_config())
-
 {
-
     _apiConfig->setBaseUrl(_config->get("baseUrl", "http://localhost:8080"));
     _apiConfig->setApiKey("api-key", _config->get("apiKey", "NO AUTH"));
     _apiConfig->setApiKey("api-secret", _config->get("apiSecret", "NO AUTH"));

@@ -3,6 +3,8 @@
 //
 
 #include "gtest/gtest.h"
+// cpprestsdk
+#include <pplx/threadpool.h>
 #include <boost/program_options.hpp>
 #include "Utils.h"
 #include "Config.h"
@@ -11,6 +13,7 @@
 namespace po = boost::program_options;
 
 int main(int argc, char **argv) {
+
 
     po::options_description desc("Allowed options");
     desc.add_options()
@@ -28,6 +31,8 @@ int main(int argc, char **argv) {
         LOGINFO("Using config " << vm.at("config").as<std::string>());
         *defaults += (*config);
     }
+    auto pplxThreadCount = std::stoi(defaults->get("pplxThreadCount", "4"));
+    crossplat::threadpool::initialize_with_threads(pplxThreadCount);
     auto env = TestEnv(defaults);
     auto trade = defaults->get("tickStorage") + "/trades_XBTUSD.json";
     auto quotes = defaults->get("tickStorage") + "/quotes_XBTUSD.json";
