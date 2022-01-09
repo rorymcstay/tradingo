@@ -22,6 +22,7 @@ add_library(trading_funcs SHARED
         ObjectPool.hpp
         Strategy.h # templated
         Context.h # templated
+        Series.h # templated
         Config.cpp
         SimpleMovingAverage.cpp
         Utils.cpp

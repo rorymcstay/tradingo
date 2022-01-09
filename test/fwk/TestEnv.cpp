@@ -5,6 +5,7 @@
 
 #include "Context.h"
 #include "BatchWriter.h"
+#include "Series.h"
 #include "TestEnv.h"
 
 
@@ -67,18 +68,7 @@ std::shared_ptr<model::Order> TestEnv::operator>>(const std::string &value_) {
     }
 }
 
-template<typename T>
-std::shared_ptr<T> getEvent(std::ifstream &fileHandle_) {
-    std::string str;
-    auto quote = std::make_shared<T>();
-    if (not std::getline(fileHandle_, str))
-        return nullptr;
-    if (str.empty())
-        return getEvent<T>(fileHandle_);
-    auto json = web::json::value::parse(str);
-    quote->fromJson(json);
-    return quote;
-}
+
 std::string format(const std::string& test_message_,
                    const std::shared_ptr<model::Order>& order_) {
     std::stringstream ss;

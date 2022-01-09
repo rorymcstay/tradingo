@@ -21,5 +21,5 @@ if [[ $DONT_PUSH -eq 1 ]]; then
     exit 0
 fi
 
-docker login --username $DOCKER_USERNAME --password $DOCKER_PASSWORD
+docker login
 docker push $remote_tag

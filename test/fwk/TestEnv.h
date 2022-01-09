@@ -94,7 +94,7 @@ public:
     std::shared_ptr<model::Order> operator >> (const std::string& value_);
     void sleep(const utility::datetime& time_) const;
 };
-template<typename T> std::shared_ptr<T> getEvent(std::ifstream& fileHandle_);
+
 
 std::string format(const std::string& test_message_, const std::shared_ptr<model::Order>& order_);
 
