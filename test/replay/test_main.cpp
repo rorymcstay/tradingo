@@ -49,7 +49,7 @@ int main(int argc, char **argv) {
         defaults->set("logFileLocation", vm.at("logdir").as<std::string>());
     }
 
-    auto pplxThreadCount = std::stoi(defaults->get("pplxThreadCount", "0"));
+    auto pplxThreadCount = 2;
     crossplat::threadpool::initialize_with_threads(pplxThreadCount);
     auto env = TestEnv(defaults);
     auto trades_file = defaults->get("tickStorage") + "/trades_XBTUSD.json";

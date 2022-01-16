@@ -1,4 +1,6 @@
+#include <chrono>
 #include <memory>
+#include <sstream>
 #include <stdexcept>
 
 #define _TURN_OFF_PLATFORM_STRING
@@ -131,6 +133,39 @@ std::shared_ptr<model::Execution> canTrade(const std::shared_ptr<model::Order>& 
 
 }
 
+struct PlaybackStats {
+    utility::datetime start_time;
+    utility::datetime end_time;
+    utility::datetime current_time;
+
+    long quotes_size;
+    long trades_size;
+    long instruments_size;
+    std::shared_ptr<model::Position> position;
+
+    long quotes_processed = 0;
+    long instruments_processed = 0;
+    long trades_processed = 0;
+    std::chrono::system_clock::time_point last_log;
+    std::chrono::system_clock::duration interval = std::chrono::seconds(10);
+
+};
+
+#define LOG_STATS(stats_) \
+        double quotes_progress = 100*(stats_.quotes_processed/(double)stats_.quotes_size); \
+        double instruments_progress = 100*(stats.instruments_processed/(double)stats_.instruments_size); \
+        double trades_progress = 100*(stats.trades_processed/(double)stats_.trades_size); \
+        LOGWARN("STATS: " \
+            << LOG_NVP("QuoteProgress",  quotes_progress) \
+            << LOG_NVP("TradeProgress",  trades_progress) \
+            << LOG_NVP("InstrumentProgress", instruments_progress) \
+            << LOG_NVP("StartTime", stats_.start_time.to_string(utility::datetime::date_format::ISO_8601)) \
+            << LOG_NVP("CurrentTime", stats_.current_time.to_string(utility::datetime::date_format::ISO_8601)) \
+            << LOG_NVP("EndTime", stats_.end_time.to_string(utility::datetime::date_format::ISO_8601)) \
+            <<LOG_NVP("Position", stats_.position->toJson().serialize()) \
+            );
+
+
 void TestEnv::playback(const Series<model::Trade>& trades,
                        const Series<model::Quote>& quotes,
                        const Series<model::Instrument>& instruments) {
@@ -138,7 +173,16 @@ void TestEnv::playback(const Series<model::Trade>& trades,
     auto quote = quotes.begin();
     auto trade = trades.begin();
     auto instrument = instruments.begin();
-    bool hasTrades = true;
+
+    auto stats = PlaybackStats {
+        quotes.begin()->getTimestamp(),
+        quotes.end()->getTimestamp(),
+        quotes.begin()->getTimestamp(),
+        quotes.size(),
+        trades.size(),
+        instruments.size(),
+        _position
+    };
 
     std::vector<std::shared_ptr<model::ModelBase>> outBuffer;
     // table writers
@@ -158,6 +202,7 @@ void TestEnv::playback(const Series<model::Trade>& trades,
     auto symbol = _config->get("symbol");
     
     while (quote != quotes.end() or trade != trades.end() or instrument != instruments.end()) {
+
         utility::datetime::interval_type current_time = std::min({
                 quote->getTimestamp().to_interval(),
                 trade->getTimestamp().to_interval(),
@@ -182,12 +227,15 @@ void TestEnv::playback(const Series<model::Trade>& trades,
                         LOGDEBUG("Filled order");
                     }
                     auto position = _context->orderApi()->getPosition();
+                    stats.position = position;
                     position->setTimestamp(trade_time);
                     positionWriter.write(position);
                 }
             }
             _context->strategy()->evaluate();
             ++trade;
+            stats.trades_processed += 1;
+            stats.current_time = trade_time;
         // QUOTE
         } else if (quote != quotes.end() and quote->getTimestamp().to_interval() == current_time) {
             (*_context->orderApi()->getMarginCalculator())(*quote);
@@ -227,12 +275,26 @@ void TestEnv::playback(const Series<model::Trade>& trades,
                 }
             }
             ++quote;
+            stats.quotes_processed += 1;
+            stats.current_time = time;
         // INSTRUMENT
         } else if (instrument != instruments.end() and instrument->getTimestamp().to_interval() == current_time) {
             dispatch(instrument->getTimestamp(), nullptr, nullptr, nullptr, *instrument);
             ++instrument;
+            stats.instruments_processed += 1;
+            stats.current_time = instrument->getTimestamp();
         } else {
-            throw std::runtime_error("Cannot determine event for timestamp");
+            std::stringstream ss;
+            if (not (trade != trades.end())) { ss << "Trades "; }
+            else if (not(quote != quotes.end())) { ss << "Quotes ";}
+            else if (not(trade != trades.end())) { ss << "Instruments ";} 
+            else { ss << "UNKNOWN "; }
+            ss << "Has completed.";
+            LOGWARN(ss.str());
+        }
+        if (std::chrono::system_clock::now() - stats.last_log > stats.interval) {
+            LOG_STATS(stats);
+            stats.last_log = std::chrono::system_clock::now();
         }
     }
     batchWriter.write_batch();
