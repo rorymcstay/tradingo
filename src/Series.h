@@ -11,7 +11,6 @@
 #include <ModelBase.h>
 #include "Utils.h"
 
-using index_t = long;
 
 template<typename T>
 class Series {

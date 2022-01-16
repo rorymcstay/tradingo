@@ -163,7 +163,7 @@ void TestEnv::playback(const Series<model::Trade>& trades,
                 trade->getTimestamp().to_interval(),
                 instrument->getTimestamp().to_interval()});
         // TRADE
-        if (trade->getTimestamp().to_interval() == current_time) {
+        if (trade != trades.end() and trade->getTimestamp().to_interval() == current_time) {
             auto trade_time = trade->getTimestamp();
             for (auto& order : _context->orderApi()->orders()) {
                 auto exec = canTrade(order.second, *trade);
@@ -189,7 +189,7 @@ void TestEnv::playback(const Series<model::Trade>& trades,
             _context->strategy()->evaluate();
             ++trade;
         // QUOTE
-        } else if (quote->getTimestamp().to_interval() == current_time) {
+        } else if (quote != quotes.end() and quote->getTimestamp().to_interval() == current_time) {
             (*_context->orderApi()->getMarginCalculator())(*quote);
             auto time = quote->getTimestamp();
             dispatch(time, *quote, nullptr, nullptr, nullptr);
@@ -228,7 +228,7 @@ void TestEnv::playback(const Series<model::Trade>& trades,
             }
             ++quote;
         // INSTRUMENT
-        } else if (instrument->getTimestamp().to_interval() == current_time) {
+        } else if (instrument != instruments.end() and instrument->getTimestamp().to_interval() == current_time) {
             dispatch(instrument->getTimestamp(), nullptr, nullptr, nullptr, *instrument);
             ++instrument;
         } else {
