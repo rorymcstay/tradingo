@@ -13,8 +13,8 @@ using namespace utility;
 
 TEST(TestSeries, initialisation) {
 
-    //auto quote_file = TESTDATA_LOCATION"/quotes_XBTUSD.json";
-    auto quote_file = "/home/rory/.tradingo/data/tickRecorder/2021-10-05/quotes_XBTUSD.json";
+    auto quote_file = TESTDATA_LOCATION"/quotes_XBTUSD.json";
+    //auto quote_file = "/home/rory/.tradingo/data/tickRecorder/2021-10-05/quotes_XBTUSD.json";
     auto series = Series<model::Quote>(quote_file);
     ASSERT_EQ(series.size(), 1000);
 
@@ -26,8 +26,5 @@ TEST(TestSeries, initialisation) {
 
     ASSERT_EQ(quote->getTimestamp().to_string(utility::datetime::date_format::ISO_8601),
         quote_retrieved->getTimestamp().to_string(utility::datetime::date_format::ISO_8601));
-
-    for (int i(0); i++; i <= 1000) {
-    }
 
 }
