@@ -103,6 +103,7 @@ void BreakOutStrategy<TOrdApi, TPositionApi>::onBBO(const std::shared_ptr<Event>
     std::string side = "Not ready";
     qty_t qtyToTrade;
     price_t price;
+    std::shared_ptr<MarketDataInterface> md = StrategyApi::getMD();
 
     bool isReady = StrategyApi::getSignal("moving_average_crossover")->isReady();
     auto signalValue = isReady ? StrategyApi::getSignal("moving_average_crossover")->read() : -1 ;
@@ -122,7 +123,9 @@ void BreakOutStrategy<TOrdApi, TPositionApi>::onBBO(const std::shared_ptr<Event>
     if (almost_equal(qtyToTrade, 0.0)) {
         LOGDEBUG("No quantity to trade");
         return;
-    } else {
+    }
+    double cost_of_qty = qtyToTrade * 1.0/price;
+    if (md->getMargin()->getWalletBalance() >= cost_of_qty) {
         //qtyToTrade *= 0.10;
         //qtyToTrade = std::max(100.0, qtyToTrade);
         LOGINFO(LOG_NVP("Signal", side) << LOG_VAR(signalValue)
@@ -134,6 +137,10 @@ void BreakOutStrategy<TOrdApi, TPositionApi>::onBBO(const std::shared_ptr<Event>
         }
         StrategyApi::allocations()->addAllocation(price, qtyToTrade, side);
         _previousDirection = side;
+    } else {
+        auto currentQty = md->getPositions().at(StrategyApi::_symbol)->getCurrentQty();
+        LOGINFO("Signal is good, but balance is insufficient."
+                << LOG_VAR(qtyToTrade) << LOG_VAR(price) << LOG_VAR(currentQty));
     }
 }
 
