@@ -38,7 +38,13 @@ int main(int argc, char **argv) {
     auto config = Config(vm.at("config").as<std::string>());
 
     auto tick_storage = config.get("tickStorage") + "/trades_XBTUSD.json";
-    auto series = Series<model::Trade>(tick_storage);
+    auto series = Series<model::Trade>(tick_storage, 100000);
     std::cout << "Series length: " << series.size() << '\n';
 
+    std::cout << series["2021-10-04T00:00:19.933Z"]->toJson().serialize() << '\n'
+    << series["2021-10-04T00:00:21.219Z"]->toJson().serialize() << '\n'
+     << series["2021-10-04T00:00:22.535Z"]->toJson().serialize() << '\n'
+    << series["2021-10-04T00:00:22.56Z"]->toJson().serialize() << '\n'
+    << series["2021-10-04T00:00:23.102Z"]->toJson().serialize() << '\n'
+    << series["2021-10-04T00:00:23.125Z"]->toJson().serialize() << '\n';
 }
