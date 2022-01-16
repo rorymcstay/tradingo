@@ -1,4 +1,5 @@
 #include <chrono>
+#include <limits>
 #include <memory>
 #include <sstream>
 #include <stdexcept>
@@ -201,12 +202,15 @@ void TestEnv::playback(const Series<model::Trade>& trades,
     auto leverageType = _config->get("leverageType", "ISOLATED");
     auto symbol = _config->get("symbol");
     
-    while (quote != quotes.end() or trade != trades.end() or instrument != instruments.end()) {
+    utility::datetime::interval_type max_interval = std::numeric_limits<utility::datetime::interval_type>::max();
 
+    while (quote != quotes.end() or trade != trades.end() or instrument != instruments.end()) {
+    
         utility::datetime::interval_type current_time = std::min({
-                quote->getTimestamp().to_interval(),
-                trade->getTimestamp().to_interval(),
-                instrument->getTimestamp().to_interval()});
+                (quote != quotes.end()) ? quote->getTimestamp().to_interval() : max_interval,
+                (trade != trades.end()) ? trade->getTimestamp().to_interval() : max_interval,
+                (instrument != instruments.end()) ? instrument->getTimestamp().to_interval() : max_interval
+        });
         // TRADE
         if (trade != trades.end() and trade->getTimestamp().to_interval() == current_time) {
             auto trade_time = trade->getTimestamp();
@@ -287,7 +291,7 @@ void TestEnv::playback(const Series<model::Trade>& trades,
             std::stringstream ss;
             if (not (trade != trades.end())) { ss << "Trades "; }
             else if (not(quote != quotes.end())) { ss << "Quotes ";}
-            else if (not(trade != trades.end())) { ss << "Instruments ";} 
+            else if (not(instrument != instruments.end())) { ss << "Instruments ";} 
             else { ss << "UNKNOWN "; }
             ss << "Has completed.";
             LOGWARN(ss.str());
