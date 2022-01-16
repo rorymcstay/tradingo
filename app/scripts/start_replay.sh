@@ -2,11 +2,13 @@
 source "$(dirname ${BASH_SOURCE[0]})/profile.env"
 
 trade_date=$1
+export LOG_LEVEL=${LOG_LEVEL:-"warning"}
 
 replay_tradingo_on() {
 
     # params
     export DATESTR=$1
+
     if [[ ! $DATESTR ]]; then
         echo "Datestring must not be empty"
         return 1
