@@ -494,7 +494,7 @@ std::shared_ptr<model::Order> TestOrdersApi::checkOrderExists(const std::shared_
             return ord_kvp.second;
         }
     }
-        // reject amend request, fail test
+    // reject amend request
     std::stringstream str;
     auto content = std::make_shared<std::istringstream>(order->toJson().serialize());
     str << "Original order " << LOG_NVP("OrderID",order->getOrderID())
@@ -557,7 +557,7 @@ bool TestOrdersApi::checkValidAmend(std::shared_ptr<model::Order> requestedAmend
     }
     if (requestedAmend->leavesQtyIsSet() &&
         requestedAmend->getLeavesQty() > originalOrder->getLeavesQty()) {
-        auto additionalCost = 1/(requestedAmend->getLeavesQty() - originalOrder->getLeavesQty()) * originalOrder->getPrice();
+        auto additionalCost = 1/originalOrder->getPrice()* (requestedAmend->getLeavesQty() - originalOrder->getLeavesQty());
         if (additionalCost > _margin->getWalletBalance()) {
             auto msg = requestedAmend->toJson().serialize();
             auto content = std::make_shared<std::istringstream>(msg);
