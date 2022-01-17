@@ -189,7 +189,7 @@ void TestOrdersApi::operator >> (const std::string &outEvent_) {
     auto eventType = getEventTypeFromString(outEvent_);
 
     std::stringstream failMessage;
-    failMessage << "Event filter:\n\t" << outEvent_ << "\nnot satisifed. Reason:\n";
+    failMessage << "Event filter:\n\t" << outEvent_ << "\nnot satisifed. Reason: ";
     if (eventType == "NONE") {
         if (!_newOrders.empty() || !_orderCancels.empty() || !_orderAmends.empty()) {
             failMessage << "There are events still pending!\n";
@@ -262,6 +262,7 @@ void TestOrdersApi::operator >> (const std::string &outEvent_) {
     auto expectedOrder = fromJson<model::Order>(params.asJson());
     if (eventType == "ORDER_NEW") {
         if (_newOrders.empty()) {
+            failMessage << "No new orders made\n";
             throw std::runtime_error(failMessage.str());
         }
         auto latestOrder = _newOrders.front();
@@ -273,6 +274,7 @@ void TestOrdersApi::operator >> (const std::string &outEvent_) {
     } else if (eventType == "ORDER_AMEND") {
         checkOrderExists(expectedOrder);
         if (_orderAmends.empty()) {
+            failMessage << "No order amends made\n";
             throw std::runtime_error(failMessage.str());
         }
         auto orderAmend = _orderAmends.front();
@@ -287,6 +289,7 @@ void TestOrdersApi::operator >> (const std::string &outEvent_) {
 
     } else if (eventType == "ORDER_CANCEL") {
         if (_orderCancels.empty()) {
+            failMessage << "No cancels made\n";
             throw std::runtime_error(failMessage.str());
         }
         auto orderCancel = _orderCancels.front();
