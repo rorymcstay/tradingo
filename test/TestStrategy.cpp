@@ -31,6 +31,7 @@ TEST(StrategyApi, smooke)
     strategy->allocations()->placeAllocations();
     auto order2 = env >> "ORDER_NEW Price=9 OrderQty=100 CumQty=0 LeavesQty=100 OrdStatus=New Side=Sell symbol=XBTUSD" LN;
     env >> format("ORDER_CANCEL Price=10 OrderQty=0 CumQty=0 LeavesQty=0 OrdStatus=New Side=Buy symbol=XBTUSD", order);
+    auto order3 = env >> "ORDER_NEW Price=11 OrderQty=100 CumQty=0 LeavesQty=100 OrdStatus=New Side=Buy symbol=XBTUSD" LN;
     env >> "NONE" LN;
 }
 
@@ -64,7 +65,7 @@ TEST(Strategy, amend_order_more_than_once)
         {"referencePrice", "100"},
         {"shortTermWindow", "100"},
         {"longTermWindow", "1000"},
-        {"startingBalance", "0.1"},
+        {"startingBalance", "10"},
     });
 
     auto allocations = env.strategy()->allocations();
