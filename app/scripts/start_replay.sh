@@ -59,7 +59,8 @@ replay_tradingo_on() {
     # run the replay in the RUN_ID directory to capture core files.
     cd $STORAGE/$RUN_ID
     set +e
-    replayTradingo --config $config_file
+    replayTradingo --config $config_file "$@"
     aws s3 sync "$STORAGE" "s3://$BUCKET_NAME/replays/"
+
 }
 replay_tradingo_on $trade_date
