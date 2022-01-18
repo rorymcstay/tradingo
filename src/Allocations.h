@@ -4,6 +4,7 @@
 
 #ifndef MY_PROJECT_ALLOCATIONS_H
 #define MY_PROJECT_ALLOCATIONS_H
+#include <algorithm>
 #include <memory>
 #include <boost/optional.hpp>
 #include <utility>
@@ -12,6 +13,8 @@
 #include "ApiException.h"
 
 #include "Allocation.h"
+
+
 
 template<typename TOrdApi>
 class Allocations {
@@ -26,12 +29,48 @@ private:
     std::string _symbol;
     std::string _clOrdIdPrefix;
 
+    std::vector<index_t> _occupiedLevels;
+
     bool _modified;
 
     std::shared_ptr<TOrdApi> _orderApi;
     void updateFromTask(const std::shared_ptr<Allocation>& allocation_,
-        const std::shared_ptr<model::Order>&);
+    const std::shared_ptr<model::Order>&);
 public:
+
+    class iterator_type {
+
+        std::vector<index_t>::const_iterator _index_iter;
+        const Allocations<TOrdApi>* _series;
+
+    public:
+
+        iterator_type(
+                std::vector<index_t>::const_iterator index_,
+                const Allocations<TOrdApi>* series_
+        )
+        :   _index_iter(index_)
+        ,   _series(series_) {}
+
+        iterator_type(const iterator_type& iterator_type_)
+        :   _index_iter(iterator_type_._index_iter)
+        ,   _series(iterator_type_._series) {}
+
+        iterator_type operator++() { _index_iter++; return *this; }
+        bool operator!=(const iterator_type & other) const { 
+            return other._index_iter != _index_iter;
+        }
+        const std::shared_ptr<Allocation>& operator*() const { return _series->_data[*_index_iter]; }
+
+        Allocation* operator->() const { 
+            auto& data = _series->_data;
+            return data[*_index_iter].get();
+        }
+
+    };
+    friend iterator_type;
+    
+
     size_t allocIndex(price_t price_);
     Allocations(std::shared_ptr<TOrdApi> orderApi, std::string symbol_,
                 std::string clOrdIdPrefix,
@@ -41,6 +80,7 @@ public:
                 qty_t lotSize_);
     /// add to an allocation by price level.
     void addAllocation(price_t price_, qty_t qty_, const std::string& side_="");
+    void addAllocation(const std::shared_ptr<Allocation>& allocation_);
     /// return the underlying data
     std::vector<std::shared_ptr<Allocation>> allocations() { return _data; }
     /// round price to tick.
@@ -59,8 +99,9 @@ public:
     void setUnmodified() { _modified = false; }
     const std::shared_ptr<Allocation>& operator[] (price_t price_) { return get(price_); }
     /// iterators
-    std::vector<std::shared_ptr<Allocation>>::iterator begin() { return _data.begin(); }//*_data[_lowPrice]; }
-    std::vector<std::shared_ptr<Allocation>>::iterator end() { return  _data.end(); }
+    iterator_type begin() const;
+    iterator_type end() const;
+    size_t size() const ;
     /// declare all allocations fulfilled.
     void restAll();
     /// declare allocations fulfilled
@@ -91,6 +132,7 @@ Allocations<TOrdApi>::Allocations(std::shared_ptr<TOrdApi> orderApi_,
     ,   _orderApi(orderApi_)
     ,   _symbol(std::move(symbol_))
     ,   _clOrdIdPrefix(std::move(clOrdIdPrefix_))
+    ,   _occupiedLevels()
 {
     for (int i=0; i < 2*(size_t)(midPoint_/tickSize_); i++) {
         _data.push_back(std::make_shared<Allocation>(i*tickSize_, 0.0));
@@ -106,10 +148,16 @@ size_t Allocations<TOrdApi>::allocIndex(price_t price_) {
     return index;
 }
 
+/// allocate qty/price
+template<typename TOrdApi>
+void Allocations<TOrdApi>::addAllocation(const std::shared_ptr<Allocation>& allocation_) {
+    addAllocation(allocation_->getPrice(), allocation_->getTargetDelta());
+}
 
 /// allocate qty/price
 template<typename TOrdApi>
 void Allocations<TOrdApi>::addAllocation(price_t price_, qty_t qty_, const std::string& side_/*=""*/) {
+
     if (almost_equal(qty_,0.0)) {
         return;
     }
@@ -124,7 +172,13 @@ void Allocations<TOrdApi>::addAllocation(price_t price_, qty_t qty_, const std::
         qty_ = - qty_;
     }
     LOGINFO("Adding allocation: " << LOG_VAR(price_) << LOG_VAR(qty_) << LOG_VAR(side_));
-    auto& allocation = _data[allocIndex(price_)];
+    auto price_index = allocIndex(price_);
+    auto& allocation = _data[price_index];
+    // mark occupied if weve not done so
+    if (std::find(_occupiedLevels.begin(), _occupiedLevels.end(), price_index) == _occupiedLevels.end()) {
+        _occupiedLevels.push_back(price_index);
+        std::sort(_occupiedLevels.begin(), _occupiedLevels.end());
+    }
     if (!allocation) {
         // shouldn't come in here.
         allocation = std::make_shared<Allocation>(price_, qty_);
@@ -150,7 +204,7 @@ qty_t Allocations<TOrdApi>::allocatedAtLevel(price_t price_) {
 template<typename TOrdApi>
 qty_t Allocations<TOrdApi>::totalAllocated() {
     qty_t allocated = 0;
-    std::for_each(_data.begin(), _data.end(), [&allocated] (const decltype(_data)::value_type& alloc_) {
+    std::for_each(begin(), end(), [&allocated] (const typename decltype(_data)::value_type& alloc_) {
       allocated += alloc_->getSize();
     });
     return allocated;
@@ -171,12 +225,17 @@ void Allocations<TOrdApi>::update(const std::shared_ptr<model::Execution> &exec_
 
     auto alloc = get(exec_->getPrice());
     alloc->update(exec_);
+    if (almost_equal(exec_->getLeavesQty(), 0.0)) {
+        _occupiedLevels.erase(
+                std::find(_occupiedLevels.begin(), _occupiedLevels.end(), allocIndex(exec_->getPrice()))
+        );
+    }
 }
 
 
 template<typename TOrdApi>
 void Allocations<TOrdApi>::restAll() {
-    std::for_each(_data.begin(), _data.end(), [](const std::shared_ptr<Allocation>& alloc_ ) {
+    std::for_each(begin(), end(), [](const std::shared_ptr<Allocation>& alloc_ ) {
       alloc_->rest();
     });
     setUnmodified();
@@ -186,7 +245,7 @@ void Allocations<TOrdApi>::restAll() {
 template<typename TOrdApi>
 void Allocations<TOrdApi>::rest(const std::function<bool(const std::shared_ptr<Allocation>&)>& predicate_) {
 
-    std::for_each(_data.begin(), _data.end(), [predicate_](const std::shared_ptr<Allocation>& alloc_ ) {
+    std::for_each(begin(), end(), [predicate_](const std::shared_ptr<Allocation>& alloc_ ) {
       if (predicate_(alloc_))
           alloc_->rest();
     });
@@ -197,7 +256,7 @@ void Allocations<TOrdApi>::rest(const std::function<bool(const std::shared_ptr<A
 template<typename TOrdApi>
 void Allocations<TOrdApi>::cancel(const std::function<bool(const std::shared_ptr<Allocation>&)>& predicate_) {
 
-    std::for_each(_data.begin(), _data.end(), [predicate_](const std::shared_ptr<Allocation>& alloc_ ) {
+    std::for_each(begin(), end(), [predicate_](const std::shared_ptr<Allocation>& alloc_ ) {
       if (predicate_(alloc_))
           LOGINFO("cancel: Cancelling allocationDelta " << LOG_VAR(alloc_->getPrice()));
       alloc_->cancelDelta();
@@ -209,7 +268,7 @@ void Allocations<TOrdApi>::cancel(const std::function<bool(const std::shared_ptr
 template<typename TOrdApi>
 void Allocations<TOrdApi>::cancelOrders(const std::function<bool(const std::shared_ptr<Allocation>&)>& predicate_) {
 
-    std::for_each(_data.begin(), _data.end(), [this, predicate_](const std::shared_ptr<Allocation>& alloc_ ) {
+    std::for_each(begin(), end(), [this, predicate_](const std::shared_ptr<Allocation>& alloc_ ) {
       if (predicate_(alloc_)) {
           alloc_->setTargetDelta(-alloc_->getSize());
           LOGINFO("cancelOrders: Cancelling allocation orders "
@@ -354,6 +413,8 @@ void Allocations<TOrdApi>::placeAllocations() {
             }
         } else if (allocation->isAmendDown() || allocation->isAmendUp()) {
             actionMessage << " AMENDING ";
+            auto old_orig_clid = order->getOrigClOrdID();
+            auto orig_was_set = order->origClOrdIDIsSet();
             auto origClOrdId = order->getClOrdID();
             order->setClOrdID(_clOrdIdPrefix
                               + std::to_string(allocation->getPrice())
@@ -380,6 +441,11 @@ void Allocations<TOrdApi>::placeAllocations() {
                     });
                 task.wait();
             } catch (api::ApiException &ex_) {
+                order->setClOrdID(order->getOrigClOrdID());
+                order->setOrigClOrdID(old_orig_clid);
+                if (not orig_was_set) {
+                    order->unsetOrigClOrdID();
+                }
                 LOGERROR("Error amending order "
                              << LOG_NVP("response", ex_.getContent()->rdbuf())
                              << LOG_VAR(ex_.what())
@@ -434,8 +500,33 @@ void Allocations<TOrdApi>::updateFromTask(const std::shared_ptr<Allocation>& all
         allocation_->setTargetDelta(allocation_->getSize() + allocation_->getTargetDelta());
     } if (allocation_->isCancel()) {
         allocation_->setSize(0.0);
+        _occupiedLevels.erase(
+                std::find(_occupiedLevels.begin(), _occupiedLevels.end(), allocIndex(allocation_->getPrice()))
+        );
+
     }
 
 }
+
+
+template<typename TOrdApi>
+size_t Allocations<TOrdApi>::size() const {
+    return _occupiedLevels.size();
+}
+
+
+template<typename TOrdApi>
+typename Allocations<TOrdApi>::iterator_type
+Allocations<TOrdApi>::begin() const {
+    return Allocations<TOrdApi>::iterator_type(_occupiedLevels.begin(), this);
+}
+
+
+template<typename TOrdApi>
+typename Allocations<TOrdApi>::iterator_type
+Allocations<TOrdApi>::end() const {
+    return Allocations<TOrdApi>::iterator_type(_occupiedLevels.end(), this);
+}
+
 
 #endif //MY_PROJECT_ALLOCATIONS_H

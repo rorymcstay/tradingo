@@ -11,10 +11,13 @@
 #include "signal/MovingAverageCrossOver.h"
 #include "Strategy.h"
 #include "Event.h"
+#include "Functional.h"
 
 using namespace io::swagger::client;
 
 using SMA_T = SimpleMovingAverage<uint64_t, uint64_t>;
+
+
 
 template<typename TOrdApi, typename TPositionApi>
 class BreakOutStrategy final : public Strategy<TOrdApi, TPositionApi> {
@@ -103,9 +106,11 @@ void BreakOutStrategy<TOrdApi, TPositionApi>::onBBO(const std::shared_ptr<Event>
     std::string side = "Not ready";
     qty_t qtyToTrade;
     price_t price;
+    std::shared_ptr<MarketDataInterface> md = StrategyApi::getMD();
 
     bool isReady = StrategyApi::getSignal("moving_average_crossover")->isReady();
     auto signalValue = isReady ? StrategyApi::getSignal("moving_average_crossover")->read() : -1 ;
+
     if (isReady && signalValue > 0) {  // _shortTermAvg - _longTermAvg > _buyThreshold
         // short term average is higher than longterm, buy
         qtyToTrade = getQtyToTrade("Buy");
@@ -122,9 +127,13 @@ void BreakOutStrategy<TOrdApi, TPositionApi>::onBBO(const std::shared_ptr<Event>
     if (almost_equal(qtyToTrade, 0.0)) {
         LOGDEBUG("No quantity to trade");
         return;
-    } else {
-        //qtyToTrade *= 0.10;
-        //qtyToTrade = std::max(100.0, qtyToTrade);
+    }
+    // auto alloc = 
+    auto alloc = StrategyApi::allocations()->get(price);
+    alloc->setTargetDelta(qtyToTrade);
+    double cost_of_qty = qtyToTrade * 1.0/price;
+    auto additional_cost = func::get_additional_cost(alloc, md->getMargin()->getMarginLeverage());
+    if (md->getMargin()->getWalletBalance() >= additional_cost) {
         LOGINFO(LOG_NVP("Signal", side) << LOG_VAR(signalValue)
                                         << LOG_VAR(qtyToTrade) << LOG_VAR(price));
         if (_previousDirection != side) {
@@ -132,8 +141,12 @@ void BreakOutStrategy<TOrdApi, TPositionApi>::onBBO(const std::shared_ptr<Event>
                 return !alloc_->getSide().empty() && alloc_->getSide() == _previousDirection;
             });
         }
-        StrategyApi::allocations()->addAllocation(price, qtyToTrade, side);
+        StrategyApi::allocations()->addAllocation(alloc);
         _previousDirection = side;
+    } else {
+        auto currentQty = md->getPositions().at(StrategyApi::_symbol)->getCurrentQty();
+        LOGINFO("Signal is good, but balance is insufficient."
+                << LOG_VAR(qtyToTrade) << LOG_VAR(price) << LOG_VAR(currentQty));
     }
 }
 

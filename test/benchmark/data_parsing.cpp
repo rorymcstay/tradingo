@@ -10,6 +10,7 @@
 #include "Utils.h"
 #include "fwk/TestEnv.h"
 #include "Config.h"
+#include "Series.h"
 #include "signal/MovingAverageCrossOver.h"
 
 static void BM_read_quotes_json(benchmark::State& state) {

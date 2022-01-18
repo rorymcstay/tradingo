@@ -18,6 +18,7 @@
 #include "OrderInterface.h"
 #include "Utils.h"
 #include "Context.h"
+#include "Series.h"
 
 #define STRINGIFY(x) #x
 #define TO_STRING(x) STRINGIFY(x)
@@ -79,9 +80,9 @@ public:
 
     void init();
 
-    void playback(const std::string& tradeFile_,
-                  const std::string& quoteFile_,
-                  const std::string& instrumentsFile_);
+    void playback(const Series<model::Trade>& trades,
+                   const Series<model::Quote>& quotes,
+                   const Series<model::Instrument>& instruments);
 
     /// exec & order, or one of quote or instrument.
     void dispatch(utility::datetime time,
@@ -94,7 +95,7 @@ public:
     std::shared_ptr<model::Order> operator >> (const std::string& value_);
     void sleep(const utility::datetime& time_) const;
 };
-template<typename T> std::shared_ptr<T> getEvent(std::ifstream& fileHandle_);
+
 
 std::string format(const std::string& test_message_, const std::shared_ptr<model::Order>& order_);
 

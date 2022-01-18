@@ -119,5 +119,6 @@ bool less_equal(T num1, T num2)
 {
     return almost_equal(num1, num2) or num1 < num2;
 }
+using index_t = long;
 
 long time_diff(utility::datetime time1_, utility::datetime time2_, const std::string& interval_="milliseconds");
