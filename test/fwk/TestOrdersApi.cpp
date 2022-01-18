@@ -2,6 +2,7 @@
 // Created by Rory McStay on 18/06/2021.
 //
 #include "TestOrdersApi.h"
+#include "ApiException.h"
 
 #include <stdexcept>
 #include <utility>
@@ -17,6 +18,7 @@
 TestOrdersApi::TestOrdersApi(std::shared_ptr<io::swagger::client::api::ApiClient> ptr)
 :   _orders()
 ,   _newOrders()
+,   _rejects()
 ,   _orderAmends()
 ,   _orderCancels()
 ,   _oidSeed(0) {
@@ -59,7 +61,7 @@ TestOrdersApi::order_amend(boost::optional<utility::string_t> orderID,
     amend_order(order, origOrder);
     set_order_timestamp(order);
     order->setOrdStatus("Replaced");
-    _orderAmends.emplace(order);
+    _orderAmends.push(order);
     _allEvents.push(order);
     return pplx::task_from_result(order);
 }
@@ -508,28 +510,34 @@ std::shared_ptr<model::Order> TestOrdersApi::checkOrderExists(const std::shared_
  * Check order is valid given current status of margin and that parameters are correct.
  */
 bool TestOrdersApi::validateOrder(const std::shared_ptr<model::Order> &order_) {
+    std::string error;
+    bool fail = false;
     if (order_->origClOrdIDIsSet() && order_->getOrderID() != "") {
-        auto msg = order_->toJson().serialize();
-        auto content = std::make_shared<std::istringstream>(msg);
-        throw api::ApiException(400, "Must specify only one of orderID or origClOrdId", content);
+        error = "Must specify only one of orderID or origClOrdId";
+        fail = true;
     }
-    if (order_->origClOrdIDIsSet() && !order_->clOrdIDIsSet()){
-        auto msg = order_->toJson().serialize();
-        auto content = std::make_shared<std::istringstream>(msg);
-        throw api::ApiException(400, "Must specify ClOrdID if OrigClOrdID is set", content);
+    if (order_->origClOrdIDIsSet() && !order_->clOrdIDIsSet()) {
+        error = "Must specify ClOrdID if OrigClOrdID is set";
+        fail = true;
     }
     if ((int)order_->getOrderQty() % std::stoi(_config->get("lotSize", "100")) != 0) {
-        auto msg = order_->toJson().serialize();
-        auto content = std::make_shared<std::istringstream>(msg);
-        throw api::ApiException(400, "Orderty is not a multiple of lotsize", content);
+        error = "Orderty is not a multiple of lotsize";
+        fail = true;
     }
     auto total_cost = 1/(order_->getOrderQty() * order_->getPrice());
     if (total_cost > _margin->getWalletBalance()) {
-        auto msg = order_->toJson().serialize();
-        auto content = std::make_shared<std::istringstream>(msg);
         std::stringstream reason;
         reason << "Account has insufficient Available Balance, " << total_cost << " XBt required";
-        throw api::ApiException(400, reason.str(), content);
+        error = reason.str();
+        fail = true;
+    }
+    if (fail) {
+        auto msg = order_->toJson().serialize();
+        auto content = std::make_shared<std::istringstream>(msg);
+        order_->setText(error);
+        order_->setOrdStatus("Rejected");
+        _rejects.push(order_);
+        throw api::ApiException(400, error, content);
     }
     return true;
 }
@@ -541,16 +549,19 @@ bool TestOrdersApi::checkValidAmend(std::shared_ptr<model::Order> requestedAmend
     if (requestedAmend->leavesQtyIsSet() and requestedAmend->orderQtyIsSet()) {
         auto msg = requestedAmend->toJson().serialize();
         auto content = std::make_shared<std::istringstream>(msg);
-        throw api::ApiException(
-            400, "Cannot specify both OrderQty and LeavesQty", content);
+        requestedAmend->setText("Cannot specify both OrderQty and LeavesQty");
+        requestedAmend->setOrdStatus(originalOrder->getOrdStatus());
+        _rejects.push(requestedAmend);
+        throw api::ApiException(400, requestedAmend->getText(), content);
     }
     if ((requestedAmend->leavesQtyIsSet() || requestedAmend->orderQtyIsSet())
          && requestedAmend->priceIsSet()) {
         auto msg = requestedAmend->toJson().serialize();
         auto content = std::make_shared<std::istringstream>(msg);
-        throw api::ApiException(
-            400, "Cannot specify both Qty and Price amend",
-            content);
+        requestedAmend->setText("Cannot specify both Qty and Price amend");
+        requestedAmend->setOrdStatus(originalOrder->getOrdStatus());
+        _rejects.push(requestedAmend);
+        throw api::ApiException(400, requestedAmend->getText(),content);
     }
     if (requestedAmend->orderQtyIsSet()) {
         throw std::runtime_error("Order amends via OrderQty not implemented.");
@@ -561,11 +572,12 @@ bool TestOrdersApi::checkValidAmend(std::shared_ptr<model::Order> requestedAmend
         if (additionalCost > _margin->getWalletBalance()) {
             auto msg = requestedAmend->toJson().serialize();
             auto content = std::make_shared<std::istringstream>(msg);
-            throw api::ApiException(
-                400, "Insufficient funds available for amend. additionalCost="
-                            + std::to_string(additionalCost)
-                            + ", balance=" + std::to_string(_margin->getWalletBalance()),
-                content);
+            requestedAmend->setText("Insufficient funds available for amend. additionalCost="
+                    + std::to_string(additionalCost)
+                    + ", balance=" + std::to_string(_margin->getWalletBalance()));
+            requestedAmend->setOrdStatus(originalOrder->getOrdStatus());
+            _rejects.push(requestedAmend);
+            throw api::ApiException(400, requestedAmend->getText(), content);
         }
     }
     return true;

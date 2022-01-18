@@ -34,6 +34,7 @@ private:
     /// reference to all orders placed during test, keyed by ClOrdID.
     std::map<std::string, std::shared_ptr<model::Order>> _orders;
     std::queue<std::shared_ptr<model::Order>> _orderAmends;
+    std::queue<std::shared_ptr<model::Order>> _rejects;
     std::queue<std::shared_ptr<model::Order>> _newOrders;
     std::queue<std::shared_ptr<model::Order>> _orderCancels;
     std::queue<std::shared_ptr<model::ModelBase>> _allEvents;
