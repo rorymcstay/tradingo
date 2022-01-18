@@ -80,6 +80,7 @@ public:
                 qty_t lotSize_);
     /// add to an allocation by price level.
     void addAllocation(price_t price_, qty_t qty_, const std::string& side_="");
+    void addAllocation(const std::shared_ptr<Allocation>& allocation_);
     /// return the underlying data
     std::vector<std::shared_ptr<Allocation>> allocations() { return _data; }
     /// round price to tick.
@@ -147,6 +148,11 @@ size_t Allocations<TOrdApi>::allocIndex(price_t price_) {
     return index;
 }
 
+/// allocate qty/price
+template<typename TOrdApi>
+void Allocations<TOrdApi>::addAllocation(const std::shared_ptr<Allocation>& allocation_) {
+    addAllocation(allocation_->getPrice(), allocation_->getTargetDelta());
+}
 
 /// allocate qty/price
 template<typename TOrdApi>

@@ -16,6 +16,12 @@ using namespace io::swagger::client;
 
 using SMA_T = SimpleMovingAverage<uint64_t, uint64_t>;
 
+price_t get_additional_cost(const std::shared_ptr<Allocation>& alloc_, double leverage_)
+{ 
+    // TODO Need to check if selling, are we paying with existing position.
+    return alloc_->getTargetDelta() * (alloc_->getPrice()/leverage_);
+}
+
 template<typename TOrdApi, typename TPositionApi>
 class BreakOutStrategy final : public Strategy<TOrdApi, TPositionApi> {
 
@@ -107,6 +113,7 @@ void BreakOutStrategy<TOrdApi, TPositionApi>::onBBO(const std::shared_ptr<Event>
 
     bool isReady = StrategyApi::getSignal("moving_average_crossover")->isReady();
     auto signalValue = isReady ? StrategyApi::getSignal("moving_average_crossover")->read() : -1 ;
+
     if (isReady && signalValue > 0) {  // _shortTermAvg - _longTermAvg > _buyThreshold
         // short term average is higher than longterm, buy
         qtyToTrade = getQtyToTrade("Buy");
@@ -124,10 +131,12 @@ void BreakOutStrategy<TOrdApi, TPositionApi>::onBBO(const std::shared_ptr<Event>
         LOGDEBUG("No quantity to trade");
         return;
     }
+    // auto alloc = 
+    auto alloc = StrategyApi::allocations()[price];
+    alloc->setTargetDelta(qtyToTrade);
     double cost_of_qty = qtyToTrade * 1.0/price;
-    if (md->getMargin()->getWalletBalance() >= cost_of_qty) {
-        //qtyToTrade *= 0.10;
-        //qtyToTrade = std::max(100.0, qtyToTrade);
+    auto additional_cost = get_additional_cost(alloc, md->getMargin()->getMarginLeverage());
+    if (md->getMargin()->getWalletBalance() >= additional_cost) {
         LOGINFO(LOG_NVP("Signal", side) << LOG_VAR(signalValue)
                                         << LOG_VAR(qtyToTrade) << LOG_VAR(price));
         if (_previousDirection != side) {
@@ -135,7 +144,7 @@ void BreakOutStrategy<TOrdApi, TPositionApi>::onBBO(const std::shared_ptr<Event>
                 return !alloc_->getSide().empty() && alloc_->getSide() == _previousDirection;
             });
         }
-        StrategyApi::allocations()->addAllocation(price, qtyToTrade, side);
+        StrategyApi::allocations()->addAllocation(alloc);
         _previousDirection = side;
     } else {
         auto currentQty = md->getPositions().at(StrategyApi::_symbol)->getCurrentQty();
