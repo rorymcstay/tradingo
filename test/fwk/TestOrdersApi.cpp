@@ -3,6 +3,8 @@
 //
 #include "TestOrdersApi.h"
 
+#include <boost/none.hpp>
+#include <memory>
 #include <stdexcept>
 #include <utility>
 
@@ -38,27 +40,45 @@ TestOrdersApi::order_amend(boost::optional<utility::string_t> orderID,
                            boost::optional<double> pegOffsetValue,
                            boost::optional<utility::string_t> text) {
     auto order = std::make_shared<model::Order>();
-    order->setOrdStatus("PendingNew");
     order->setClOrdID(clOrdID.value());
     order->setOrigClOrdID(origClOrdID.value());
+    auto origOrder = checkOrderExists(order);
+    double new_price;
+    double new_qty;
+    order->setOrdStatus("PendingReplace");
     order->setLeavesQty(leavesQty.value());
+    if (price.has_value()) {
+        order->setPrice(price.value());
+    }
     if (orderID.has_value())
         order->setOrderID(orderID.value());
-    if (orderQty.has_value())
+    if (orderQty.has_value()) {
+        new_qty = orderQty.value();
         order->setOrderQty(orderQty.value());
-    if (price.has_value())
-        order->setPrice(price.value());
-    if (stopPx.has_value())
+    }
+    if (stopPx.has_value()) 
         order->setStopPx(stopPx.value());
     if (pegOffsetValue.has_value())
         order->setPegOffsetValue(pegOffsetValue.value());
     if (text.has_value())
         order->setText(text.value());
-    auto origOrder = checkOrderExists(order);
+
+    auto origQty = origOrder->getOrderQty();
+    double diff = order->getLeavesQty() - origOrder->getLeavesQty();
     checkValidAmend(order, origOrder);
     amend_order(order, origOrder);
     set_order_timestamp(order);
     order->setOrdStatus("Replaced");
+    // populate for data purposes
+    order->setOrderQty(origQty + diff);
+    order->setOrdType(origOrder->getOrdType());
+    order->setCumQty(origOrder->getCumQty());
+    order->setExecInst(origOrder->getExecInst());
+    order->setPrice(origOrder->getPrice());
+    order->setSymbol(origOrder->getSymbol());
+    order->setSide(origOrder->getSide());
+    order->setTimeInForce(origOrder->getTimeInForce());
+    order->setAvgPx(order->getAvgPx());
     _orderAmends.emplace(order);
     _allEvents.push(order);
     return pplx::task_from_result(order);
@@ -77,14 +97,15 @@ TestOrdersApi::order_cancel(boost::optional<utility::string_t> orderID,
         auto content = std::make_shared<std::istringstream>(R"({"clOrdID": ")" + clOrdID.value() +  R"(" })");
         throw api::ApiException(404, "Order not found to cancel", content);
     } else {
-        _orders[clOrdID.value()]->setOrdStatus("Canceled");
+        auto& origOrder = _orders[clOrdID.value()];
+        origOrder->setOrdStatus("Canceled");
         auto event_order = std::make_shared<model::Order>();
         auto event_json = _orders[clOrdID.value()]->toJson();
         event_order->fromJson(event_json);
-        _orders[clOrdID.value()]->setOrderQty(0.0);
-        _orders[clOrdID.value()]->setLeavesQty(0.0);
-        set_order_timestamp(_orders[clOrdID.value()]);
-        ordersRet.push_back(_orders[clOrdID.value()]);
+        origOrder->setOrderQty(0.0);
+        origOrder->setLeavesQty(0.0);
+        set_order_timestamp(origOrder);
+        ordersRet.push_back(origOrder);
         _orderCancels.push(event_order);
         _allEvents.push(event_order);
         _orders.erase(clOrdID.value());
@@ -97,14 +118,8 @@ TestOrdersApi::order_cancelAll(boost::optional<utility::string_t> symbol, boost:
                                boost::optional<utility::string_t> text) {
     std::vector<std::shared_ptr<model::Order>> out = {};
     for (auto& orders : _orders) {
-        orders.second->setOrdStatus("Canceled");
-        auto event_order = std::make_shared<model::Order>();
-        auto event_json = orders.second->toJson();
-        event_order->fromJson(event_json);
-        _orderCancels.push(event_order);
+        order_cancel(boost::none, orders.second->getClOrdID(), boost::none);
         out.push_back(orders.second);
-        _allEvents.push(event_order);
-        set_order_timestamp(orders.second);
     }
     return pplx::task_from_result(out);
 }
