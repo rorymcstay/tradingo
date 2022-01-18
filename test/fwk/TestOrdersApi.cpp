@@ -197,7 +197,7 @@ TestOrdersApi::order_new(utility::string_t symbol,
 
 
 #define CHECK_VAL(val1, val2)                                                                  \
-    EXPECT_FALSE(val1 != val2) << " The values " << LOG_NVP(#val1, val1) << " and " << LOG_NVP(#val2, val2) << " "
+    ASSERT_EQ(val1, val2) << " The values " << LOG_NVP(#val1, val1) << " and " << LOG_NVP(#val2, val2) << " "
 
 #define PVAR(order, name_)  #name_ "="  << (order)->get##name_() << " "
 void TestOrdersApi::operator >> (const std::string &outEvent_) {

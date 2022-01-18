@@ -11,16 +11,13 @@
 #include "signal/MovingAverageCrossOver.h"
 #include "Strategy.h"
 #include "Event.h"
+#include "Functional.h"
 
 using namespace io::swagger::client;
 
 using SMA_T = SimpleMovingAverage<uint64_t, uint64_t>;
 
-price_t get_additional_cost(const std::shared_ptr<Allocation>& alloc_, double leverage_)
-{ 
-    // TODO Need to check if selling, are we paying with existing position.
-    return alloc_->getTargetDelta() * (alloc_->getPrice()/leverage_);
-}
+
 
 template<typename TOrdApi, typename TPositionApi>
 class BreakOutStrategy final : public Strategy<TOrdApi, TPositionApi> {
@@ -132,10 +129,10 @@ void BreakOutStrategy<TOrdApi, TPositionApi>::onBBO(const std::shared_ptr<Event>
         return;
     }
     // auto alloc = 
-    auto alloc = StrategyApi::allocations()[price];
+    auto alloc = StrategyApi::allocations()->get(price);
     alloc->setTargetDelta(qtyToTrade);
     double cost_of_qty = qtyToTrade * 1.0/price;
-    auto additional_cost = get_additional_cost(alloc, md->getMargin()->getMarginLeverage());
+    auto additional_cost = func::get_additional_cost(alloc, md->getMargin()->getMarginLeverage());
     if (md->getMargin()->getWalletBalance() >= additional_cost) {
         LOGINFO(LOG_NVP("Signal", side) << LOG_VAR(signalValue)
                                         << LOG_VAR(qtyToTrade) << LOG_VAR(price));
