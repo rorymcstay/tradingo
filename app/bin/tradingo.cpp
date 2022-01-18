@@ -35,12 +35,14 @@ int main(int argc, char **argv) {
 
     // parse config and create context.
     auto config = std::make_shared<Config>(vm.at("config").as<std::string>());
+    auto pplxThreadCount = std::stoi(config->get("pplxThreadCount", "4"));
+    crossplat::threadpool::initialize_with_threads(pplxThreadCount);
+
     auto context = std::make_shared<Context<MarketData, api::OrderApi, api::PositionApi>>(config);
     context->init();
     context->initStrategy();
 
-    auto pplxThreadCount = std::stoi(config->get("pplxThreadCount", "4"));
-    crossplat::threadpool::initialize_with_threads(pplxThreadCount);
+
     // running loop
      while (context->strategy()->shouldEval()) {
          //LOGINFO(AixLog::Color::YELLOW << "======== START Evaluate ========" << AixLog::Color::none);

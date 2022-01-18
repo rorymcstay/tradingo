@@ -1,10 +1,15 @@
+#include <chrono>
+#include <limits>
 #include <memory>
+#include <sstream>
+#include <stdexcept>
 
 #define _TURN_OFF_PLATFORM_STRING
 #include <model/Margin.h>
 
 #include "Context.h"
 #include "BatchWriter.h"
+#include "Series.h"
 #include "TestEnv.h"
 
 
@@ -67,18 +72,7 @@ std::shared_ptr<model::Order> TestEnv::operator>>(const std::string &value_) {
     }
 }
 
-template<typename T>
-std::shared_ptr<T> getEvent(std::ifstream &fileHandle_) {
-    std::string str;
-    auto quote = std::make_shared<T>();
-    if (not std::getline(fileHandle_, str))
-        return nullptr;
-    if (str.empty())
-        return getEvent<T>(fileHandle_);
-    auto json = web::json::value::parse(str);
-    quote->fromJson(json);
-    return quote;
-}
+
 std::string format(const std::string& test_message_,
                    const std::shared_ptr<model::Order>& order_) {
     std::stringstream ss;
@@ -90,7 +84,8 @@ std::string format(const std::string& test_message_,
 }
 
 /// if trade may not occur, return nullptr, else return exec report and modify order.
-std::shared_ptr<model::Execution> canTrade(const std::shared_ptr<model::Order>& order_, const std::shared_ptr<model::Trade>& trade_) {
+std::shared_ptr<model::Execution> canTrade(const std::shared_ptr<model::Order>& order_,
+        const std::shared_ptr<model::Trade>& trade_) {
     auto orderQty = order_->getLeavesQty();
     auto tradeQty = trade_->getSize();
     auto orderPx = order_->getPrice();
@@ -139,34 +134,56 @@ std::shared_ptr<model::Execution> canTrade(const std::shared_ptr<model::Order>& 
 
 }
 
-void TestEnv::playback(const std::string& tradeFile_,
-                       const std::string& quoteFile_,
-                       const std::string& instrumentsFile_) {
-    std::ifstream tradeFile;
-    std::ifstream quoteFile;
-    std::ifstream instrumentsFile;
-    tradeFile.open(tradeFile_);
-    quoteFile.open(quoteFile_);
-    instrumentsFile.open(quoteFile_);
-    if (not tradeFile.is_open()) {
-        std::stringstream msg;
-        msg << "File " << LOG_VAR(tradeFile_) << " does not exist.";
-        throw std::runtime_error(msg.str());
-    }
-    if (not quoteFile.is_open()) {
-        std::stringstream msg;
-        msg << "File " << LOG_VAR(tradeFile_) << " does not exist.";
-        throw std::runtime_error(msg.str());
-    }
-    if (not instrumentsFile.is_open()) {
-        std::stringstream msg;
-        LOGWARN("File " << LOG_VAR(tradeFile_) << " does not exist.");
-    }
-    bool stop = false;
-    auto quote = getEvent<model::Quote>(quoteFile);
-    auto trade = getEvent<model::Trade>(tradeFile);
-    auto instrument = getEvent<model::Instrument>(instrumentsFile);
-    bool hasTrades = true;
+struct PlaybackStats {
+    utility::datetime start_time;
+    utility::datetime end_time;
+    utility::datetime current_time;
+
+    long quotes_size;
+    long trades_size;
+    long instruments_size;
+    std::shared_ptr<model::Position> position;
+
+    long quotes_processed = 0;
+    long instruments_processed = 0;
+    long trades_processed = 0;
+    std::chrono::system_clock::time_point last_log;
+    std::chrono::system_clock::duration interval = std::chrono::seconds(10);
+
+};
+
+#define LOG_STATS(stats_) \
+        double quotes_progress = 100*(stats_.quotes_processed/(double)stats_.quotes_size); \
+        double instruments_progress = 100*(stats.instruments_processed/(double)stats_.instruments_size); \
+        double trades_progress = 100*(stats.trades_processed/(double)stats_.trades_size); \
+        LOGWARN("STATS: " \
+            << LOG_NVP("QuoteProgress",  quotes_progress) \
+            << LOG_NVP("TradeProgress",  trades_progress) \
+            << LOG_NVP("InstrumentProgress", instruments_progress) \
+            << LOG_NVP("StartTime", stats_.start_time.to_string(utility::datetime::date_format::ISO_8601)) \
+            << LOG_NVP("CurrentTime", stats_.current_time.to_string(utility::datetime::date_format::ISO_8601)) \
+            << LOG_NVP("EndTime", stats_.end_time.to_string(utility::datetime::date_format::ISO_8601)) \
+            <<LOG_NVP("Position", stats_.position->toJson().serialize()) \
+            );
+
+
+void TestEnv::playback(const Series<model::Trade>& trades,
+                       const Series<model::Quote>& quotes,
+                       const Series<model::Instrument>& instruments) {
+
+    auto quote = quotes.begin();
+    auto trade = trades.begin();
+    auto instrument = instruments.begin();
+
+    auto stats = PlaybackStats {
+        quotes.begin()->getTimestamp(),
+        quotes.end()->getTimestamp(),
+        quotes.begin()->getTimestamp(),
+        quotes.size(),
+        trades.size(),
+        instruments.size(),
+        _position
+    };
 
     std::vector<std::shared_ptr<model::ModelBase>> outBuffer;
     // table writers
@@ -184,29 +201,52 @@ void TestEnv::playback(const std::string& tradeFile_,
     _lastDispatch.mkt_time = quote->getTimestamp();
     auto leverageType = _config->get("leverageType", "ISOLATED");
     auto symbol = _config->get("symbol");
-    while (not stop) {
-        if (!hasTrades or trade->getTimestamp() >= quote->getTimestamp()) {
-            // trades are ahead of quotes, send the quote
-            (*_context->orderApi()->getMarginCalculator())(quote);
-            auto time = quote->getTimestamp();
-            // QUOTE
-            // TODO: env << "EXEC Price=..."
-            dispatch(time, quote, nullptr, nullptr, nullptr);
-            // set the quote for next iteration.
-            quote = getEvent<model::Quote>(quoteFile);
-            // record replay actions to a file.
-            *_context->orderApi() >> batchWriter;
+    
+    utility::datetime::interval_type max_interval = std::numeric_limits<utility::datetime::interval_type>::max();
 
-            if (not quote) {
-                stop = true;
-            }
-            // update instrument:
-            {
-                if (instrument and instrument->getTimestamp() < quote->getTimestamp()) {
-                    dispatch(time, nullptr, nullptr, nullptr, instrument);
-                    instrument = getEvent<model::Instrument>(instrumentsFile);
+    while (quote != quotes.end() or trade != trades.end() or instrument != instruments.end()) {
+    
+        utility::datetime::interval_type current_time = std::min({
+                (quote != quotes.end()) ? quote->getTimestamp().to_interval() : max_interval,
+                (trade != trades.end()) ? trade->getTimestamp().to_interval() : max_interval,
+                (instrument != instruments.end()) ? instrument->getTimestamp().to_interval() : max_interval
+        });
+        // TRADE
+        if (trade != trades.end() and trade->getTimestamp().to_interval() == current_time) {
+            auto trade_time = trade->getTimestamp();
+            for (auto& order : _context->orderApi()->orders()) {
+                auto exec = canTrade(order.second, *trade);
+                if (exec) {
+                    exec->setTimestamp(trade_time);
+                    // put resultant execution into marketData.
+                    LOGINFO(LOG_NVP("OrderID", order.second->getOrderID())
+                        << AixLog::Color::GREEN
+                        << LOG_NVP("Side", order.second->getSide())
+                        << LOG_NVP("CumQty", order.second->getCumQty())
+                        << LOG_NVP("LeavesQty", order.second->getLeavesQty())
+                        << LOG_NVP("OrdStatus", order.second->getOrdStatus())
+                        << AixLog::Color::none);
+                    dispatch(trade_time, nullptr, exec, order.second, nullptr);
+                    if (exec->getOrdStatus() == "Filled") {
+                        LOGDEBUG("Filled order");
+                    }
+                    auto position = _context->orderApi()->getPosition();
+                    stats.position = position;
+                    position->setTimestamp(trade_time);
+                    positionWriter.write(position);
                 }
             }
+            _context->strategy()->evaluate();
+            ++trade;
+            stats.trades_processed += 1;
+            stats.current_time = trade_time;
+        // QUOTE
+        } else if (quote != quotes.end() and quote->getTimestamp().to_interval() == current_time) {
+            (*_context->orderApi()->getMarginCalculator())(*quote);
+            auto time = quote->getTimestamp();
+            dispatch(time, *quote, nullptr, nullptr, nullptr);
+            // record replay actions to a file.
+            *_context->orderApi() >> batchWriter;
 
             // TODO: void liquidatePositions(positions)
             {
@@ -238,40 +278,28 @@ void TestEnv::playback(const std::string& tradeFile_,
                                     << LOG_NVP("balance", margin->getWalletBalance()));
                 }
             }
-        } else { // send the trade.
-            // TODO Check if trade can match on what we have? then send EXECUTION
-            auto trade_time = trade->getTimestamp();
-            for (auto& order : _context->orderApi()->orders()) {
-                auto exec = canTrade(order.second, trade);
-                // TODO: env << "EXEC Price=..."
-                if (exec) {
-                    exec->setTimestamp(trade_time);
-                    // put resultant execution into marketData.
-                    LOGINFO(LOG_NVP("OrderID", order.second->getOrderID())
-                        << AixLog::Color::GREEN
-                        << LOG_NVP("Side", order.second->getSide())
-                        << LOG_NVP("CumQty", order.second->getCumQty())
-                        << LOG_NVP("LeavesQty", order.second->getLeavesQty())
-                        << LOG_NVP("OrdStatus", order.second->getOrdStatus())
-                        << AixLog::Color::none);
-                    dispatch(trade_time, nullptr, exec, order.second, nullptr);
-                    if (exec->getOrdStatus() == "Filled") {
-                        LOGDEBUG("Filled order");
-                    }
-                    auto position = _context->orderApi()->getPosition();
-                    position->setTimestamp(trade_time);
-                    positionWriter.write(position);
-                }
-            }
-            _context->strategy()->evaluate();
-            trade = getEvent<model::Trade>(tradeFile);
-
-            if (not trade) {
-                // trades are finished now, wont come in here again
-                hasTrades = false;
-            }
+            ++quote;
+            stats.quotes_processed += 1;
+            stats.current_time = time;
+        // INSTRUMENT
+        } else if (instrument != instruments.end() and instrument->getTimestamp().to_interval() == current_time) {
+            dispatch(instrument->getTimestamp(), nullptr, nullptr, nullptr, *instrument);
+            ++instrument;
+            stats.instruments_processed += 1;
+            stats.current_time = instrument->getTimestamp();
+        } else {
+            std::stringstream ss;
+            if (not (trade != trades.end())) { ss << "Trades "; }
+            else if (not(quote != quotes.end())) { ss << "Quotes ";}
+            else if (not(instrument != instruments.end())) { ss << "Instruments ";} 
+            else { ss << "UNKNOWN "; }
+            ss << "Has completed.";
+            LOGWARN(ss.str());
         }
-
+        if (std::chrono::system_clock::now() - stats.last_log > stats.interval) {
+            LOG_STATS(stats);
+            stats.last_log = std::chrono::system_clock::now();
+        }
     }
     batchWriter.write_batch();
     positionWriter.write_batch();

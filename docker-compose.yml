@@ -1,13 +1,12 @@
 version: "3.0"
 
-
 services:
-
-  live-tradingo:
+  tradingo:
     build:
       context: .
-      dockerfile: docker/tradingo-replay.docker
+      dockerfile: ./docker/tradingo.dockerfile
     entrypoint: ["/usr/local/scripts/start_tradingo.sh"]
+    restart: always
     environment:
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}

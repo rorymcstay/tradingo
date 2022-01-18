@@ -1,5 +1,6 @@
 #!/bin/bash
 source "$(dirname ${BASH_SOURCE[0]})/profile.env"
+export LOG_LEVEL=${LOG_LEVEL:-"info"}
 
 start_tradingo() {
     # exit on first failure

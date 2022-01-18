@@ -3,6 +3,9 @@
 //
 
 #include "Functional.h"
+#include "Allocation.h"
+#include "Allocations.h"
+#include "Utils.h"
 
 model::Instrument
 func::get_instrument(const std::shared_ptr<api::InstrumentApi> &_instrumentApi, const std::string &symbol_) {
@@ -21,4 +24,10 @@ func::get_instrument(const std::shared_ptr<api::InstrumentApi> &_instrumentApi, 
         return *inst;
     else
         return model::Instrument();
+}
+
+price_t func::get_additional_cost(const std::shared_ptr<Allocation>& alloc_, double leverage_)
+{ 
+    // TODO Need to check if selling, are we paying with existing position.
+    return alloc_->getTargetDelta() * (alloc_->getPrice()/leverage_);
 }

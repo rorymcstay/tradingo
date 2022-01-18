@@ -4,6 +4,7 @@ add_executable(tickRecorder bin/tickRecorder.cpp etc/config/tickRecorder.cfg)
 add_executable(tradingo bin/tradingo.cpp etc/config/tradingo.cfg)
 
 
+
 target_link_libraries(tickRecorder
         trading_funcs
         ${OPENSSL_CRYPTO_LIBRARY}
@@ -12,6 +13,8 @@ target_link_libraries(tradingo
         trading_funcs
         ${OPENSSL_CRYPTO_LIBRARY}
         boost_program_options)
+
+
 
 #target_link_libraries(tradingoLoader
 #        trading_funcs

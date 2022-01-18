@@ -35,6 +35,7 @@ add_executable(testTradingo
         TestStrategy.cpp
         TestMarketData.cpp
         TestConfig.cpp
+        TestSeries.cpp
 
         test_api_OrderApi.cpp
         test_api_PositionApi.cpp
@@ -52,6 +53,14 @@ target_link_libraries(testTradingo
         pthread
 )
 
+add_compile_definitions("TESTDATA_LOCATION=\"${CMAKE_INSTALL_PREFIX}/etc/test/data\"")
+install(DIRECTORY
+    data/ DESTINATION etc/test/data/
+    FILES_MATCHING
+    PATTERN
+    data/*.json
+    PERMISSIONS OWNER_WRITE OWNER_READ GROUP_READ
+    )
 
 install(TARGETS
             testTradingo

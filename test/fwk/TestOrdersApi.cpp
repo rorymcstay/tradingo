@@ -4,6 +4,8 @@
 #include "TestOrdersApi.h"
 #include "ApiException.h"
 
+#include <boost/none.hpp>
+#include <memory>
 #include <stdexcept>
 #include <utility>
 
@@ -40,27 +42,45 @@ TestOrdersApi::order_amend(boost::optional<utility::string_t> orderID,
                            boost::optional<double> pegOffsetValue,
                            boost::optional<utility::string_t> text) {
     auto order = std::make_shared<model::Order>();
-    order->setOrdStatus("PendingNew");
     order->setClOrdID(clOrdID.value());
     order->setOrigClOrdID(origClOrdID.value());
+    auto origOrder = checkOrderExists(order);
+    double new_price;
+    double new_qty;
+    order->setOrdStatus("PendingReplace");
     order->setLeavesQty(leavesQty.value());
+    if (price.has_value()) {
+        order->setPrice(price.value());
+    }
     if (orderID.has_value())
         order->setOrderID(orderID.value());
-    if (orderQty.has_value())
+    if (orderQty.has_value()) {
+        new_qty = orderQty.value();
         order->setOrderQty(orderQty.value());
-    if (price.has_value())
-        order->setPrice(price.value());
-    if (stopPx.has_value())
+    }
+    if (stopPx.has_value()) 
         order->setStopPx(stopPx.value());
     if (pegOffsetValue.has_value())
         order->setPegOffsetValue(pegOffsetValue.value());
     if (text.has_value())
         order->setText(text.value());
-    auto origOrder = checkOrderExists(order);
+
+    auto origQty = origOrder->getOrderQty();
+    double diff = order->getLeavesQty() - origOrder->getLeavesQty();
     checkValidAmend(order, origOrder);
     amend_order(order, origOrder);
     set_order_timestamp(order);
     order->setOrdStatus("Replaced");
+    // populate for data purposes
+    order->setOrderQty(origQty + diff);
+    order->setOrdType(origOrder->getOrdType());
+    order->setCumQty(origOrder->getCumQty());
+    order->setExecInst(origOrder->getExecInst());
+    order->setPrice(origOrder->getPrice());
+    order->setSymbol(origOrder->getSymbol());
+    order->setSide(origOrder->getSide());
+    order->setTimeInForce(origOrder->getTimeInForce());
+    order->setAvgPx(order->getAvgPx());
     _orderAmends.push(order);
     _allEvents.push(order);
     return pplx::task_from_result(order);
@@ -79,14 +99,15 @@ TestOrdersApi::order_cancel(boost::optional<utility::string_t> orderID,
         auto content = std::make_shared<std::istringstream>(R"({"clOrdID": ")" + clOrdID.value() +  R"(" })");
         throw api::ApiException(404, "Order not found to cancel", content);
     } else {
-        _orders[clOrdID.value()]->setOrdStatus("Canceled");
+        auto& origOrder = _orders[clOrdID.value()];
+        origOrder->setOrdStatus("Canceled");
         auto event_order = std::make_shared<model::Order>();
         auto event_json = _orders[clOrdID.value()]->toJson();
         event_order->fromJson(event_json);
-        _orders[clOrdID.value()]->setOrderQty(0.0);
-        _orders[clOrdID.value()]->setLeavesQty(0.0);
-        set_order_timestamp(_orders[clOrdID.value()]);
-        ordersRet.push_back(_orders[clOrdID.value()]);
+        origOrder->setOrderQty(0.0);
+        origOrder->setLeavesQty(0.0);
+        set_order_timestamp(origOrder);
+        ordersRet.push_back(origOrder);
         _orderCancels.push(event_order);
         _allEvents.push(event_order);
         _orders.erase(clOrdID.value());
@@ -99,14 +120,8 @@ TestOrdersApi::order_cancelAll(boost::optional<utility::string_t> symbol, boost:
                                boost::optional<utility::string_t> text) {
     std::vector<std::shared_ptr<model::Order>> out = {};
     for (auto& orders : _orders) {
-        orders.second->setOrdStatus("Canceled");
-        auto event_order = std::make_shared<model::Order>();
-        auto event_json = orders.second->toJson();
-        event_order->fromJson(event_json);
-        _orderCancels.push(event_order);
+        order_cancel(boost::none, orders.second->getClOrdID(), boost::none);
         out.push_back(orders.second);
-        _allEvents.push(event_order);
-        set_order_timestamp(orders.second);
     }
     return pplx::task_from_result(out);
 }
@@ -184,23 +199,23 @@ TestOrdersApi::order_new(utility::string_t symbol,
 
 
 #define CHECK_VAL(val1, val2)                                                                  \
-    if (val1 != val2) {                                                                        \
-        std::stringstream ss;                                                                  \
-        ss << " The values " << LOG_NVP(#val1, val1) << " and " << LOG_NVP(#val2, val2) << " "; \
-        FAIL() << failMessage.str() << ss.str();                                                        \
-    }
+    ASSERT_EQ(val1, val2) << " The values " << LOG_NVP(#val1, val1) << " and " << LOG_NVP(#val2, val2) << " "
 
 #define PVAR(order, name_)  #name_ "="  << (order)->get##name_() << " "
 void TestOrdersApi::operator >> (const std::string &outEvent_) {
     auto eventType = getEventTypeFromString(outEvent_);
 
     std::stringstream failMessage;
-    failMessage << "Event filter:\n\t" << outEvent_ << "\nnot satisifed. Reason:\n";
+    failMessage << "Event filter:\n\t" << outEvent_ << "\nnot satisifed. Reason: ";
     if (eventType == "NONE") {
         if (!_newOrders.empty() || !_orderCancels.empty() || !_orderAmends.empty()) {
             failMessage << "There are events still pending!\n";
             while (!_newOrders.empty()) {
                 auto order = _newOrders.front();
+                if (!order) {
+                    failMessage << "NULL";
+                    break;
+                }
                 failMessage << "env >> \"ORDER_NEW "
                             << PVAR(order, Price)
                             << PVAR(order, OrderQty)
@@ -217,6 +232,10 @@ void TestOrdersApi::operator >> (const std::string &outEvent_) {
             }
             while (!_orderAmends.empty()) {
                 auto order = _orderAmends.front();
+                if (!order) {
+                    failMessage << "NULL";
+                    break;
+                }
                 failMessage << "env >> \"ORDER_AMEND "
                             << PVAR(order, Price)
                             << PVAR(order, OrderQty)
@@ -234,6 +253,10 @@ void TestOrdersApi::operator >> (const std::string &outEvent_) {
             }
             while (!_orderCancels.empty()) {
                 auto order = _orderCancels.front();
+                if (!order) {
+                    failMessage << "NULL";
+                    break;
+                }
                 failMessage << "env >> \"ORDER_CANCEL "
                             << PVAR(order, Price)
                             << PVAR(order, OrderQty)
@@ -248,6 +271,7 @@ void TestOrdersApi::operator >> (const std::string &outEvent_) {
                         << "\" LN;\n";
                 _orderCancels.pop();
             }
+            throw std::runtime_error(failMessage.str());
         }
         return;
     }
@@ -255,42 +279,44 @@ void TestOrdersApi::operator >> (const std::string &outEvent_) {
     auto expectedOrder = fromJson<model::Order>(params.asJson());
     if (eventType == "ORDER_NEW") {
         if (_newOrders.empty()) {
-            FAIL() << failMessage.str() << "No new orders created.";
-            return;
+            failMessage << "No new orders made\n";
+            throw std::runtime_error(failMessage.str());
         }
         auto latestOrder = _newOrders.front();
-        CHECK_VAL(latestOrder->getPrice(), expectedOrder->getPrice());
-        CHECK_VAL(latestOrder->getSide(), expectedOrder->getSide());
-        CHECK_VAL(latestOrder->getOrderQty(), expectedOrder->getOrderQty());
-        CHECK_VAL(latestOrder->getLeavesQty(), expectedOrder->getLeavesQty());
-        CHECK_VAL(latestOrder->getSymbol(), expectedOrder->getSymbol());
+        CHECK_VAL(latestOrder->getPrice(), expectedOrder->getPrice()) << failMessage.str();
+        CHECK_VAL(latestOrder->getSide(), expectedOrder->getSide()) << failMessage.str();
+        CHECK_VAL(latestOrder->getOrderQty(), expectedOrder->getOrderQty()) << failMessage.str();
+        CHECK_VAL(latestOrder->getLeavesQty(), expectedOrder->getLeavesQty()) << failMessage.str();
+        CHECK_VAL(latestOrder->getSymbol(), expectedOrder->getSymbol()) << failMessage.str();
     } else if (eventType == "ORDER_AMEND") {
         checkOrderExists(expectedOrder);
         if (_orderAmends.empty()) {
-            FAIL() << failMessage.str() << "No amends made for any orders";
-            return;
+            failMessage << "No order amends made\n";
+            throw std::runtime_error(failMessage.str());
         }
         auto orderAmend = _orderAmends.front();
         if (orderAmend->priceIsSet()) {
-            CHECK_VAL(orderAmend->getPrice(), expectedOrder->getPrice());
+            CHECK_VAL(orderAmend->getPrice(), expectedOrder->getPrice()) << failMessage.str();
         } else if (orderAmend->leavesQtyIsSet()) {
-            CHECK_VAL(orderAmend->getLeavesQty(), expectedOrder->getLeavesQty());
+            CHECK_VAL(orderAmend->getLeavesQty(), expectedOrder->getLeavesQty()) << failMessage.str();
         } else {
             throw std::runtime_error("Only Price or Qty amend supported at this time.");
         }
-        CHECK_VAL(orderAmend->getOrderID(), expectedOrder->getOrderID());
+        CHECK_VAL(orderAmend->getOrderID(), expectedOrder->getOrderID()) << failMessage.str();
 
     } else if (eventType == "ORDER_CANCEL") {
         if (_orderCancels.empty()) {
-            FAIL() << failMessage.str() << "No expectedOrder cancels";
-            return;
+            failMessage << "No cancels made\n";
+            throw std::runtime_error(failMessage.str());
         }
         auto orderCancel = _orderCancels.front();
-        CHECK_VAL(orderCancel->getSymbol(), expectedOrder->getSymbol());
-        CHECK_VAL(orderCancel->getOrderID(), expectedOrder->getOrderID());
-        CHECK_VAL(orderCancel->getClOrdID(), expectedOrder->getClOrdID());
+        CHECK_VAL(orderCancel->getSymbol(), expectedOrder->getSymbol()) << failMessage.str();
+        CHECK_VAL(orderCancel->getOrderID(), expectedOrder->getOrderID()) << failMessage.str();
+        CHECK_VAL(orderCancel->getClOrdID(), expectedOrder->getClOrdID()) << failMessage.str();
     } else {
-        FAIL() << failMessage.str() << R"(Must specify event type - One of "ORDER_NEW", "ORDER_AMEND", "ORDER_CANCEL")";
+        failMessage << R"(Must specify event type - One of "ORDER_NEW", "ORDER_AMEND", "ORDER_CANCEL")";
+        std::runtime_error(failMessage.str());
+
     }
 }
 
@@ -496,7 +522,7 @@ std::shared_ptr<model::Order> TestOrdersApi::checkOrderExists(const std::shared_
             return ord_kvp.second;
         }
     }
-        // reject amend request, fail test
+    // reject amend request
     std::stringstream str;
     auto content = std::make_shared<std::istringstream>(order->toJson().serialize());
     str << "Original order " << LOG_NVP("OrderID",order->getOrderID())
@@ -568,7 +594,7 @@ bool TestOrdersApi::checkValidAmend(std::shared_ptr<model::Order> requestedAmend
     }
     if (requestedAmend->leavesQtyIsSet() &&
         requestedAmend->getLeavesQty() > originalOrder->getLeavesQty()) {
-        auto additionalCost = 1/(requestedAmend->getLeavesQty() - originalOrder->getLeavesQty()) * originalOrder->getPrice();
+        auto additionalCost = 1/originalOrder->getPrice()* (requestedAmend->getLeavesQty() - originalOrder->getLeavesQty());
         if (additionalCost > _margin->getWalletBalance()) {
             auto msg = requestedAmend->toJson().serialize();
             auto content = std::make_shared<std::istringstream>(msg);

@@ -1,5 +1,8 @@
 add_executable(replayTradingo
         test_main.cpp)
+add_executable(tradingo_replay
+    replay.cpp)
+
 if(${REPLAY_MODE})
     message(STATUS "Replay mode is active")
     # REPLAY_MODE changes the following
@@ -13,6 +16,14 @@ if(${REPLAY_MODE})
 endif(${REPLAY_MODE})
 
 
+target_link_libraries(tradingo_replay
+        test_trading_funcs
+        ${OPENSSL_CRYPTO_LIBRARY}
+        CppRestSwaggerClient
+        pthread
+        ${GTEST_LIBRARY}
+        boost_program_options)
+
 target_link_libraries(replayTradingo
         test_trading_funcs
         ${GTEST_LIBRARY}
@@ -24,6 +35,7 @@ target_link_libraries(replayTradingo
         )
 install(TARGETS
            replayTradingo 
+           tradingo_replay
         RUNTIME DESTINATION bin
         LIBRARY DESTINATION lib
         )
