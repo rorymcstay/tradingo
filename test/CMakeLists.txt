@@ -21,8 +21,7 @@ add_subdirectory(fwk)
 add_subdirectory(strategy)
 add_subdirectory(benchmark)
 add_subdirectory(replay)
-
-
+add_subdirectory(simulator)
 
 add_executable(testTradingo
 
