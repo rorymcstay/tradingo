@@ -24,7 +24,7 @@ ENUM_MACRO_2(Side,
 
 using timestamp_t = std::chrono::time_point<std::chrono::system_clock>;
 
-using qty_t=long;
+using qty_t=double;
 using price_t=double;
 
 template<typename T>

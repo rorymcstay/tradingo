@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SIMULATOR_UTILS_H
+#define SIMULATOR_UTILS_H
 #include <cmath>
 #include <iostream>
 #include <ctime>
@@ -104,3 +105,5 @@ bool less_equal(T num1, T num2)
 {
     return almost_equal(num1, num2) or num1 < num2;
 }
+
+#endif

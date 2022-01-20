@@ -20,6 +20,7 @@
 
 
 using namespace io::swagger::client;
+using namespace tradingo_utils;
 
 template<typename Item>
 class BatchWriter

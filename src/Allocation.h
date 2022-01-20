@@ -13,6 +13,7 @@
 using price_t = double;
 using qty_t = double;
 using namespace io::swagger::client;
+using namespace tradingo_utils;
 
 class Allocation {
     /// the underlying order on market for price level

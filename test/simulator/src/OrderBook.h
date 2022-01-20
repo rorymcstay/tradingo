@@ -188,9 +188,9 @@ Trader::Ptr OrderBook<T>::registerTrader(int traderID_)
 template<typename T>
 bool OrderBook<T>::isTraderRegistered(int traderID_)
 {
-    if (_registeredTraders.find(traderID_) == _registeredTraders.end())
-        return false;
-    return true;
+    if (_registeredTraders.find(traderID_) != _registeredTraders.end())
+        return true;
+    return false;
 }
 
 template<typename T>

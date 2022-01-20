@@ -11,6 +11,7 @@
 #include <ModelBase.h>
 #include "Utils.h"
 
+using namespace tradingo_utils;
 
 template<typename T>
 class Series {
