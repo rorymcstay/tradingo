@@ -1,5 +1,5 @@
-#ifndef EXECWRITER_H
-#define EXECWRITER_H
+#ifndef SIMULATOR_EXECWRITER_H
+#define SIMULATOR_EXECWRITER_H
 #include <ostream>
 #include <utility>
 #include <fstream>
@@ -106,5 +106,4 @@ void ExecWriter<T>::start()
 {
     _writerThread = std::thread(&ExecWriter<T>::main, this);
 }
-
-#endif //EXECWRITER_H
+#endif //SIMULATOR_EXECWRITER_H

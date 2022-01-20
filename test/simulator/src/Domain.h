@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SIMULATOR_DOMAIN_H
+#define SIMULATOR_DOMAIN_H
 #include "Utils.h"
 #include <chrono>
 #include <ctime>
@@ -195,3 +196,4 @@ public:
             : greater_than(self_->price(), other_->price());
     }
 };
+#endif

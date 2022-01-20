@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SIMULATOR_ORDERBOOK_H
+#define SIMULATOR_ORDERBOOK_H
 #include <algorithm>
 #include <ctime>
 #include <exception>
@@ -9,7 +10,6 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
-
 
 
 #include "Domain.h"
@@ -35,7 +35,7 @@ class OrderBook
     RootOrderMap                _rootOrders;
     Traders                     _registeredTraders;
     price_t                     _tickSize;
-    std::queue<TExecPtr> _execReports;
+    std::queue<TExecPtr>        _execReports;
     int                         _oidSeed;
     std::string                 _symbol;
     price_t                     _closePrice;
@@ -247,7 +247,7 @@ void OrderBook<T>::rejectNewOrderRequest(const typename Order<T>::Ptr& order_, c
     INFO("Rejecting new order request: " << LOG_NVP("OrderID",order_->orderID()) << LOG_VAR(reason)
         << LOG_NVP("TraderID", order_->traderID()));
     order_->setstatus(OrdStatus::Rejected);
-    auto execReport = std::make_shared<ExecReport>(order_, ExecType::Reject);
+    auto execReport = std::make_shared<ExecReport<T>>(order_, ExecType::Reject);
     execReport->settext(reason);
     addExecReport(execReport);
 }
@@ -260,7 +260,7 @@ void OrderBook<T>::acceptNewOrderRequest(const typename Order<T>::Ptr& order_)
         << LOG_NVP("OrdQty", order_->ordQty()));
     order_->setstatus(OrdStatus::New);
     _rootOrders[order_->orderID()] = order_;
-    addExecReport(std::make_shared<ExecReport>(order_, ExecType::New));
+    addExecReport(std::make_shared<ExecReport<T>>(order_, ExecType::New));
 }
 
 template<typename T>
@@ -282,7 +282,7 @@ template<typename T>
 void OrderBook<T>::onCancel(const typename Order<T>::Ptr &order_)
 {
     order_->setstatus(OrdStatus::Cancelled);
-    addExecReport(std::make_shared<ExecReport>(order_, ExecType::Cancel));
+    addExecReport(std::make_shared<ExecReport<T>>(order_, ExecType::Cancel));
     _rootOrders.erase(order_->orderID());
     updateLevel(order_->side(), order_->price(), order_->leavesQty());
 }
@@ -292,7 +292,7 @@ void OrderBook<T>::onAmendDown(const typename Order<T>::Ptr &order_, qty_t newQt
 {
     qty_t oldQty = order_->ordQty();
     order_->setordQty(newQty_);
-    addExecReport(std::make_shared<ExecReport>(order_, ExecType::Replaced));
+    addExecReport(std::make_shared<ExecReport<T>>(order_, ExecType::Replaced));
     updateLevel(order_->side(), order_->price(), newQty_-oldQty);
 }
 
@@ -386,9 +386,9 @@ void OrderBook<T>::onTrade(typename Order<T>::Ptr& buyOrder_, typename Order<T>:
         _sellOrders.pop();
     }
     // send exec reports
-    auto execReport = std::make_shared<ExecReport>(sellOrder_, ExecType::Trade);
+    auto execReport = std::make_shared<ExecReport<T>>(sellOrder_, ExecType::Trade);
     addExecReport(execReport);
-    execReport = std::make_shared<ExecReport>(buyOrder_, ExecType::Trade);
+    execReport = std::make_shared<ExecReport<T>>(buyOrder_, ExecType::Trade);
     addExecReport(execReport);
     updateLevel(Side::Buy, buyOrder_->price(), -crossQty_);
     updateLevel(Side::Sell, sellOrder_->price(), -crossQty_);
@@ -442,7 +442,7 @@ void OrderBook<T>::match()
 template<typename T>
 void OrderBook<T>::rejectCancelRequest(const typename Order<T>::Ptr& order_, const std::string& reason_)
 {
-    auto execReport = std::make_shared<ExecReport>(order_, ExecType::CancelReject);
+    auto execReport = std::make_shared<ExecReport<T>>(order_, ExecType::CancelReject);
     execReport->settext(reason_);
     addExecReport(execReport);
 }
@@ -470,3 +470,4 @@ price_t OrderBook<T>::bestAsk() const
     }
     return -1;
 }
+#endif

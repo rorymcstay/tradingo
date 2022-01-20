@@ -42,6 +42,7 @@ add_executable(testTradingo
 )
 
 add_test(NAME "tradingo-tests" COMMAND testTradingo)
+add_test(NAME "orderbook-tests" COMMAND test_orderbook)
 target_link_libraries(testTradingo
         test_trading_funcs
         ${GTEST_LIBRARY}

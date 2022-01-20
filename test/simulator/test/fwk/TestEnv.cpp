@@ -1,3 +1,5 @@
+#ifndef SIMULATOR_TEST_TESTENV_H
+#define SIMULATOR_TEST_TESTENV_H
 #include <exception>
 #include <gtest/gtest.h>
 
@@ -62,23 +64,23 @@ struct EnvMessage
         int qty = std::stoi(params_.at("OrdQty"));
         Side side = str2enum<Side>(params_.at("Side").c_str());
         auto temporder = std::make_shared<Order<T>>(side, qty, price);
-        if (params_["Type"] == "Newtypename Order<T>")
+        if (params_["Type"] == "NewOrder")
         {
             int traderID = std::stoi(params_.at("TraderID"));
             temporder->settraderID(traderID);
             order = temporder;
         }
-        else if (params_["Type"] == "Canceltypename Order<T>")
+        else if (params_["Type"] == "CancelOrder")
         {
             int traderID = std::stoi(params_.at("TraderID"));
-            int oid = std::stoi(params_.at("typename Order<T>ID"));
+            int oid = std::stoi(params_.at("OrderID"));
             temporder->settraderID(traderID);
             temporder->setorderID(oid);
             order = temporder;
         }
-        else if (params_["Type"] == "typename ExecReport<T>")
+        else if (params_["Type"] == "ExecReport")
         {
-            int oid = std::stoi(params_.at("typename Order<T>ID"));
+            int oid = std::stoi(params_.at("OrderID"));
             temporder->setorderID(oid);
             auto execType = str2enum<ExecType>(params_.at("ExecType").c_str());
             execReport = std::make_shared<ExecReport<T>>(temporder, execType);
@@ -202,3 +204,4 @@ public:
     }
 };
 
+#endif

@@ -1,12 +1,10 @@
 #include <gtest/gtest.h>
 
-#include "model/Order.h"
-
 #include "fwk/TestEnv.cpp"
+#include "fwk/TestDomain.h"
 
-using namespace io::swagger::client;
-using TestOrderBook = OrderBook<model::Order>;
-using TestEnvImpl = TestEnv<model::Order>;
+using TestOrderBook = OrderBook<TestOrder>;
+using TestEnvImpl = TestEnv<TestOrder>;
 
 TEST(TestOrderBook, smoke_test)
 {
