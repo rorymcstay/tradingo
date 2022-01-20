@@ -28,7 +28,7 @@ class OrderBook
           typename std::vector<typename Order<T>::Ptr>,
           OrderCompare<T>>;
     using Traders=std::unordered_map<int, Trader::Ptr>;
-    using RootOrderMap=std::unordered_map<int, TOrdPtr>;
+    using RootOrderMap=std::unordered_map<std::string, TOrdPtr>;
 
     OrderQueue                  _buyOrders;
     OrderQueue                  _sellOrders;
@@ -62,7 +62,7 @@ private:
     void acceptNewOrderRequest(const TOrdPtr& order_);
     void rejectNewOrderRequest(const TOrdPtr& order_, const std::string& reason_);
     void rejectCancelRequest(const TOrdPtr& order_, const std::string& reason_);
-    TOrdPtr findRootOrder(int orderID_);
+    TOrdPtr findRootOrder(const std::string& orderID_);
     void addExecReport(const TExecPtr& report_);
     void onAmendDown(const TOrdPtr &order_, qty_t newQty_);
 
@@ -205,7 +205,8 @@ void
 OrderBook<T>::onOrderSingle(typename Order<T>::Ptr& order_)
 {
     order_->setEntryTimeNow();
-    order_->setorderID(++_oidSeed);
+    auto oid = ++_oidSeed;
+    order_->setorderID(std::to_string(oid));
     std::lock_guard<decltype(_mutex)> lock(_mutex);
     auto& orderQueue = getOrderQueue(order_->side());
     if (not isTickAligned(order_->price()))
@@ -270,7 +271,7 @@ void OrderBook<T>::addExecReport(const typename ExecReport<T>::Ptr& execReport_)
 }
 
 template<typename T>
-typename Order<T>::Ptr OrderBook<T>::findRootOrder(int orderID_)
+typename Order<T>::Ptr OrderBook<T>::findRootOrder(const std::string& orderID_)
 {
     if (_rootOrders.find(orderID_) == _rootOrders.end())
         return nullptr;

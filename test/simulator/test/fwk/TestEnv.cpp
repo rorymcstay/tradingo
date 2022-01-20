@@ -9,6 +9,7 @@
 #include <utility>
 
 #include "OrderBook.h"
+#include "TestDomain.h"
 
 #define STRINGIFY(x) #x
 #define TO_STRING(x) STRINGIFY(x)
@@ -63,25 +64,30 @@ struct EnvMessage
         double price = std::stod(params_.at("Price"));
         int qty = std::stoi(params_.at("OrdQty"));
         Side side = str2enum<Side>(params_.at("Side").c_str());
+        auto orderData = std::make_shared<TestOrder>();
         auto temporder = std::make_shared<Order<T>>(side, qty, price);
+        temporder->setOrderData(orderData);
+
         if (params_["Type"] == "NewOrder")
         {
-            int traderID = std::stoi(params_.at("TraderID"));
+            double traderID = std::atof(params_.at("TraderID").c_str());
             temporder->settraderID(traderID);
             order = temporder;
+            order->setOrderData(orderData);
         }
         else if (params_["Type"] == "CancelOrder")
         {
             int traderID = std::stoi(params_.at("TraderID"));
             int oid = std::stoi(params_.at("OrderID"));
             temporder->settraderID(traderID);
-            temporder->setorderID(oid);
+            temporder->setorderID(std::to_string(oid));
             order = temporder;
+            order->setOrderData(orderData);
         }
         else if (params_["Type"] == "ExecReport")
         {
             int oid = std::stoi(params_.at("OrderID"));
-            temporder->setorderID(oid);
+            temporder->setorderID(std::to_string(oid));
             auto execType = str2enum<ExecType>(params_.at("ExecType").c_str());
             execReport = std::make_shared<ExecReport<T>>(temporder, execType);
         }
@@ -91,6 +97,7 @@ struct EnvMessage
         }
     }
 };
+
 
 template<typename T>
 class TestEnv
@@ -194,7 +201,7 @@ public:
         auto execType = params.at("ExecType");
         auto ordStatus = params.at("OrdStatus");
         ASSERT_EQ(execReport->price(), std::stod(params.at("Price"))) << str_;
-        ASSERT_EQ(execReport->orderID(), std::stoi(params.at("OrderID"))) << str_;
+        ASSERT_EQ(execReport->orderID(), params.at("OrderID")) << str_;
         ASSERT_EQ(execReport->ordQty(), std::stoi(params.at("OrdQty"))) << str_;
         ASSERT_EQ(execReport->lastQty(), std::stoi(params.at("LastQty"))) << str_;
         ASSERT_EQ(execReport->cumQty(), std::stoi(params.at("CumQty"))) << str_;

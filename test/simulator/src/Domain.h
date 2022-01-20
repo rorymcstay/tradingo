@@ -1,10 +1,11 @@
 #ifndef SIMULATOR_DOMAIN_H
 #define SIMULATOR_DOMAIN_H
-#include "Utils.h"
 #include <chrono>
 #include <ctime>
 #include <string>
 #include <memory>
+
+#include "Utils.h"
 
 
 ENUM_MACRO_7(OrdStatus,
@@ -35,11 +36,11 @@ class Order {
     price_t      _price;
     std::string _symbol;
     timestamp_t _entryTime;
-    int         _orderID;
+    std::string _orderID;
     qty_t       _cumQty;
-    price_t      _lastPrice;
+    price_t     _lastPrice;
     qty_t       _lastQty;
-    int         _traderID;
+    double      _traderID;
 
     std::shared_ptr<T> _orderData;
 
@@ -59,36 +60,86 @@ public:
     ,   _traderID(0)
     {}
 
-    OrdStatus status() { return _status; }
-    void setstatus(OrdStatus newStatus_) { _status = newStatus_; }
-    price_t price() const { return _price; }
-    Side side() const { return _side; }
-    int orderID() const { return _orderID; }
-    void setorderID(int oid_) { _orderID = oid_; }
-    int traderID() const { return _traderID; }
-    void settraderID(int traderID_) { _traderID = traderID_; }
-    void setEntryTimeNow() { _entryTime = std::chrono::system_clock::now(); }
-    timestamp_t entryTime() { return _entryTime; }
-
-    qty_t ordQty() const { return _ordQty; }
-    void setordQty(qty_t newQty_) { _ordQty = newQty_; }
-
-    qty_t cumQty() const { return _cumQty; }
-    qty_t leavesQty() const { return _ordQty - _cumQty; }
-
-    price_t lastPrice() const { return _lastPrice; }
-    void setlastPrice(price_t price_) {
-        // handle average price here also
-        _lastPrice = price_;
+    void setOrderData(const std::shared_ptr<T> orderData_) {
+        _orderData = orderData_;
     }
-    qty_t lastQty() const { return _lastQty; }
+
+    OrdStatus status() const { 
+        return str2enum<OrdStatus>(_orderData->getOrdStatus().c_str()); 
+    }
+
+    void setstatus(OrdStatus newStatus_) {
+        _orderData->setOrdStatus(enum2str(newStatus_));
+    }
+
+    price_t price() const {
+        return _orderData->getPrice();
+    }
+
+    Side side() const {
+        return str2enum<Side>(_orderData->getSide().c_str());
+    }
+
+    const std::string& orderID() const {
+        return _orderData->getOrderID(); 
+    }
+
+    void setorderID(const std::string& oid_) {
+        _orderData->setOrderID(oid_);
+    }
+
+    double traderID() const {
+        return _orderData->getAccount();
+    }
+
+    void settraderID(double traderID_) {
+        _orderData->setAccount(traderID_);
+    }
+
+    void setEntryTimeNow() {
+        _entryTime = std::chrono::system_clock::now();
+    }
+
+    timestamp_t entryTime() const { return _entryTime; }
+
+    qty_t ordQty() const {
+        return _orderData->getOrderQty();
+    }
+
+    void setordQty(qty_t newQty_) {
+        _orderData->setOrderQty(newQty_);
+    }
+
+    qty_t cumQty() const {
+        return _orderData->getCumQty();
+    }
+    qty_t leavesQty() const {
+        return _orderData->getLeavesQty();
+    }
+
+    price_t avgPx() const {
+        return _orderData->getAvgPx();
+    }
+
+    price_t lastPrice() const { return _orderData->getLastPx(); }
+
+    void setlastPrice(price_t price_) {
+        auto new_avg = (lastQty()/cumQty()) * price_ + ((cumQty() - lastQty())/cumQty()) * avgPx();
+        _orderData->setAvgPx(new_avg);
+    }
+
+    qty_t lastQty() const {
+        return _lastQty;
+    }
+
     void setlastQty(qty_t qty_)
     {
-        _cumQty += qty_;
+        _orderData->setCumQty(_orderData->getCumQty() + qty_); 
+        _orderData->setLeavesQty(_orderData->getLeavesQty() - qty_);
         _lastQty = qty_;
     }
 
-    bool isCancelled() const { return _status == OrdStatus::Cancelled; }
+    bool isCancelled() const { return status() == OrdStatus::Cancelled; }
 
 };
 
@@ -102,8 +153,8 @@ class ExecReport
     price_t    _price;
     qty_t       _ordQty;
     OrdStatus _ordStatus;
-    int       _orderID;
-    int       _execID; 
+    std::string _orderID;
+    int _execID; 
 
     qty_t       _lastQty;
     qty_t       _cumQty;
@@ -127,7 +178,7 @@ public:
     {
     }
 
-    int orderID() const { return _orderID; }
+    std::string orderID() const { return _orderID; }
     qty_t ordQty() const { return _ordQty; }
     price_t price() const { return _price; }
     int execID() const { return _execID; }
@@ -148,21 +199,23 @@ class Trader
     int _messageCount;
     timestamp_t _lastMessageTime;
 
+    qty_t _balance;
+    qty_t _position;
+ 
+
 public:
     using Ptr = std::shared_ptr<Trader>;
     Trader()
     :   _messageCount(0)
-    ,   _lastMessageTime(std::chrono::system_clock::now())
-    {}
+    ,   _lastMessageTime(std::chrono::system_clock::now()) {
+    }
 
-    void resetMessageCount()
-    {
+    void resetMessageCount() {
         _lastMessageTime = std::chrono::system_clock::now();
         _messageCount = 0;
     }
 
-    bool isRateExceeded()
-    {
+    bool isRateExceeded() {
         auto elapsed = std::chrono::system_clock::now() - _lastMessageTime;
         if (elapsed < std::chrono::seconds(1))
         {
@@ -176,6 +229,7 @@ public:
         return false;
     }
 };
+
 
 template<typename T>
 class OrderCompare
