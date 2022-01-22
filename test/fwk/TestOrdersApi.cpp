@@ -334,7 +334,7 @@ void TestOrdersApi::add_order(const std::shared_ptr<model::Order> &order_) {
     event_order->fromJson(event_json);
     _newOrders.push(event_order);
     _allEvents.push(event_order);
-
+    
 }
 
 

@@ -27,6 +27,7 @@
 #include "MarginCalculator.h"
 
 using namespace io::swagger::client;
+using namespace tradingo_utils;
 
 class TestOrdersApi {
 private:
