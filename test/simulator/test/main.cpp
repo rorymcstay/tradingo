@@ -3,6 +3,8 @@
 #include "fwk/TestEnv.cpp"
 #include "fwk/TestDomain.h"
 
+using namespace simulator;
+
 using TestOrderBook = OrderBook<TestOrder>;
 using TestEnvImpl = TestEnv<TestOrder>;
 

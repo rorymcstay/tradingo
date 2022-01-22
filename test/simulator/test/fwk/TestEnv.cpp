@@ -15,6 +15,8 @@
 #define TO_STRING(x) STRINGIFY(x)
 #define LN  " |line#:" TO_STRING(__LINE__)
 
+namespace simulator {
+
 using Params_data = std::map<std::string, std::string>;
 
 class Params
@@ -214,5 +216,7 @@ public:
         ASSERT_EQ(execReport->text(), params.at("Text", "")) << str_;
     }
 };
+
+} // namespace simulator
 
 #endif

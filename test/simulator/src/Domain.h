@@ -8,6 +8,9 @@
 #include "Utils.h"
 
 
+
+namespace simulator {
+
 ENUM_MACRO_7(OrdStatus,
     New,
     PendingNew,
@@ -22,6 +25,7 @@ ENUM_MACRO_2(Side,
     Buy,
     Sell
 )
+
 
 using timestamp_t = std::chrono::time_point<std::chrono::system_clock>;
 
@@ -255,4 +259,6 @@ public:
             : greater_than(self_->price(), other_->price());
     }
 };
+
+} // namespace simulator
 #endif

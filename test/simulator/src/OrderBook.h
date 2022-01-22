@@ -15,6 +15,8 @@
 #include "Domain.h"
 #include "Utils.h"
 
+namespace simulator {
+
 
 template<typename T>
 class OrderBook
@@ -471,4 +473,7 @@ price_t OrderBook<T>::bestAsk() const
     }
     return -1;
 }
+
+} // simulator
+
 #endif

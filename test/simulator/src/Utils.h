@@ -5,6 +5,8 @@
 #include <ctime>
 #include <iomanip>
 
+namespace simulator {
+
 #define __FILENAME__ (__builtin_strrchr(__FILE__, '/') ? __builtin_strrchr(__FILE__, '/') + 1 : __FILE__)
 #define INFO(msg_)  std::cout << " INFO    " << msg_ << " |" << __FILENAME__ << ":" << __LINE__ << '\n'
 #define WARN(msg_)  std::cout << " WARN    " << msg_ << " |" << __FILENAME__ << ":" << __LINE__ << '\n'
@@ -105,5 +107,7 @@ bool less_equal(T num1, T num2)
 {
     return almost_equal(num1, num2) or num1 < num2;
 }
+
+} // namespace simulator
 
 #endif
