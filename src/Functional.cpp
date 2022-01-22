@@ -29,5 +29,11 @@ func::get_instrument(const std::shared_ptr<api::InstrumentApi> &_instrumentApi, 
 price_t func::get_additional_cost(const std::shared_ptr<Allocation>& alloc_, double leverage_)
 { 
     // TODO Need to check if selling, are we paying with existing position.
-    return alloc_->getTargetDelta() * (alloc_->getPrice()/leverage_);
+    return func::get_cost(alloc_->getPrice(), alloc_->getTargetDelta(), leverage_);
+}
+
+
+price_t func::get_cost(price_t price_, qty_t qty_, double leverage_)
+{ 
+    return  qty_ * (1 / price_* leverage_);
 }

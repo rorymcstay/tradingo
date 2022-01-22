@@ -22,6 +22,8 @@ get_instrument(const std::shared_ptr<api::InstrumentApi>& _instrumentApi, const 
 
 price_t get_additional_cost(const std::shared_ptr<Allocation>& alloc_, double leverage_);
 
+price_t get_cost(price_t price_, qty_t qty_, double leverage_);
+
 } // func
 
 

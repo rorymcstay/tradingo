@@ -15,6 +15,7 @@
 #include <model/Margin.h>
 
 #include "Utils.h"
+#include "Functional.h"
 
 
 TestOrdersApi::TestOrdersApi(std::shared_ptr<io::swagger::client::api::ApiClient> ptr)
@@ -423,14 +424,26 @@ void TestOrdersApi::addExecToPosition(const std::shared_ptr<model::Execution>& e
     assert(exec_->lastPxIsSet() && exec_->lastQtyIsSet()
            && "LastPx and LastQty must be specified for executions");
 
-    { // wallet balance
+    {   // update wallet balance
         auto lastQty = exec_->getLastQty();
         auto lastPx = exec_->getLastPx();
-        auto dirMx = (exec_->getSide() == "Buy") ? -1 : +1;
-        auto cost = 1 / lastQty * lastPx * dirMx;
-        auto newBalance = cost + _margin->getWalletBalance();
+        auto cost = func::get_cost(lastPx, lastQty, _position->getLeverage());
+        double newBalance;
+        if (not almost_equal(_position->getCurrentQty(), 0.0) and sgn(lastQty) == sgn(_position->getCurrentQty())) {
+            // balance must be reduced since the execution is extending our position
+            newBalance = _margin->getWalletBalance() - cost;
+        }
+        else { // pay less than the cost, since remainder from our position
+            if (std::abs(_position->getCurrentQty()) > std::abs(lastQty)) {
+                // paying entirely with position, so we gain the cost
+                newBalance = _margin->getWalletBalance() + cost;
+            } else {
+                // pay partially with positon
+                cost = func::get_cost(lastPx, _position->getCurrentQty() - lastQty, _position->getLeverage());
+                newBalance = _margin->getWalletBalance() - cost;
+            }
+        }
         _margin->setWalletBalance(newBalance);
-
     }
     { // update the order
         auto order = _orders.at(exec_->getClOrdID());
@@ -444,8 +457,7 @@ void TestOrdersApi::addExecToPosition(const std::shared_ptr<model::Execution>& e
     { // update costs and quantity
         price_t currentCost = _position->getCurrentCost();
         qty_t currentSize = _position->getCurrentQty();
-        price_t costDelta = (1 / exec_->getLastPx() * exec_->getLastQty()) *
-                            (exec_->getSide() == "Buy" ? 1 : -1);
+        price_t costDelta = func::get_cost(exec_->getLastPx(), exec_->getLastQty(), _position->getLeverage());
         qty_t positionDelta = (exec_->getSide() == "Buy")
                                   ? exec_->getLastQty()
                                   : -exec_->getLastQty();
