@@ -21,9 +21,6 @@
 #include "Config.h"
 #include "Utils.h"
 
-// test/simulator
-#include "simulator/src/OrderBook.h"
-
 // test/fwk
 #include "TestUtils.h"
 #include "Params.h"
@@ -50,8 +47,6 @@ private:
     std::shared_ptr<MarginCalculator> _marginCalculator;
     double _leverage;
     std::string _leverageType;
-
-    std::shared_ptr<simulator::OrderBook<model::Order>> _orderBook;
 
 public:
     const std::shared_ptr<MarginCalculator>& getMarginCalculator() const;
