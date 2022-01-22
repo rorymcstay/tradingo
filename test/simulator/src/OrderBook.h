@@ -368,10 +368,10 @@ template<typename T>
 void OrderBook<T>::onTrade(typename Order<T>::Ptr& buyOrder_, typename Order<T>::Ptr& sellOrder_, price_t crossPx_, qty_t crossQty_)
 {
     INFO("Trade: " << LOG_NVP("Price", crossPx_) << LOG_NVP("Quantity", crossQty_));
-    buyOrder_->setlastPrice(crossPx_);
-    sellOrder_->setlastPrice(crossPx_);
     buyOrder_->setlastQty(crossQty_);
     sellOrder_->setlastQty(crossQty_);
+    buyOrder_->setlastPrice(crossPx_);
+    sellOrder_->setlastPrice(crossPx_);
     buyOrder_->setstatus(OrdStatus::PartiallyFilled);
     sellOrder_->setstatus(OrdStatus::PartiallyFilled);
     if (buyOrder_->leavesQty() == 0)

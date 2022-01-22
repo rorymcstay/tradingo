@@ -58,7 +58,8 @@ public:
     ,   _lastPrice(0)
     ,   _lastQty(0)
     ,   _traderID(0)
-    {}
+    {
+    }
 
     void setOrderData(const std::shared_ptr<T> orderData_) {
         _orderData = orderData_;
@@ -74,6 +75,9 @@ public:
 
     price_t price() const {
         return _orderData->getPrice();
+    }
+    void setprice(price_t price_) {
+        _orderData->setPrice(price_);
     }
 
     Side side() const {
@@ -126,6 +130,7 @@ public:
     void setlastPrice(price_t price_) {
         auto new_avg = (lastQty()/cumQty()) * price_ + ((cumQty() - lastQty())/cumQty()) * avgPx();
         _orderData->setAvgPx(new_avg);
+        _orderData->setLastPx(price_);
     }
 
     qty_t lastQty() const {

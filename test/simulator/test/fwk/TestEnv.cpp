@@ -66,6 +66,10 @@ struct EnvMessage
         Side side = str2enum<Side>(params_.at("Side").c_str());
         auto orderData = std::make_shared<TestOrder>();
         auto temporder = std::make_shared<Order<T>>(side, qty, price);
+        orderData->setPrice(price);
+        orderData->setOrderQty(qty);
+        orderData->setSide(enum2str(side));
+        orderData->setLeavesQty(qty);
         temporder->setOrderData(orderData);
 
         if (params_["Type"] == "NewOrder")
