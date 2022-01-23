@@ -1,44 +1,67 @@
-version: "3.0"
+version: "3.4"
+
+x-tradingo-common-env:
+  &tradingo-common-env
+  AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+  AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+  AWS_REGION: ${AWS_REGION}
+  AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION}
+  RUN_ID: dc-local
+
+x-breakout-common-env:
+  &breakout-common-env
+  MOVING_AVG_INTERVAL: "1000"
+  MOVING_AVG_CALLBACK: "false"
+  MOVING_AVG_LONG_TERM: "8000"
+  MOVING_AVG_SHORT_TERM: "1000"
+  STRATEGY: "breakout"
+  SYMBOL: "XBTUSD"
+  STARTING_AMOUNT: "1000"
+  LONG_EXPOSE: "1000"
+  SHORT_EXPOSE: "100"
+
+x-bitmex-common-env:
+  &bitmex-common-env
+  CONNECTION_STRING: ${CONNECTION_STRING}
+  BASE_URL: ${BASE_URL}
+  API_KEY: ${API_KEY}
+  API_SECRET: ${API_SECRET}
 
 services:
   tradingo:
     build:
       context: .
       dockerfile: ./docker/tradingo.dockerfile
+    image: rmcstay95/tradingo:latest
     entrypoint: ["/usr/local/scripts/start_tradingo.sh"]
-    restart: always
     environment:
-      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
-      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
-      AWS_REGION: ${AWS_REGION}
-      AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION}
-      MOVING_AVG_INTERVAL: "1000"
-      MOVING_AVG_CALLBACK: "false"
-      MOVING_AVG_LONG_TERM: "8000"
-      MOVING_AVG_SHORT_TERM: "1000"
-      STRATEGY: "breakout"
-      SYMBOL: "XBTUSD"
-      STARTING_AMOUNT: "1000"
-      LONG_EXPOSE: "1000"
-      SHORT_EXPOSE: "100"
+     <<: *bitmex-common-env
+     <<: *tradingo-common-env
+     <<: *breakout-common-env
+    restart: always
+
   replay-tradingo:
     build:
       context: .
-      dockerfile: docker/tradingo-replay.docker
-    entrypoint: ["/usr/local/scripts/start_replay.sh", "2021-09-13"]
+      dockerfile: ./docker/tradingo-replay.docker
+    image: rmcstay95/tradingo-replay:latest
+    entrypoint: ["/usr/local/scripts/start_replay.sh", "2022-01-13"]
     environment:
-      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
-      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
-      AWS_REGION: ${AWS_REGION}
-      MOVING_AVG_INTERVAL: "1000"
-      MOVING_AVG_CALLBACK: "false"
-      MOVING_AVG_LONG_TERM: "8000"
-      MOVING_AVG_SHORT_TERM: "1000"
-      STRATEGY: "breakout"
-      SYMBOL: "XBTUSD"
-      STARTING_AMOUNT: "1000"
-      LONG_EXPOSE: "1000"
-      SHORT_EXPOSE: "100"
+     <<: *tradingo-common-env
+     <<: *breakout-common-env
+    volumes:
+     - tick-storage:/data/
+
+  tick-recorder:
+    build:
+      context: .
+      dockerfile: docker/tradingo.dockerfile
+    image: rmcstay95/tradingo:latest
+    entrypoint: ["/usr/local/scripts/tickrecorder.sh"]
+    environment: *tradingo-common-env
+    restart: always
+    volumes:
+     - tick-storage:/data/
 
 volumes:
-  data: {}
+  tick-storage:

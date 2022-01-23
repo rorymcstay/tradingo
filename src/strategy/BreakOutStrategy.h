@@ -128,10 +128,10 @@ void BreakOutStrategy<TOrdApi, TPositionApi>::onBBO(const std::shared_ptr<Event>
         LOGDEBUG("No quantity to trade");
         return;
     }
-    auto alloc = StrategyApi::allocations()->get(price);
+    const std::shared_ptr<Allocation>& alloc = StrategyApi::allocations()->get(price);
     alloc->setTargetDelta(qtyToTrade);
-    double cost_of_qty = qtyToTrade * 1.0/price;
-    auto additional_cost = func::get_additional_cost(alloc, md->getMargin()->getMarginLeverage());
+    const std::shared_ptr<model::Position>& position = md->getPositions().at(StrategyApi::_symbol);
+    auto additional_cost = func::get_additional_cost(position, alloc->getTargetDelta(), alloc->getPrice());
     auto currentBalance = md->getMargin()->getWalletBalance();
     if (currentBalance >= additional_cost) {
         LOGINFO(LOG_NVP("Signal", side) << LOG_VAR(signalValue)
@@ -144,7 +144,7 @@ void BreakOutStrategy<TOrdApi, TPositionApi>::onBBO(const std::shared_ptr<Event>
         StrategyApi::allocations()->addAllocation(alloc);
         _previousDirection = side;
     } else {
-        auto currentQty = md->getPositions().at(StrategyApi::_symbol)->getCurrentQty();
+        auto currentQty = position->getCurrentQty();
         LOGINFO("Signal is good, but balance is insufficient. "
                 << LOG_VAR(qtyToTrade) 
                 << LOG_VAR(price) 

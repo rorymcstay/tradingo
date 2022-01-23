@@ -26,6 +26,8 @@ class Allocation {
     qty_t _targetDelta;
     /// incremented in the case of an amend.
     int _version;
+    /// bool
+    bool _is_modified;
 
     /// reduce an allocations size by amount_
     void reduce(qty_t amount_) { _size -= amount_; }

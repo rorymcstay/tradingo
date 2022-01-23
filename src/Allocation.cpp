@@ -4,6 +4,7 @@
 
 #include "Allocation.h"
 #include "Utils.h"
+#include <stdexcept>
 
 
 Allocation::Allocation()
@@ -34,6 +35,9 @@ void Allocation::rest() {
 
 
 void Allocation::cancelDelta() {
+    if (isAmendUp() || isAmendDown()) {
+        _version--;
+    }
     _targetDelta = 0;
 }
 
@@ -55,11 +59,12 @@ void Allocation::setTargetDelta(qty_t delta_) {
         // order is pending new
         _order->setOrderQty(std::abs(_targetDelta));
         _order->setPrice(_price);
-        _order->setSide(_targetDelta >= 0 ? "Buy" : "Sell");
+        _order->setSide(targetSide());
         _order->setOrdStatus("PendingNew");
         _order->setLeavesQty(std::abs(_targetDelta));
     } else if (isAmendUp() || isAmendDown()) {
-        _version++;
+        if(_order->getOrdStatus() != "PendingAmend");
+            _version++;
         _order->setOrdStatus("PendingAmend");
         double newLeavesQty = _order->getLeavesQty();
         newLeavesQty += ((isAmendUp()) ? 1 : -1)* std::abs(_targetDelta);
@@ -74,6 +79,8 @@ void Allocation::setTargetDelta(qty_t delta_) {
         _order->setOrderQty(std::abs(_size + _targetDelta));
         _order->setOrigClOrdID(_order->getClOrdID());
         _order->setOrdStatus("ChangingSides");
+    } else {
+        throw std::runtime_error("No Action!");
     }
 }
 

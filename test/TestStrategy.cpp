@@ -43,6 +43,7 @@ TEST(Strategy, changing_sides) {
         {"referencePrice", "100"},
         {"shortTermWindow", "100"},
         {"longTermWindow", "1000"},
+        {"startingBalance", "10"},
     });
 
     auto allocations = env.strategy()->allocations();
@@ -125,6 +126,8 @@ TEST(Strategy, time_diff) {
 
 TEST(Strategy, balance_is_updated_during_test) {
 
+    price_t startingBalance = 10.0;
+
     TestEnv env({DEFAULT_ARGS,
         {"symbol", "XBTUSD"},
         {"clOrdPrefix", "MCST"},
@@ -133,7 +136,7 @@ TEST(Strategy, balance_is_updated_during_test) {
         {"fairPrice", "100"},
         {"shortTermWindow", "100"},
         {"longTermWindow", "1000"},
-        {"startingBalance", "0.1"}
+        {"startingBalance", std::to_string(startingBalance)}
     });
 
     auto strategy = env.strategy();
@@ -143,14 +146,16 @@ TEST(Strategy, balance_is_updated_during_test) {
     env >> "NONE" LN;
     env << format("EXECUTION side=Buy lastPx=9.99 lastQty=100 execType=Trade", order) + LN;
     auto position = env.strategy()->getMD()->getPositions().at("XBTUSD");
-    ASSERT_DOUBLE_EQ(position->getCurrentCost(), 10.01001001001001);
+    auto expectedCurrentCost = 0.66733400066733406;
+    ASSERT_DOUBLE_EQ(position->getCurrentCost(), expectedCurrentCost);
     ASSERT_DOUBLE_EQ(position->getCurrentQty(), 100);
+    // the bankruptcy price is invalid, as our leverage is > 1, so we will go bankrupt before price goes to zero
     ASSERT_DOUBLE_EQ(position->getBankruptPrice(), 0.0);
     ASSERT_DOUBLE_EQ(position->getBreakEvenPrice(), 9.99);
     ASSERT_DOUBLE_EQ(position->getLiquidationPrice(), 0.23333333333332984);
     auto margin = env.strategy()->getMD()->getMargin();
-    ASSERT_DOUBLE_EQ(margin->getWalletBalance(), 0.00010000000000000286);
-    ASSERT_DOUBLE_EQ(margin->getMaintMargin(), 0.035000000000000003);
-    ASSERT_DOUBLE_EQ(margin->getAvailableMargin(), -0.0349);
+    ASSERT_DOUBLE_EQ(margin->getWalletBalance(), 9.3333333333333339); // ~= startingBalance - currentCost
+    ASSERT_DOUBLE_EQ(margin->getMaintMargin(), 0.035);
+    ASSERT_DOUBLE_EQ(margin->getAvailableMargin(), 9.2983333333333338);
     ASSERT_DOUBLE_EQ(margin->getUnrealisedPnl(), 0.0);
 }
