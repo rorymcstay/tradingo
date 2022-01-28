@@ -23,16 +23,20 @@ TEST(BreakOutStrategy, smoke_test)
     env >> "NONE" LN;
     env << "QUOTE askPrice=100.0 askSize=100.0 bidPrice=99.0 bidSize=1000.0 symbol=XBTUSD" LN;
     auto order = env >> "ORDER_NEW Price=100 OrderQty=200 CumQty=0 LeavesQty=200 OrdStatus=New Side=Sell symbol=XBTUSD" LN;
-    order->getOrdStatus();
     env >> "NONE" LN;
     env << "QUOTE askPrice=101.0 askSize=100.0 bidPrice=100.0 bidSize=1000.0 symbol=XBTUSD" LN;
+    auto order2 = env >> "ORDER_NEW Price=99 OrderQty=200 LeavesQty=200 OrdStatus=New Side=Buy Symbol=XBTUSD " LN;
+    env >> format("ORDER_CANCEL Price=100 OrderQty=200 OrdStatus=Canceled Side=Sell Symbol=XBTUSD ", order) + LN;
     env >> "NONE" LN;
     env << "QUOTE askPrice=101.0 askSize=100.0 bidPrice=100.0 bidSize=1000.0 symbol=XBTUSD" LN;
-    auto order3 = env >> "ORDER_NEW Price=99 OrderQty=100 CumQty=0 LeavesQty=100 OrdStatus=New Side=Buy symbol=XBTUSD" LN;
-    env >> "ORDER_NEW Price=101 OrderQty=200 LeavesQty=200 OrdStatus=New Side=Sell Symbol=XBTUSD " LN;
+    auto order4 = env >> "ORDER_NEW Price=100 OrderQty=0 CumQty=0 LeavesQty=0 OrdStatus=New Side=Sell Symbol=XBTUSD " LN;
+    auto order5 = env >> "ORDER_NEW Price=101 OrderQty=200 CumQty=0 LeavesQty=200 OrdStatus=New Side=Sell Symbol=XBTUSD " LN;
+    env >> format("ORDER_CANCEL Price=99 OrderQty=200 CumQty=0 LeavesQty=0 OrdStatus=Canceled Side=Buy Symbol=XBTUSD ", order2) + LN;
+    env >> "NONE" LN;
     env << "TRADE foreignNotional=500 grossValue=1304800 homeNotional=0.013048000000000001 price=99 side=Sell size=500 symbol=XBTUSD tickDirection=ZeroMinusTick trdMatchID=dac0793c-0ff4-74f5-a793-b00e3811a690" LN;
-    //env >> format("ORDER_AMEND Price=0 LeavesQty=200 ClOrdID=MCST101.000000_v1 OrdStatus=Replaced", order3) + LN;
-    //env >> "ORDER_AMEND Price=0 OrderQty=0 CumQty=0 LeavesQty=200 OrderID=3 ClOrdID=MCST101.000000_v1 OrigClOrdID=MCST101.000000_v0 OrdStatus=Replaced Side= Symbol= " LN;
+    env >> "ORDER_NEW Price=99 OrderQty=0 CumQty=0 LeavesQty=0 OrderID=5 ClOrdID=MCST99.000000_v0 OrigClOrdID= OrdStatus=New Side=Buy Symbol=XBTUSD " LN;
+    env >> "ORDER_NEW Price=100 OrderQty=0 CumQty=0 LeavesQty=0 OrderID=6 ClOrdID=MCST100.000000_v0 OrigClOrdID= OrdStatus=New Side=Sell Symbol=XBTUSD " LN;
+    env >> format("ORDER_AMEND Price=101 OrderQty=200 CumQty=0 LeavesQty=500 OrdStatus=Replaced Side=Sell Symbol=XBTUSD", order5) + LN;
     env << "TRADE foreignNotional=500 grossValue=1304800 homeNotional=0.013048000000000001 price=38321 side=Sell size=500 symbol=XBTUSD tickDirection=ZeroMinusTick trdMatchID=dac0793c-0ff4-74f5-a793-b00e3811a690" LN;
     env >> "NONE" LN;
 

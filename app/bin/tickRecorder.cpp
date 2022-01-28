@@ -57,6 +57,11 @@ int main(int argc, char **argv) {
     } else {
         return 1;
     }
+    // first initialise threadpool
+    auto pplxThreadCount = std::stoi(config->get("pplxThreadCount", "4"));
+    crossplat::threadpool::initialize_with_threads(pplxThreadCount);
+
+    // then initialise context
     auto context = std::make_shared<Context<MarketData, io::swagger::client::api::OrderApi, io::swagger::client::api::PositionApi>>(config);
     context->init();
 
@@ -64,8 +69,7 @@ int main(int argc, char **argv) {
 
     LOGINFO("Starting tick recording with " << LOG_VAR(symbol) << LOG_VAR(storage));
 
-    auto pplxThreadCount = std::stoi(config->get("pplxThreadCount", "4"));
-    crossplat::threadpool::initialize_with_threads(pplxThreadCount);
+
 
     // table writers
     auto printer = [](const std::shared_ptr<model::ModelBase>& order_) {

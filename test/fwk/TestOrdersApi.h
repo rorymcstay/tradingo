@@ -59,21 +59,18 @@ public:
 
 private:
 
-    // functional helpers
-    void add_order(const std::shared_ptr<model::Order>& order_);
-    void amend_order(const std::shared_ptr<model::Order>& amendRequest_,
-                     const std::shared_ptr<model::Order>& originalOrder_);
+    // validates and rejects if necessary
     bool validateOrder(const std::shared_ptr<model::Order>& order_);
     std::shared_ptr<model::Order> checkOrderExists(const std::shared_ptr<model::Order>& order);
     bool checkValidAmend(std::shared_ptr<model::Order> amendRequest,
                          std::shared_ptr<model::Order> originalOrder);
 
-    // API
 public:
     void set_order_timestamp(const std::shared_ptr<model::Order>& order_);
     TestOrdersApi(std::shared_ptr<io::swagger::client::api::ApiClient> ptr);
     void init(std::shared_ptr<Config> config_);
 
+    // API
     pplx::task<std::shared_ptr<model::Order>> order_amend(
             boost::optional<utility::string_t> orderID,
             boost::optional<utility::string_t> origClOrdID,

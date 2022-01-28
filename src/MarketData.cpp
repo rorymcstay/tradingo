@@ -217,7 +217,10 @@ void MarketDataInterface::update(const std::vector<std::shared_ptr<model::Instru
 }
 
 void MarketDataInterface::updatePositions(const std::vector<std::shared_ptr<model::Position>>& positions_) {
-    insertPositions(positions_);
+    for (auto& pos : positions_) {
+        auto update_json = pos->toJson();
+        _positions[getPositionKey(pos)]->fromJson(update_json);
+    }
 }
 
 void MarketDataInterface::insertPositions(const std::vector<std::shared_ptr<model::Position>>& positions_) {
@@ -265,8 +268,13 @@ void MarketDataInterface::handlePositions(std::vector<std::shared_ptr<model::Pos
 
 void
 MarketDataInterface::handleMargin(std::vector<std::shared_ptr<model::Margin>> margin_, const std::string &action_) {
-    if (action_ == "update" or action_ == "partial") {
+    if (action_ == "update") {
+        auto update_json = margin_[0]->toJson();
+        _margin->fromJson(update_json);
+    } else if (action_ == "partial") {
         // update margin
+        _margin = margin_[0];
+    } else if (action_ == "insert") {
         _margin = margin_[0];
     }
 
@@ -322,8 +330,10 @@ void MarketDataInterface::insertOrders(const std::vector<std::shared_ptr<model::
 }
 
 void MarketDataInterface::updateOrders(const std::vector<std::shared_ptr<model::Order>> &orders_) {
-    for (auto& ord : orders_)
-        _orders[getOrderKey(ord)] = ord;
+    for (auto& ord : orders_) {
+        auto update_json = ord->toJson();
+        _orders[getOrderKey(ord)]->fromJson(update_json);
+    }
 }
 
 const std::unordered_map<std::string, MarketDataInterface::OrderPtr> &MarketDataInterface::getOrders() const {
