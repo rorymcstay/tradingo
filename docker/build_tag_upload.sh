@@ -15,6 +15,7 @@ docker build -f docker/$docker_file --tag $local_tag $ROOT_DIR
 
 set -x
 docker tag $local_tag $remote_tag
+docker tag $local_tag rmcstay95/$component:latest
 
 
 if [[ $DONT_PUSH -eq 1 ]]; then
