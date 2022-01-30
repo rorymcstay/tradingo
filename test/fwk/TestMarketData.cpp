@@ -3,6 +3,7 @@
 //
 
 #include "TestMarketData.h"
+#include "model/Instrument.h"
 
 template<typename T>
 void set_time(const T& modelBase_, utility::datetime& time_) {
@@ -52,6 +53,10 @@ void TestMarketData::operator<<(const std::string &marketDataString) {
         handlePositions(positions, action);
         std::lock_guard<decltype(MarketDataInterface::_mutex)> lock(MarketDataInterface::_mutex);
         set_time(position, _time);
+    } else if (type == "INSTRUMENT") {
+        auto trade = fromJson<model::Instrument>(json);
+        std::vector<decltype(trade)> instrument = {trade};
+        handleInstruments(instrument, "update");
     } else {
         throw std::runtime_error("Must specify update type, one off POSITION, TRADE, QUOTE, EXECUTION");
     }

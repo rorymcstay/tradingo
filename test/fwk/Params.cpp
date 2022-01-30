@@ -1,10 +1,9 @@
 //
 // Created by Rory McStay on 19/06/2021.
 //
-
-
-
 #include "Params.h"
+#include <set>
+#include <string>
 
 Params::Params(std::string str_)
 :   _data()
@@ -34,18 +33,31 @@ web::json::value Params::asJson() const {
         key[0] = tolower(key[0]);
 
         // TODO Mandatory params
-        if (pair.first.find("Size") != std::string::npos
-            or pair.first.find("Qty") != std::string::npos
-            or pair.first.find("Price") != std::string::npos
-            or pair.first.find("price") != std::string::npos
-            or pair.first.find("Notional") != std::string::npos
-            or pair.first.find("size") != std::string::npos
-            or pair.first.find("Size") != std::string::npos
-            or pair.first.find("grossValue") != std::string::npos
-            or pair.first.find("Px") != std::string::npos) {
+        std::set<char> digit = {'-', '0','1','2','3', '4','5','6','7','8','9'};
+        std::set<std::string> true_false = {"True", "False", "true", "false"};
+        if (digit.contains(pair.second.front())
+                and key.find("Timestamp")==std::string::npos
+                and key.find("Time")==std::string::npos
+                and key.find("timestamp")==std::string::npos
+                and key.find("fundingInterval")==std::string::npos
+                and key.find("sessionInterval")==std::string::npos
+                and key.find("sessionInterval")==std::string::npos
+                and key.find("closingTime")==std::string::npos
+                and key.find("listing")==std::string::npos
+                and key.find("front")==std::string::npos
+        ) {
             // cast to double
             retVal[key] = web::json::value(std::atof(pair.second.c_str()));
             retVal[key].as_double();
+        } else if (true_false.contains(pair.second)) {
+            if (pair.second == "True") {
+                retVal[key] = web::json::value(true);
+            }
+            if (pair.second == "False") {
+                retVal[key] = web::json::value(false);
+            }
+            
+            
         } else {
             // take it as string
             retVal[key] = web::json::value(pair.second);
@@ -54,6 +66,7 @@ web::json::value Params::asJson() const {
     // add timestamp if it is missing
     if (_data.find("timestamp") == _data.end()) {
         retVal["timestamp"] = web::json::value(utility::datetime::utc_now().to_string());
+
     }
     return retVal;
 }

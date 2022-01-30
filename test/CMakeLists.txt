@@ -34,16 +34,25 @@ add_executable(testTradingo
         TestStrategy.cpp
         TestMarketData.cpp
         TestConfig.cpp
-        TestSeries.cpp
 
+        test_main.cpp
+)
+
+add_executable(testTradingo-lr
+
+        TestSeries.cpp
+        TestTimeControl.cpp
         test_api_OrderApi.cpp
         test_api_PositionApi.cpp
+
         test_main.cpp
 )
 
 add_test(NAME "tradingo-tests" COMMAND testTradingo)
+add_test(NAME "tradingo-longrunning--tests" COMMAND testTradingo-lr)
 add_test(NAME "orderbook-tests" COMMAND test_orderbook)
-target_link_libraries(testTradingo
+
+set(TEST_LINK_LIBRARIES 
         test_trading_funcs
         ${GTEST_LIBRARY}
         ${OPENSSL_CRYPTO_LIBRARY}
@@ -51,6 +60,13 @@ target_link_libraries(testTradingo
         boost_system
         boost_filesystem
         pthread
+)
+
+target_link_libraries(testTradingo
+    ${TEST_LINK_LIBRARIES}
+)
+target_link_libraries(testTradingo-lr
+    ${TEST_LINK_LIBRARIES}
 )
 
 add_compile_definitions("TESTDATA_LOCATION=\"${CMAKE_INSTALL_PREFIX}/etc/test/data\"")
