@@ -226,9 +226,10 @@ void Allocations<TOrdApi>::update(const std::shared_ptr<model::Execution> &exec_
     auto alloc = get(exec_->getPrice());
     alloc->update(exec_);
     if (almost_equal(exec_->getLeavesQty(), 0.0)) {
-        _occupiedLevels.erase(
-                std::find(_occupiedLevels.begin(), _occupiedLevels.end(), allocIndex(exec_->getPrice()))
-        );
+
+        auto ref = std::find(_occupiedLevels.begin(), _occupiedLevels.end(), allocIndex(exec_->getPrice()));
+        if (ref != _occupiedLevels.end())
+            _occupiedLevels.erase(ref);
     }
 }
 
