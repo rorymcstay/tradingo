@@ -145,16 +145,16 @@ TEST(Strategy, position_margin_is_updated_during_test) {
     env << "QUOTE Timestamp=2022-01-30 20:24:56.136000+00:00 Symbol=XBTUSD BidSize=200.0 BidPrice=37663.0 AskPrice=37663.5 AskSize=1078300.0";
 
     auto strategy = env.strategy();
+    auto margin = strategy->getMD()->getMargin();
 
     strategy->allocations()->addAllocation(37663.0, 100.0);
     strategy->allocations()->placeAllocations();
-    auto order = env >> "ORDER_NEW Symbol=XBTUSD Side=Buy OrderQty=200.0 Price=37663.0 OrdType=Limit TimeInForce=GoodTillCancel ExDestination=XBME OrdStatus=New WorkingIndicator=True LeavesQty=200.0 MultiLegReportingType=SingleSecurity Text=Submitted via API. TransactTime=2022-01-30 20:10:17.266000+00:00 Timestamp=2022-01-30 20:10:17.266000+00:00";
+    auto order = env >> "ORDER_NEW Symbol=XBTUSD Side=Buy OrderQty=100.0 Price=37663.0 OrdType=Limit TimeInForce=GoodTillCancel ExDestination=XBME OrdStatus=New WorkingIndicator=True LeavesQty=200.0 MultiLegReportingType=SingleSecurity Text=Submitted via API. TransactTime=2022-01-30 20:10:17.266000+00:00 Timestamp=2022-01-30 20:10:17.266000+00:00";
     env << format("EXECUTION ExecId=16c53278-f1af-31ce-7117-e665a369a69f Symbol=XBTUSD Side=Sell LastQty=200.0 LastPx=37663.0 LastMkt=XBME LastLiquidityInd=AddedLiquidity OrderQty=200.0 Price=37663.0 Currency=USD SettlCurrency=XBt ExecType=Trade OrdType=Limit TimeInForce=GoodTillCancel ExDestination=XBME OrdStatus=Filled CumQty=200.0 AvgPx=37663.0 Commission=-0.0001 TradePublishIndicator=PublishTrade MultiLegReportingType=SingleSecurity TrdMatchId=1b32729e-b43a-9450-039e-15a60f43111c ExecCost=531774.0 ExecComm=-53.0 HomeNotional=-0.00531774 ForeignNotional=200.0 TransactTime=2022-01-30 19:44:36.002000+00:00 Timestamp=2022-01-30 19:44:36.002000+00:00", order);
 
     auto alloc = strategy->allocations()->get(37663.0);
     ASSERT_EQ(alloc->getOrder()->getAvgPx(), 37663.0);
 
-    auto margin = strategy->getMD()->getMargin();
     auto cost = func::get_cost(37663.0, 200.0, 10);
     ASSERT_EQ(margin->getAmount(), 351951.0 - cost);
     ASSERT_EQ(margin->getMaintMargin(), 0.0);

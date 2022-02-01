@@ -80,6 +80,7 @@ install(DIRECTORY
 
 install(TARGETS
             testTradingo
+            testTradingo-lr
         RUNTIME DESTINATION bin
         LIBRARY DESTINATION lib
 )
