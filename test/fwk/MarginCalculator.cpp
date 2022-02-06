@@ -2,6 +2,7 @@
 // Created by rory on 31/10/2021.
 //
 #include "MarginCalculator.h"
+#include "Functional.h"
 #include <memory>
 #include <stdexcept>
 #include <utility>
@@ -52,7 +53,9 @@ double MarginCalculator::getLiquidationPrice(
             qty_t qty_,
             qty_t balance_) const {
     auto maintMargin = _marketData->instrument()->getMaintMargin();
-    auto posValue = 1/fairPrice_ * qty_;
+    auto position = _marketData->getPositions().at("XBTUSD");
+    auto posValue = position->getMarkValue();
+
     if (almost_equal(posValue, 0.0)) {
         return 0.0;
     }
@@ -72,14 +75,13 @@ double MarginCalculator::getLiquidationPrice(
 }
 
 
-
 double MarginCalculator::getOrderCost(double price_, double qty_) const {
     return price_ * qty_;
 }
 
 
 double MarginCalculator::getInitialMargin(double price_, double qty_, double leverage_) const {
-    auto value = getOrderCost(price_, qty_);
+    auto value = func::get_cost(price_, qty_, leverage_);
     return 1/leverage_ * value;
 }
 
