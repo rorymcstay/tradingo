@@ -12,9 +12,22 @@
 #include "MarketData.h"
 #include "model/Margin.h"
 
+
+struct Dispatch {
+    utility::datetime mkt_time;
+    utility::datetime actual_time;
+};
+
 class TestMarketData : public MarketDataInterface {
     std::shared_ptr<Config> _config;
     utility::datetime _time;
+    int _events;
+    Dispatch _lastDispatch;
+    bool _realtime;
+
+    template<typename T>
+    void onEvent(const T& event_);
+    void sleep(const utility::datetime& time_) const;
 
 public:
     TestMarketData(const std::shared_ptr<Config>& ptr, const std::shared_ptr<InstrumentService>& instSvc_);
@@ -38,6 +51,7 @@ public:
     void operator << (const std::shared_ptr<model::Position> &pos_);
     void operator << (const std::shared_ptr<model::Order> &order_);
     void operator << (const std::shared_ptr<model::Instrument> &instrument_);
+    void operator << (const std::shared_ptr<model::Margin> &margin_);
 };
 
 

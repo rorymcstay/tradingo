@@ -4,14 +4,15 @@
 
 #include "TestMarketData.h"
 #include "model/Instrument.h"
+#include "model/Trade.h"
+#include <cpprest/asyncrt_utils.h>
+
 
 template<typename T>
-void set_time(const T& modelBase_, utility::datetime& time_) {
-    if (modelBase_->timestampIsSet()) {
-        LOGDEBUG("Setting market data time: " << time_.to_string(utility::datetime::ISO_8601));
-        time_ = modelBase_->getTimestamp();
-    }
+const utility::datetime& get_time(const T& modelBase_) {
+    return modelBase_->getTimestamp();
 }
+
 
 void TestMarketData::operator<<(const std::string &marketDataString) {
 
@@ -22,51 +23,72 @@ void TestMarketData::operator<<(const std::string &marketDataString) {
 
     if (type == "EXECUTION") {
         auto execution = fromJson<model::Execution>(json);
-        std::vector<decltype(execution)> execs =  {execution};
-        handleExecutions(execs, "insert");
-        std::lock_guard<decltype(MarketDataInterface::_mutex)> lock(MarketDataInterface::_mutex);
-        set_time(execution, _time);
+        operator<<(execution);
     } else if (type == "QUOTE") {
         auto quote = fromJson<model::Quote>(json);
-        std::vector<decltype(quote)> qts = {quote};
-        handleQuotes(qts, "insert");
-        std::lock_guard<decltype(MarketDataInterface::_mutex)> lock(MarketDataInterface::_mutex);
-        set_time(quote, _time);
+        operator<<(quote);
     } else if (type == "MARGIN") {
         auto margin = fromJson<model::Margin>(json);
-        std::vector<decltype(margin)> mgns = {margin};
-        handleMargin(mgns, "insert");
-        std::lock_guard<decltype(MarketDataInterface::_mutex)> lock(MarketDataInterface::_mutex);
+        operator<<(margin);
     } else if (type == "TRADE") {
         auto trade = fromJson<model::Trade>(json);
-        std::vector<decltype(trade)> trades = {trade};
-        handleTrades(trades, "insert");
+        operator<<(trade);
     } else if (type == "POSITION") {
         auto position = fromJson<model::Position>(json);
-        std::vector<decltype(position)> positions = {position};
-        std::string action;
-        if (_positions.contains(getPositionKey(position))) {
-            action = "update";
-        } else {
-            action = "insert";
-        }
-        handlePositions(positions, action);
-        std::lock_guard<decltype(MarketDataInterface::_mutex)> lock(MarketDataInterface::_mutex);
-        set_time(position, _time);
+        operator<<(position);
     } else if (type == "INSTRUMENT") {
         auto trade = fromJson<model::Instrument>(json);
-        std::vector<decltype(trade)> instrument = {trade};
-        handleInstruments(instrument, "update");
+        operator<<(trade);
     } else {
-        throw std::runtime_error("Must specify update type, one off POSITION, TRADE, QUOTE, EXECUTION");
+        throw std::runtime_error("Must specify update type, one off POSITION, TRADE, QUOTE, EXECUTION, MARGIN");
     }
 
 }
 
 TestMarketData::TestMarketData(const std::shared_ptr<Config>& ptr, const std::shared_ptr<InstrumentService>& instSvc_)
 : MarketDataInterface(ptr, instSvc_)
-, _config(ptr)
-, _time(utility::datetime::utc_now()){
+,    _config(ptr)
+,    _realtime(ptr->get("realtime", "false") == "true")
+,    _time(utility::datetime::utc_now()) 
+,    _lastDispatch() {
+
+}
+
+TestMarketData::TestMarketData()
+:    MarketDataInterface()
+,    _config(nullptr) 
+,    _realtime(false)
+,    _time(utility::datetime::utc_now()) 
+,    _lastDispatch() {
+
+
+}
+
+
+void TestMarketData::sleep(const utility::datetime& time_) const {
+    if (_events == 0) {
+        return;
+    }
+    auto now = utility::datetime::utc_now();
+    if (not _lastDispatch.actual_time.is_initialized()) {
+        LOGWARN("last dispatch time is uninitialised, will not sleep.");
+        return;
+    }
+    auto mktTimeDiff = time_diff(time_, _lastDispatch.mkt_time);
+
+    auto timeSinceLastDispatch = time_diff(now, _lastDispatch.actual_time);
+
+    if (timeSinceLastDispatch < mktTimeDiff /*the amount of time passed, is less than in the market*/) {
+        auto sleep_for = mktTimeDiff-timeSinceLastDispatch;
+        LOGDEBUG(LOG_NVP("TimeNow", now.to_string(utility::datetime::ISO_8601))
+              << LOG_NVP("MktTime", time_.to_string(utility::datetime::ISO_8601))
+              << LOG_NVP("LastDispatch", _lastDispatch.actual_time.to_string(utility::datetime::ISO_8601))
+              << LOG_NVP("LastDispatchMktTime", _lastDispatch.mkt_time.to_string(utility::datetime::ISO_8601))
+              << LOG_VAR(mktTimeDiff)
+              << LOG_VAR(timeSinceLastDispatch)
+              << LOG_VAR(sleep_for));
+        std::this_thread::sleep_for(std::chrono::milliseconds(mktTimeDiff-timeSinceLastDispatch));
+    }
 
 }
 
@@ -74,36 +96,58 @@ void TestMarketData::init() {
 
 }
 
+template<typename T>
+void TestMarketData::onEvent(const T& event_) {
+    auto& time = get_time(event_);
+    if (_realtime) {
+        sleep(time);
+    }
+    _lastDispatch.actual_time = utility::datetime::utc_now();
+    _lastDispatch.mkt_time = _time;
+    _events++;
+}
+
 void TestMarketData::operator<<(const std::shared_ptr<model::Quote> &quote_) {
+    onEvent(quote_);
     std::vector<std::shared_ptr<model::Quote>> quotes = {quote_};
     MarketDataInterface::handleQuotes(quotes, "insert");
-    set_time(quote_, _time);
     callback();
 }
 
 void TestMarketData::operator<<(const std::shared_ptr<model::Trade> &trade_) {
+    onEvent(trade_);
     std::vector<std::shared_ptr<model::Trade>> trades = {trade_};
     MarketDataInterface::handleTrades(trades, "insert");
     callback();
 }
 
 void TestMarketData::operator<<(const std::shared_ptr<model::Execution> &exec_) {
+    onEvent(exec_);
     std::vector<std::shared_ptr<model::Execution>> execs = {exec_};
     MarketDataInterface::handleExecutions(execs, "insert");
     callback();
 }
 
 void TestMarketData::operator<<(const std::shared_ptr<model::Position> &pos_) {
+    onEvent(pos_);
     std::vector<std::shared_ptr<model::Position>> positions = {pos_};
     MarketDataInterface::handlePositions(positions, "insert");
 }
 
+void TestMarketData::operator<<(const std::shared_ptr<model::Margin> &margin_) {
+    onEvent(margin_);
+    std::vector<std::shared_ptr<model::Margin>> margins= {margin_};
+    MarketDataInterface::handleMargin(margins, "insert");
+}
+
 void TestMarketData::operator<<(const std::shared_ptr<model::Instrument> &instrument_) {
+    onEvent(instrument_);
     std::vector<std::shared_ptr<model::Instrument>> insts = {instrument_};
     MarketDataInterface::handleInstruments(insts, "update");
 }
 
 void TestMarketData::operator<<(const std::shared_ptr<model::Order> &order_) {
+    onEvent(order_);
     std::string action = "insert";
     if (order_->getOrdStatus() == "Canceled") {
         action = "delete";
@@ -114,9 +158,4 @@ void TestMarketData::operator<<(const std::shared_ptr<model::Order> &order_) {
     }
     std::vector<std::shared_ptr<model::Order>> orders = {order_};
     MarketDataInterface::handleOrders(orders, action);
-}
-
-TestMarketData::TestMarketData()
-:   _config(nullptr) {
-
 }

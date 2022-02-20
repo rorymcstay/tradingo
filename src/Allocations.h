@@ -322,8 +322,8 @@ void Allocations<TOrdApi>::placeAllocations() {
                               std::to_string(allocation->getVersion()));
             try {
                 order->setSymbol(_symbol);
-                _orderApi
-                    ->order_new(order->getSymbol(), order->getSide(),
+                _orderApi->order_new(order->getSymbol(),
+                                order->getSide(),
                                 boost::none, // simpleOrderQty
                                 order->getOrderQty(),
                                 order->getPrice(),

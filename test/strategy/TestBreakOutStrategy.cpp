@@ -16,7 +16,7 @@ TEST(BreakOutStrategy, smoke_test)
         {"longTermWindow", "2"},
         {"moving_average_crossover-interval", "10"},
         {"callback-signals", "true"},
-        {"startingBalance", "1000.0"}
+        {"startingBalance", "10000000000"}
     });
 
     env << "QUOTE askPrice=100.0 askSize=100.0 bidPrice=99.0 bidSize=1000.0 symbol=XBTUSD" LN;

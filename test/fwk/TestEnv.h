@@ -9,6 +9,7 @@
 #include <memory>
 #include <utility>
 
+#define _TURN_OFF_PLATFORM_STRING
 #include "TestMarketData.h"
 #include "TestOrdersApi.h"
 #include "TestPositionApi.h"
@@ -20,6 +21,9 @@
 #include "Context.h"
 #include "Series.h"
 
+#include "model/Execution.h"
+#include "model/Position.h"
+
 #define STRINGIFY(x) #x
 #define TO_STRING(x) STRINGIFY(x)
 #define FILENAME(x) __FILENAME__#x
@@ -27,10 +31,7 @@
 
 using namespace io::swagger::client;
 
-struct Dispatch {
-    utility::datetime mkt_time;
-    utility::datetime actual_time;
-};
+
 
 #define DEFAULT_ARGS \
         {"symbol", "XBTUSD"},\
@@ -75,9 +76,12 @@ class TestEnv
     std::shared_ptr<Context<TestMarketData, OrderApi, PositionApi>> _context;
     std::shared_ptr<model::Position> _position;
     std::shared_ptr<model::Margin> _margin;
-    Dispatch _lastDispatch;
-    bool _realtime;
     long _events;
+
+
+    TestOrdersApi::Writer _batchWriter;
+    TestOrdersApi::Writer _positionWriter;
+
 public:
     const std::shared_ptr<TStrategy>& strategy() const { return _context->strategy(); }
     const TContext& context() const { return _context; }
@@ -99,7 +103,23 @@ public:
 
     void operator << (const std::string& value_);
     std::shared_ptr<model::Order> operator >> (const std::string& value_);
-    void sleep(const utility::datetime& time_) const;
+
+
+    void operator << (const std::shared_ptr<model::Position>&);
+    void operator << (const std::shared_ptr<model::Margin>&);
+    void operator << (const std::shared_ptr<model::Instrument>&);
+    void operator << (const std::shared_ptr<model::Quote>&);
+    void operator << (const std::shared_ptr<model::Execution>&);
+    std::shared_ptr<model::Execution> operator << (const std::shared_ptr<model::Trade>&);
+
+    void liquidatePositions(const std::string&);
+
+    /// test assertion on position
+    void operator >> (const std::shared_ptr<model::Position>&);
+    // test assertion on margin
+    void operator >> (const std::shared_ptr<model::Margin>&);
+    /// simulate sending an order
+    std::shared_ptr<model::Order> operator >> (const std::shared_ptr<model::Order>&);
 };
 
 

@@ -370,6 +370,10 @@ const std::shared_ptr<model::Instrument>& MarketDataInterface::instrument() cons
     return _instruments.at(_symbol);
 }
 
+const std::unordered_map<std::string, std::shared_ptr<model::Instrument>>& MarketDataInterface::getInstruments() const {
+    return _instruments;
+}
+
 
 MarketDataInterface::MarketDataInterface(const std::shared_ptr<Config>& config_,
                                          std::shared_ptr<InstrumentService>  instSvc_)
@@ -384,7 +388,10 @@ void MarketDataInterface::setCallback(const std::function<void()> &callback) {
     _callback = callback;
 }
 
-MarketDataInterface::MarketDataInterface() {
+MarketDataInterface::MarketDataInterface()
+:   _instSvc(nullptr)
+,   _symbol("XBTUSD")
+,   _callback([]() {}) {
 
 }
 

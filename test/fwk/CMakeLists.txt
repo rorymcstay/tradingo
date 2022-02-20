@@ -5,6 +5,7 @@ FILE(GLOB SourcesToTest
 
 link_directories(${CPPREST_ROOT}/lib)
 message(STATUS "BITMEXAPI_INCLUDE_DIR = ${BITMEXAPI_INCLUDE_DIR}")
+add_compile_definitions("TESTDATA_LOCATION=\"${CMAKE_INSTALL_PREFIX}/etc/test/data\"")
 
 include_directories(
     ${BITMEXAPI_INCLUDE_DIR}/

@@ -7,6 +7,7 @@
 #include <boost/none.hpp>
 #include <memory>
 #include <stdexcept>
+#include <string>
 #include <unordered_map>
 #include <utility>
 
@@ -29,6 +30,10 @@ TestOrdersApi::TestOrdersApi(std::shared_ptr<io::swagger::client::api::ApiClient
 
     LOGINFO("TestOrdersApi initialised!");
 
+}
+
+void TestOrdersApi::setMarketData(const std::shared_ptr<TestMarketData>& marketData_) {
+    _marketData = marketData_;
 }
 
 /// look up orders for old client order id.
@@ -104,9 +109,9 @@ TestOrdersApi::order_amend(boost::optional<utility::string_t> orderID,
     order->setOrderID(origOrder->getOrderID());
     // negative in the case of amend down, therefore increase in balance.
     auto qty_delta = order->getLeavesQty() - origOrder->getLeavesQty();
-    auto total_cost = func::get_additional_cost(_position, qty_delta, order->getPrice());
+    auto total_cost = func::get_additional_cost(getPosition(origOrder->getSymbol()), qty_delta, order->getPrice());
     // in the case of amend up, and long position, we want this to reduce
-    _margin->setWalletBalance(_margin->getWalletBalance() - total_cost);
+    getMargin()->setWalletBalance(getMargin()->getWalletBalance() - total_cost);
     if (order->priceIsSet()) {
         origOrder->setPrice(order->getPrice());
     } else if (order->leavesQtyIsSet()) {
@@ -159,8 +164,8 @@ TestOrdersApi::order_cancel(boost::optional<utility::string_t> orderID,
     auto event_json = _orders[clOrdID.value()]->toJson();
     event_order->fromJson(event_json);
     // update balance after cancel
-    auto total_cost = func::get_cost(origOrder->getPrice(), origOrder->getOrderQty(), _position->getLeverage());
-    _margin->setWalletBalance(_margin->getWalletBalance() + total_cost);
+    auto total_cost = func::get_cost(origOrder->getPrice(), origOrder->getOrderQty(), getPosition(origOrder->getSymbol())->getLeverage());
+    getMargin()->setWalletBalance(getMargin()->getWalletBalance() + total_cost);
     origOrder->setOrderQty(0.0);
     origOrder->setLeavesQty(0.0);
     set_order_timestamp(origOrder);
@@ -260,8 +265,8 @@ TestOrdersApi::order_new(utility::string_t symbol,
     order->setCumQty(0.0);
     set_order_timestamp(order);
     // update balance
-    auto total_cost = func::get_cost(order->getPrice(), order->getOrderQty(), _position->getLeverage());
-    _margin->setWalletBalance(_margin->getWalletBalance() - total_cost);
+    auto total_cost = func::get_cost(order->getPrice(), order->getOrderQty(), getPosition(order->getSymbol())->getLeverage());
+    getMargin()->setWalletBalance(getMargin()->getWalletBalance() - total_cost);
     auto event_order = std::make_shared<model::Order>();
     auto event_json = order->toJson();
     event_order->fromJson(event_json);
@@ -362,6 +367,7 @@ void TestOrdersApi::operator >> (const std::string &outEvent_) {
         CHECK_VAL(latestOrder->getLeavesQty(), expectedOrder->getLeavesQty()) << failMessage.str();
         CHECK_VAL(latestOrder->getSymbol(), expectedOrder->getSymbol()) << failMessage.str();
     } else if (eventType == "ORDER_AMEND") {
+        std::string expected_order_id = std::to_string(params.asJson()["orderID"].as_integer());
         if (_orderAmends.empty()) {
             failMessage << "No order amends made\n";
             throw std::runtime_error(failMessage.str());
@@ -370,7 +376,7 @@ void TestOrdersApi::operator >> (const std::string &outEvent_) {
                     || _orders.find(expectedOrder->getClOrdID()) != _orders.end())) {
             // is amend
             failMessage << " The order " 
-                << LOG_NVP("OrderID", expectedOrder->getOrderID()) 
+                << LOG_NVP("OrderID", expected_order_id) 
                 << LOG_NVP("ClOrdID", expectedOrder->getClOrdID())
                 << " does not exist in the test\n";
             throw std::runtime_error(failMessage.str());
@@ -383,16 +389,17 @@ void TestOrdersApi::operator >> (const std::string &outEvent_) {
         } else {
             throw std::runtime_error("Only Price or Qty amend supported at this time.");
         }
-        CHECK_VAL(orderAmend->getOrderID(), expectedOrder->getOrderID()) << failMessage.str();
+        CHECK_VAL(orderAmend->getOrderID(), expected_order_id) << failMessage.str();
 
     } else if (eventType == "ORDER_CANCEL") {
+        std::string expected_order_id = std::to_string(params.asJson()["orderID"].as_integer());
         if (_orderCancels.empty()) {
             failMessage << "No cancels made\n";
             throw std::runtime_error(failMessage.str());
         }
         auto orderCancel = _orderCancels.front();
         CHECK_VAL(orderCancel->getSymbol(), expectedOrder->getSymbol()) << failMessage.str();
-        CHECK_VAL(orderCancel->getOrderID(), expectedOrder->getOrderID()) << failMessage.str();
+        CHECK_VAL(orderCancel->getOrderID(), expected_order_id) << failMessage.str();
         CHECK_VAL(orderCancel->getClOrdID(), expectedOrder->getClOrdID()) << failMessage.str();
     } else {
         failMessage << R"(Must specify event type - One of "ORDER_NEW", "ORDER_AMEND", "ORDER_CANCEL")";
@@ -472,84 +479,115 @@ void TestOrdersApi::addExecToPosition(const std::shared_ptr<model::Execution>& e
     assert(exec_->lastPxIsSet() && exec_->lastQtyIsSet()
            && "LastPx and LastQty must be specified for executions");
 
+    /*
+     * To Calculate:
+     *  Order:
+     *       last_px
+     *       last_qty
+     *       avg_px
+     *
+     *  Position:
+     *       break_even_price
+     *       last_value
+     *       bankrupt_price
+     *       avg_cost_price
+     *       avg_entry_price
+     *       mark_value
+     *       liquidation_price
+     *       commission
+     *       margin_call_price
+     *       leverage
+     *       last_price
+     *       pos_cost
+     *       realised_cost
+     *       realised_pnl
+     *       unrealised_cost
+     *       unrealised_pnl
+     *       current_comm 
+     *       last_price
+     *
+     * **/
+
+    auto position = getPosition(exec_->getSymbol());
+
     { // update the order
         auto order = _orders.at(exec_->getClOrdID());
         order->setCumQty(order->getCumQty() + exec_->getLastQty());
         order->setLeavesQty(order->getLeavesQty() - exec_->getLastQty());
         auto newQty = order->getCumQty();
         auto oldQty = newQty - exec_->getLastQty();
-        auto newAvgPx = (order->getAvgPx() * oldQty/newQty) + (exec_->getLastQty() * exec_->getLastQty()/newQty);
+        auto newAvgPx = (order->getAvgPx() * oldQty/newQty) + (exec_->getLastPx() * exec_->getLastQty()/newQty);
         order->setAvgPx(newAvgPx);
     }
+    { // set avg px on position
+        auto order = _orders.at(exec_->getClOrdID());
+        auto newQty = order->getCumQty() + position->getCurrentQty();
+        auto oldQty = position->getCurrentQty();
+        auto newAvgPx = (position->getAvgCostPrice() * oldQty/newQty) + (order->getAvgPx() * order->getCumQty()/newQty);
+        position->setAvgEntryPrice(newAvgPx);
+        position->setAvgCostPrice(newAvgPx);
+    }
     { // update costs and quantity of position
-        price_t currentCost = _position->getCurrentCost();
-        qty_t currentSize = _position->getCurrentQty();
-        price_t costDelta = func::get_cost(exec_->getLastPx(), exec_->getLastQty(), _position->getLeverage());
+        price_t currentCost = position->getCurrentCost();
+        qty_t currentSize = position->getCurrentQty();
+        price_t costDelta = func::get_cost(exec_->getLastPx(), exec_->getLastQty(), position->getLeverage());
         qty_t positionDelta = (exec_->getSide() == "Buy")
                                   ? exec_->getLastQty()
                                   : -exec_->getLastQty();
         qty_t newPosition = currentSize + positionDelta;
         price_t newCost = currentCost + costDelta;
-        _position->setCurrentQty(newPosition);
-        _position->setCurrentCost(newCost);
+        position->setCurrentQty(newPosition);
+        position->setCurrentCost(newCost);
     }
     { // set the breakeven price
-        auto bkevenPrice = _position->getCurrentQty()/(_position->getLeverage()*_position->getCurrentCost());
-        _position->setBreakEvenPrice(bkevenPrice);
+        auto positionTotalCost = position->getAvgCostPrice()*position->getCurrentQty();
+        auto bkevenPrice = position->getCurrentQty()/(positionTotalCost);
+        position->setBreakEvenPrice(bkevenPrice);
     }
     { // unrealised pnl calculation
-        auto unrealisedPnl = _marginCalculator->getUnrealisedPnL(_position);
-        _position->setUnrealisedPnl(unrealisedPnl);
+        auto unrealisedPnl = _marginCalculator->getUnrealisedPnL(position);
+        position->setUnrealisedPnl(unrealisedPnl);
     }
     { // update the margin
-        auto marginBalance = _margin->getWalletBalance() + _position->getUnrealisedPnl();
-        _margin->setMarginBalance(marginBalance);
-        double maintenanceMargin = _marginCalculator->getMarginAmount(_position);
-        _position->setMaintMarginReq(maintenanceMargin);
-        _margin->setMaintMargin(maintenanceMargin);
-        _margin->setAvailableMargin(_margin->getWalletBalance() - maintenanceMargin);
+        auto margin = getMargin();
+        auto marginBalance = margin->getWalletBalance() + position->getUnrealisedPnl();
+        margin->setMarginBalance(marginBalance);
+        double maintenanceMargin = _marginCalculator->getMarginAmount(position);
+        position->setMaintMarginReq(maintenanceMargin);
+        margin->setMaintMargin(maintenanceMargin);
+        margin->setAvailableMargin(margin->getWalletBalance() - maintenanceMargin);
     }
     { // liquidation price
         auto leverageType = "ISOLATED";
         auto liqPrice = _marginCalculator->getLiquidationPrice(
-                _position->getLeverage(),
+                position->getLeverage(),
                 leverageType,
-                _marginCalculator->getMarkPrice(),
-                _position->getCurrentQty(),
-                _margin->getWalletBalance()
+                position->getMarkPrice(),
+                position->getCurrentQty(),
+                getMargin()->getWalletBalance()
         );
-        _position->setLiquidationPrice(liqPrice);
-        _position->setExecQty(exec_->getLastQty());
+        position->setLiquidationPrice(liqPrice);
+        position->setExecQty(exec_->getLastQty());
     }
     // timestamp
-    _position->setTimestamp(exec_->getTimestamp());
+    position->setTimestamp(exec_->getTimestamp());
 
     LOGINFO(AixLog::Color::GREEN
                     << "New Position: "
-                    << LOG_NVP("CurrentCost", _position->getCurrentCost())
-                    << LOG_NVP("Size", _position->getCurrentQty())
-                    << LOG_NVP("Time", _position->getTimestamp().to_string())
+                    << LOG_NVP("CurrentCost", position->getCurrentCost())
+                    << LOG_NVP("Size", position->getCurrentQty())
+                    << LOG_NVP("Time", position->getTimestamp().to_string())
                     << AixLog::Color::none);
 }
 
 
-const std::shared_ptr<model::Position> &TestOrdersApi::getPosition() const {
-    return _position;
-}
-
-
-void TestOrdersApi::setPosition(const std::shared_ptr<model::Position> &position) {
-    _position = position;
+const std::shared_ptr<model::Position> &TestOrdersApi::getPosition(const std::string& symbol_) const {
+    return _marketData->getPositions().at(symbol_);
 }
 
 
 const std::shared_ptr<model::Margin>& TestOrdersApi::getMargin() const {
-    return _margin;
-}
-
-
-void TestOrdersApi::setMargin(const std::shared_ptr<model::Margin> &margin_) {
-    _margin = margin_;
+    return _marketData->getMargin();
 }
 
 
@@ -572,6 +610,8 @@ std::shared_ptr<model::Order> TestOrdersApi::checkOrderExists(const std::shared_
  */
 bool TestOrdersApi::validateOrder(const std::shared_ptr<model::Order> &order_) {
     std::string error;
+    auto& instrument = _marketData->getInstruments().at(order_->getSymbol());
+    auto& position = getPosition(order_->getSymbol());
     bool fail = false;
     if (order_->origClOrdIDIsSet() && order_->getOrderID() != "") {
         error = "Must specify only one of orderID or origClOrdId";
@@ -581,12 +621,12 @@ bool TestOrdersApi::validateOrder(const std::shared_ptr<model::Order> &order_) {
         error = "Must specify ClOrdID if OrigClOrdID is set";
         fail = true;
     }
-    if ((int)order_->getOrderQty() % std::stoi(_config->get("lotSize", "100")) != 0) {
+    if ((int)order_->getOrderQty() % (int)instrument->getLotSize() != 0.0) {
         error = "Orderty is not a multiple of lotsize";
         fail = true;
     }
-    auto total_cost = func::get_cost(order_->getPrice(), order_->getOrderQty(), _position->getLeverage());
-    if (total_cost > _margin->getWalletBalance()) {
+    auto total_cost = func::get_cost(order_->getPrice(), order_->getOrderQty(), position->getLeverage());
+    if (total_cost > getMargin()->getWalletBalance()) {
         std::stringstream reason;
         reason << "Account has insufficient Available Balance, " << total_cost << " XBt required";
         error = reason.str();
@@ -630,14 +670,14 @@ bool TestOrdersApi::checkValidAmend(std::shared_ptr<model::Order> requestedAmend
     }
     // negative incase of amend down.
     auto quantity_delta = requestedAmend->getLeavesQty() - originalOrder->getLeavesQty();
-    auto additionalCost = func::get_cost(originalOrder->getPrice(), quantity_delta, _position->getLeverage());
+    auto additionalCost = func::get_cost(originalOrder->getPrice(), quantity_delta, getPosition(originalOrder->getSymbol())->getLeverage());
     // if amending down, always false
-    if (additionalCost > _margin->getWalletBalance()) {
+    if (additionalCost > getMargin()->getWalletBalance()) {
         auto msg = requestedAmend->toJson().serialize();
         auto content = std::make_shared<std::istringstream>(msg);
         requestedAmend->setText("Insufficient funds available for amend. additionalCost="
                 + std::to_string(additionalCost)
-                + ", balance=" + std::to_string(_margin->getWalletBalance()));
+                + ", balance=" + std::to_string(getMargin()->getWalletBalance()));
         requestedAmend->setOrdStatus(originalOrder->getOrdStatus());
         _rejects.push(requestedAmend);
         throw api::ApiException(400, requestedAmend->getText(), content);
@@ -649,8 +689,6 @@ bool TestOrdersApi::checkValidAmend(std::shared_ptr<model::Order> requestedAmend
 
 void TestOrdersApi::init(std::shared_ptr<Config> config_) {
     _config = config_;
-    _leverage = std::atof(_config->get("leverage", "10").c_str());
-    _leverageType = _config->get("leverageType", "ISOLATED");
 }
 
 

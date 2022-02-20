@@ -25,9 +25,8 @@ void Signal::update() {
             if (_time.is_initialized()) {
                 mkt_time_past = time_diff(quote->getTimestamp(), _time);
             }
-            LOGDEBUG("REPLAYE_MODE: Market time past " << LOG_VAR(mkt_time_past) << LOG_VAR(_timer.interval()));
+            LOGDEBUG("REPLAY_MODE: Market time past " << LOG_VAR(mkt_time_past) << LOG_VAR(_timer.interval()));
             if (mkt_time_past >= _timer.interval()) {
-                LOGDEBUG("REPLAY_MODE: Time to update " << _timer.interval());
                 onQuote(quote);
                 _time = quote->getTimestamp();
             }

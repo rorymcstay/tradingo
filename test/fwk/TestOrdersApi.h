@@ -41,21 +41,18 @@ private:
     std::queue<std::shared_ptr<model::ModelBase>> _allEvents;
     long _oidSeed;
     utility::datetime _time;
-    std::shared_ptr<model::Position> _position;
-    std::shared_ptr<model::Margin> _margin;
     std::shared_ptr<Config> _config;
     std::shared_ptr<MarginCalculator> _marginCalculator;
-    double _leverage;
-    std::string _leverageType;
+    std::shared_ptr<TestMarketData> _marketData;
 
 public:
     const std::shared_ptr<MarginCalculator>& getMarginCalculator() const;
     void setMarginCalculator(const std::shared_ptr<MarginCalculator>& marginCalculator);
     using Writer = BatchWriter<std::shared_ptr<model::ModelBase>>;
-    const std::shared_ptr<model::Position>& getPosition() const;
-    void setPosition(const std::shared_ptr<model::Position>& position_);
+    const std::shared_ptr<model::Position>& getPosition(const std::string& symbol_) const;
     const std::shared_ptr<model::Margin>& getMargin() const;
-    void setMargin(const std::shared_ptr<model::Margin>& margin_);
+
+    void setMarketData(const std::shared_ptr<TestMarketData>& _marketData);
 
 private:
 

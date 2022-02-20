@@ -120,10 +120,10 @@ void BreakOutStrategy<TOrdApi, TPositionApi>::onBBO(const std::shared_ptr<Event>
         qtyToTrade = getQtyToTrade("Sell");
         price = askPrice;
         side = "Sell";
-    }
-    else {
+    } else {
         LOGDEBUG("Signal is not ready.");
     }
+
     if (almost_equal(qtyToTrade, 0.0)) {
         LOGDEBUG("No quantity to trade");
         return;
@@ -146,8 +146,8 @@ void BreakOutStrategy<TOrdApi, TPositionApi>::onBBO(const std::shared_ptr<Event>
     } else {
         auto currentQty = position->getCurrentQty();
         LOGINFO("Signal is good, but balance is insufficient. "
-                << LOG_VAR(qtyToTrade) 
-                << LOG_VAR(price) 
+                << LOG_VAR(qtyToTrade)
+                << LOG_VAR(price)
                 << LOG_VAR(currentQty)
                 << LOG_VAR(currentBalance)
                 << LOG_VAR(additional_cost));

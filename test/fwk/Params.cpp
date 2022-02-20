@@ -56,8 +56,6 @@ web::json::value Params::asJson() const {
             if (pair.second == "False") {
                 retVal[key] = web::json::value(false);
             }
-            
-            
         } else {
             // take it as string
             retVal[key] = web::json::value(pair.second);

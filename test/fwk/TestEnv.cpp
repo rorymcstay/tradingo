@@ -1,25 +1,52 @@
+#include <gtest/gtest.h>
 #include <chrono>
+#include <cpprest/json.h>
+#include <fstream>
 #include <limits>
 #include <memory>
 #include <sstream>
 #include <stdexcept>
 
 #define _TURN_OFF_PLATFORM_STRING
+#include "TestEnv.h"
+
 #include <model/Margin.h>
+#include "model/Execution.h"
+#include "model/Trade.h"
 
 #include "Context.h"
 #include "BatchWriter.h"
 #include "Series.h"
-#include "TestEnv.h"
+
+
+#include "Functional.h"
+
+web::json::value get_validation_fields() {
+    std::string validation_fields_file = TESTDATA_LOCATION "/validation_fields.json";
+    std::ifstream t(validation_fields_file);
+    std::stringstream buffer;
+    buffer << t.rdbuf();
+    std::string val = buffer.str();
+    return web::json::value::parse(val);
+}
 
 
 TestEnv::TestEnv(const std::shared_ptr<Config> &config_)
 :   _config(config_)
 ,   _position(std::make_shared<model::Position>())
 ,   _margin(std::make_shared<model::Margin>())
-,   _lastDispatch()
-,   _realtime(false)
-,   _events(0)
+,   _positionWriter("replay_positions",
+        _config->get("symbol"),
+        _config->get("storage"), 1,
+        [](const std::shared_ptr<model::ModelBase>& order_) {
+                return order_->toJson().serialize();
+    }, /*rotate=*/false)
+,   _batchWriter("replay_orders",
+        _config->get("symbol"),
+        _config->get("storage"), 1,
+        [](const std::shared_ptr<model::ModelBase>& order_) {
+                return order_->toJson().serialize();
+    }, /*rotate=*/false)
 {
     init();
 }
@@ -29,21 +56,90 @@ TestEnv::TestEnv(std::initializer_list<std::pair<std::string,std::string>> confi
 :   _config(std::make_shared<Config>(config_))
 ,   _position(std::make_shared<model::Position>())
 ,   _margin(std::make_shared<model::Margin>())
-,   _lastDispatch()
-,   _realtime(false)
-,   _events(0)
+,   _positionWriter("replay_positions",
+        _config->get("symbol"),
+        _config->get("storage"), 1,
+        [](const std::shared_ptr<model::ModelBase>& order_) {
+                return order_->toJson().serialize();
+    }, /*rotate=*/false)
+,   _batchWriter("replay_orders",
+        _config->get("symbol"),
+        _config->get("storage"), 1,
+        [](const std::shared_ptr<model::ModelBase>& order_) {
+                return order_->toJson().serialize();
+    }, /*rotate=*/false)
 {
     init();
+}
+
+
+void TestEnv::init() {
+
+    _config->set("baseUrl", "https://localhost:8888/api/v1");
+    _config->set("apiKey", "dummy");
+    _config->set("apiSecret", "dummy");
+    _config->set("connectionString", "https://localhost:8888/realtime");
+    _config->set("clOrdPrefix", "MCST");
+    _config->set("httpEnabled", "False");
+    _config->set("tickSize", "0.5");
+    _config->set("lotSize", "100");
+    _config->set("callback-signals", "true");
+    _config->set("cloidSeed", "0");
+
+
+    _context = std::make_shared<Context<TestMarketData, OrderApi, TestPositionApi>>(_config);
+
+    // make instrument for test
+    auto tickSize = std::atof(_config->get("tickSize", "0.5").c_str());
+    auto referencePrice = std::atof(_config->get("referencePrice").c_str());
+    auto lotSize = std::atof(_config->get("lotSize", "100").c_str());
+    auto fairPrice = std::atof(_config->get("fairPrice").c_str());
+    auto instSvc = std::shared_ptr<InstrumentService>(nullptr);
+    auto instrument = std::make_shared<model::Instrument>();
+    auto maintMargin = std::atof(_config->get("maintMargin", "0.035").c_str());
+    instrument->setFairPrice(fairPrice);
+    instrument->setSymbol(_config->get("symbol"));
+    instrument->setPrevPrice24h(referencePrice);
+    instrument->setTickSize(tickSize);
+    instrument->setLotSize(lotSize);
+    instrument->setMaintMargin(maintMargin);
+    instrument->setMarkPrice(fairPrice);
+    instrument->setTimestamp(utility::datetime::utc_now());
+    *_context->marketData() << instrument;
+
+    // setup initial positoin
+    _position->setSymbol(_config->get("symbol"));
+    _position->setCurrentQty(0.0);
+    _position->setCurrentCost(0.0);
+    _position->setUnrealisedPnl(0.0);
+    _position->setTimestamp(utility::datetime::utc_now());
+    _position->setLeverage(10.0);
+    *_context->marketData() << _position;
+    _context->orderApi()->setMarketData(_context->marketData());
+    _context->positionApi()->setMarketData(_context->marketData());
+
+    // set up initial margin
+    _context->orderApi()->setMarginCalculator(
+        std::make_shared<MarginCalculator>(_config, _context->marketData())
+    );
+    _margin->setWalletBalance(std::atof(_config->get("startingBalance").c_str()));
+    _margin->setMaintMargin(0.0);
+    _margin->setAvailableMargin(_margin->getWalletBalance());
+    _margin->setUnrealisedPnl(0.0);
+    _margin->setCurrency("XBt");
+    _margin->setTimestamp(utility::datetime::utc_now());
+    *_context->marketData() << _margin;
+
+    _context->orderApi()->init(_config);
+    // initialise strategy as the very last thing we do
+    _context->init();
+    _context->initStrategy();
+
 }
 
 void TestEnv::operator<<(const std::string &value_) {
     try {
         *_context->marketData() << value_;
-        if (_realtime) {
-            sleep(_context->marketData()->time());
-            _lastDispatch.actual_time = utility::datetime::utc_now();
-            _lastDispatch.mkt_time = _context->marketData()->time();
-        }
         if (getEventTypeFromString(value_) == "EXECUTION") {
             auto params = Params(value_);
             auto exec = std::make_shared<model::Execution>();
@@ -51,7 +147,6 @@ void TestEnv::operator<<(const std::string &value_) {
             exec->fromJson(json);
             _context->orderApi()->addExecToPosition(exec);
         }
-        _events++;
         _context->strategy()->evaluate();
         // TODO make TestException class
     } catch (std::exception& ex) {
@@ -95,8 +190,8 @@ std::shared_ptr<model::Execution> canTrade(const std::shared_ptr<model::Order>& 
     if (order_->getOrdStatus() == "Canceled"
         || order_->getOrdStatus() == "Rejected"
         || order_->getOrdStatus() == "Filled") {
+        // order is completed
         return nullptr;
-        // order is filled, do nothing
     } else if ((side == "Buy" ? tradePx <= orderPx : tradePx >= orderPx)) {
         LOGDEBUG(AixLog::Color::GREEN << "Tradeable order found: "
                 << LOG_NVP("Order", order_->toJson().serialize())
@@ -117,16 +212,9 @@ std::shared_ptr<model::Execution> canTrade(const std::shared_ptr<model::Order>& 
         exec->setLeavesQty(leavesQty);
         exec->setExecType("Trade");
         exec->setOrderQty(order_->getOrderQty());
-        if (almost_equal(leavesQty, 0.0)) {
-            order_->setOrdStatus("Filled");
-        } else {
-            order_->setOrdStatus("PartiallyFilled");
-        }
-        auto cumQty = order_->getCumQty() + fillQty;
-        order_->setLeavesQty(leavesQty);
-        order_->setCumQty(cumQty);
-        LOGDEBUG(AixLog::Color::GREEN << LOG_NVP("Order", order_->toJson().serialize()) << AixLog::Color::none);
-
+        exec->setTimestamp(trade_->getTimestamp());
+        exec->setExecCost(0.0);
+        LOGDEBUG(AixLog::Color::GREEN << LOG_NVP("Execution", exec->toJson().serialize()) << AixLog::Color::none);
         return exec;
     } else {
         return nullptr;
@@ -186,20 +274,7 @@ void TestEnv::playback(const Series<model::Trade>& trades,
     };
 
     std::vector<std::shared_ptr<model::ModelBase>> outBuffer;
-    // table writers
-    auto printer = [](const std::shared_ptr<model::ModelBase>& order_) {
-        return order_->toJson().serialize();
-    };
-    auto batchWriter = TestOrdersApi::Writer("replay_orders",
-                                             _context->config()->get("symbol"),
-                                             _context->config()->get("storage"), 1,
-                                             printer, /*rotate=*/false);
-    auto positionWriter = TestOrdersApi::Writer("replay_positions",
-                                                _context->config()->get("symbol"),
-                                                _context->config()->get("storage"), 1,
-                                                printer, /*rotate=*/false);
-    _lastDispatch.mkt_time = quote->getTimestamp();
-    auto leverageType = _config->get("leverageType", "ISOLATED");
+
     auto symbol = _config->get("symbol");
     
     utility::datetime::interval_type max_interval = std::numeric_limits<utility::datetime::interval_type>::max();
@@ -213,77 +288,29 @@ void TestEnv::playback(const Series<model::Trade>& trades,
         });
         // TRADE
         if (trade != trades.end() and trade->getTimestamp().to_interval() == current_time) {
-            auto trade_time = trade->getTimestamp();
-            for (auto& order : _context->orderApi()->orders()) {
-                auto exec = canTrade(order.second, *trade);
-                if (exec) {
-                    exec->setTimestamp(trade_time);
-                    // put resultant execution into marketData.
-                    LOGINFO(LOG_NVP("OrderID", order.second->getOrderID())
-                        << AixLog::Color::GREEN
-                        << LOG_NVP("Side", order.second->getSide())
-                        << LOG_NVP("CumQty", order.second->getCumQty())
-                        << LOG_NVP("LeavesQty", order.second->getLeavesQty())
-                        << LOG_NVP("OrdStatus", order.second->getOrdStatus())
-                        << AixLog::Color::none);
-                    dispatch(trade_time, nullptr, exec, order.second, nullptr);
-                    if (exec->getOrdStatus() == "Filled") {
-                        LOGDEBUG("Filled order");
-                    }
-                    auto position = _context->orderApi()->getPosition();
-                    stats.position = position;
-                    position->setTimestamp(trade_time);
-                    positionWriter.write(position);
-                }
+            auto exec = operator<<(*trade);
+            if (exec) {
+                operator<<(exec);
             }
-            _context->strategy()->evaluate();
             ++trade;
             stats.trades_processed += 1;
-            stats.current_time = trade_time;
+            stats.current_time = trade->getTimestamp();
         // QUOTE
         } else if (quote != quotes.end() and quote->getTimestamp().to_interval() == current_time) {
             (*_context->orderApi()->getMarginCalculator())(*quote);
-            auto time = quote->getTimestamp();
-            dispatch(time, *quote, nullptr, nullptr, nullptr);
-            // record replay actions to a file.
-            *_context->orderApi() >> batchWriter;
-
-            // TODO: void liquidatePositions(positions)
-            {
-                std::shared_ptr<MarginCalculator> mc = _context->orderApi()->getMarginCalculator();
-               
-                auto md = _context->strategy()->getMD();
-                
-                auto position = md->getPositions().at(symbol);
-
-                auto qty = position->getCurrentQty();
-                auto margin = md->getMargin();
-                auto liqPrice = position->getLiquidationPrice();
-                auto markPrice = mc->getMarkPrice();
-
-                if (not almost_equal(qty, 0.0) and ((qty > 0 and markPrice > liqPrice)
-                    or (qty < 0 and markPrice < liqPrice))) {
-
-                    position->setCurrentQty(0);
-                    position->setUnrealisedPnl(0.0);
-                    auto liquidationValue = position->getBankruptPrice()*qty;
-                    position->setRealisedPnl(liquidationValue - position->getCurrentCost());
-                    position->setTimestamp(time);
-                    auto cost_to_balance = position->getCurrentCost();
-                    if (leverageType == "CROSSED")
-                        margin->setWalletBalance(margin->getWalletBalance() - cost_to_balance);
-                    positionWriter.write(position);
-                    LOGINFO("Auto liquidation triggered: "
-                                    << LOG_VAR(liqPrice) << LOG_VAR(markPrice) << LOG_VAR(qty)
-                                    << LOG_NVP("balance", margin->getWalletBalance()));
-                }
-            }
+            operator<<(*quote);
             ++quote;
             stats.quotes_processed += 1;
-            stats.current_time = time;
+            stats.current_time = quote->getTimestamp();
         // INSTRUMENT
         } else if (instrument != instruments.end() and instrument->getTimestamp().to_interval() == current_time) {
-            dispatch(instrument->getTimestamp(), nullptr, nullptr, nullptr, *instrument);
+            auto position = _context->marketData()->getPositions().at(instrument->getSymbol());
+            if ((position->getCurrentQty() > 0.0 && instrument->getMarkPrice() <= position->getLiquidationPrice())
+                    or(position->getCurrentQty() < 0.0 && instrument->getMarkPrice() >= position->getMarkPrice()))
+            {
+                liquidatePositions(position->getSymbol());
+            }
+            operator<<(*instrument);
             ++instrument;
             stats.instruments_processed += 1;
             stats.current_time = instrument->getTimestamp();
@@ -301,76 +328,41 @@ void TestEnv::playback(const Series<model::Trade>& trades,
             stats.last_log = std::chrono::system_clock::now();
         }
     }
-    batchWriter.write_batch();
-    positionWriter.write_batch();
+    _batchWriter.write_batch();
+    _positionWriter.write_batch();
 }
 
-void TestEnv::init() {
 
-    _config->set("baseUrl", "https://localhost:8888/api/v1");
-    _config->set("apiKey", "dummy");
-    _config->set("apiSecret", "dummy");
-    _config->set("connectionString", "https://localhost:8888/realtime");
-    _config->set("clOrdPrefix", "MCST");
-    _config->set("httpEnabled", "False");
-    _config->set("tickSize", "0.5");
-    _config->set("lotSize", "100");
-    _config->set("callback-signals", "true");
-    _config->set("cloidSeed", "0");
+void TestEnv::liquidatePositions(const std::string& symbol) {
+    std::shared_ptr<MarginCalculator> mc = _context->orderApi()->getMarginCalculator();
+   
+    auto md = _context->strategy()->getMD();
+    
+    auto position = md->getPositions().at(symbol);
 
-    if (_config->get("realtime", "false") == "true") {
-        _realtime = true;
-    }
-    if (_config->get("logLevel", "").empty())
-        _config->set("logLevel", "debug");
+    auto qty = position->getCurrentQty();
+    auto margin = md->getMargin();
+    auto liqPrice = position->getLiquidationPrice();
+    auto markPrice = mc->getMarkPrice();
 
-    _context = std::make_shared<Context<TestMarketData, OrderApi, TestPositionApi>>(_config);
+    position->setPosState("Liquidation");
+    auto execution = std::make_shared<model::Execution>();
+    execution->setLastPx(position->getLiquidationPrice());
+    execution->setLastQty(std::abs(position->getCurrentQty()));
+    execution->setSide(position->getCurrentQty() >= 0.0 ? "Sell" : "Buy");
+    execution->setAvgPx(position->getLiquidationPrice());
+    execution->setCumQty(position->getCurrentQty());
+    execution->setText("Liquidation");
+    execution->setLastLiquidityInd("RemovedLiquidity");
+    execution->setOrderQty(std::abs(position->getCurrentQty()));
 
-    // make instrument for test
-    auto tickSize = std::atof(_config->get("tickSize", "0.5").c_str());
-    auto referencePrice = std::atof(_config->get("referencePrice").c_str());
-    auto lotSize = std::atof(_config->get("lotSize", "100").c_str());
-    auto fairPrice = std::atof(_config->get("fairPrice").c_str());
-    auto instSvc = std::shared_ptr<InstrumentService>(nullptr);
-    auto instrument = std::make_shared<model::Instrument>();
-    auto maintMargin = std::atof(_config->get("maintMargin", "0.035").c_str());
-    instrument->setFairPrice(fairPrice);
-    instrument->setSymbol(_config->get("symbol"));
-    instrument->setPrevPrice24h(referencePrice);
-    instrument->setTickSize(tickSize);
-    instrument->setLotSize(lotSize);
-    instrument->setMaintMargin(maintMargin);
-    instrument->setMarkPrice(fairPrice);
-    *_context->marketData() << instrument;
-    _context->instrumentService()->add(instrument);
-
-    // setup initial positoin
-    _position->setSymbol(_config->get("symbol"));
-    _position->setCurrentQty(0.0);
-    _position->setCurrentCost(0.0);
-    _position->setUnrealisedPnl(0.0);
-    _context->orderApi()->setPosition(_position);
-    _context->positionApi()->addPosition(_position);
-    _context->marketData()->addPosition(_position);
-
-    // set up initial margin
-    _context->orderApi()->setMarginCalculator(
-        std::make_shared<MarginCalculator>(_config, _context->marketData())
-    );
-    _margin->setWalletBalance(std::atof(_config->get("startingBalance").c_str()));
-    _margin->setMaintMargin(0.0);
-    _margin->setAvailableMargin(_margin->getWalletBalance());
-    _margin->setUnrealisedPnl(0.0);
-    _margin->setCurrency("XBt");
-    _context->marketData()->setMargin(_margin);
-    _context->orderApi()->setMargin(_margin);
-    _context->orderApi()->init(_config);
-
-    // initialise strategy as the very last thing we do
-    _context->init();
-    _context->initStrategy();
+    LOGINFO("Auto liquidation triggered: "
+                    << LOG_VAR(liqPrice) << LOG_VAR(markPrice) << LOG_VAR(qty)
+                    << LOG_NVP("balance", margin->getWalletBalance()));
+    operator<<(execution);
 
 }
+
 
 void TestEnv::dispatch(utility::datetime time_,
                        const std::shared_ptr<model::Quote> &quote_,
@@ -378,14 +370,7 @@ void TestEnv::dispatch(utility::datetime time_,
                        const std::shared_ptr<model::Order>& order_,
                        const std::shared_ptr<model::Instrument>& instrument_) {
 
-    // default behaviour is not to sleep
-    if (_realtime) {
-        sleep(time_);
-    }
-    _events++;
-    _lastDispatch.actual_time = utility::datetime::utc_now();
     if (quote_) {
-        _lastDispatch.mkt_time = quote_->getTimestamp();
         LOGDEBUG(AixLog::Color::blue << "quote: " << LOG_NVP("time",time_.to_string(utility::datetime::ISO_8601)) << AixLog::Color::none);
         *_context->orderApi() << time_;
         *_context->marketData() << quote_;
@@ -395,35 +380,142 @@ void TestEnv::dispatch(utility::datetime time_,
         _context->orderApi()->addExecToPosition(exec_);
         *_context->marketData() << exec_;
         *_context->marketData() << order_;
-        *_context->marketData() << _context->orderApi()->getPosition();
+        *_context->marketData() << _context->orderApi()->getPosition(exec_->getSymbol());
     } else if (instrument_) {
         *_context->marketData() << instrument_;
     }
 }
 
-void TestEnv::sleep(const utility::datetime& time_) const {
-    if (_events == 0) {
-        return;
-    }
-    auto now = utility::datetime::utc_now();
-    if (not _lastDispatch.actual_time.is_initialized()) {
-        LOGWARN("last dispatch time is uninitialised, will not sleep.");
-        return;
-    }
-    auto mktTimeDiff = time_diff(time_, _lastDispatch.mkt_time);
 
-    auto timeSinceLastDispatch = time_diff(now, _lastDispatch.actual_time);
+void TestEnv::operator << (const std::shared_ptr<model::Position>& position_) {
+    *_context->marketData() << position_;
+}
 
-    if (timeSinceLastDispatch < mktTimeDiff /*the amount of time passed, is less than in the market*/) {
-        auto sleep_for = mktTimeDiff-timeSinceLastDispatch;
-        LOGDEBUG(LOG_NVP("TimeNow", now.to_string(utility::datetime::ISO_8601))
-              << LOG_NVP("MktTime", time_.to_string(utility::datetime::ISO_8601))
-              << LOG_NVP("LastDispatch", _lastDispatch.actual_time.to_string(utility::datetime::ISO_8601))
-              << LOG_NVP("LastDispatchMktTime", _lastDispatch.mkt_time.to_string(utility::datetime::ISO_8601))
-              << LOG_VAR(mktTimeDiff)
-              << LOG_VAR(timeSinceLastDispatch)
-              << LOG_VAR(sleep_for));
-        std::this_thread::sleep_for(std::chrono::milliseconds(mktTimeDiff-timeSinceLastDispatch));
+
+void TestEnv::operator << (const std::shared_ptr<model::Execution>& exec_) {
+    *_context->marketData() << exec_;
+    auto& position = _context->marketData()->getPositions().at(exec_->getSymbol());
+    auto& order = _context->orderApi()->orders().at(exec_->getClOrdID());
+    auto& instrument = _context->marketData()->getInstruments().at(exec_->getSymbol());
+    position->setLastPrice(exec_->getLastPx());
+    position->setLastValue(position->getMarkValue());
+    // TODO
+    position->setLiquidationPrice(0.0);
+
+    if (position->getPosState() == "Liquidation") {
+        position->setPosState("Liquidated");
+        position->setTimestamp(exec_->getTimestamp());
+        operator<<(position);
+        position->setPosState("");
+        position->unsetPosState();
     }
 
+    { // update the order
+        order->setCumQty(order->getCumQty() + exec_->getLastQty());
+        order->setLeavesQty(order->getLeavesQty() - exec_->getLastQty());
+        auto newQty = order->getCumQty();
+        auto oldQty = newQty - exec_->getLastQty();
+        auto newAvgPx = (order->getAvgPx() * oldQty/newQty) + (exec_->getLastPx() * exec_->getLastQty()/newQty);
+        order->setAvgPx(newAvgPx);
+    }
+    { // set avg px on position
+        auto newQty = order->getCumQty() + position->getCurrentQty();
+        auto oldQty = position->getCurrentQty();
+        auto newAvgPx = (position->getAvgCostPrice() * oldQty/newQty) + (order->getAvgPx() * order->getCumQty()/newQty);
+        position->setAvgEntryPrice(newAvgPx);
+        position->setAvgCostPrice(newAvgPx);
+    }
+    { // update costs and quantity of position
+        price_t currentCost = position->getCurrentCost();
+        qty_t currentSize = position->getCurrentQty();
+        price_t costDelta = func::get_cost(exec_->getLastPx(), exec_->getLastQty(), position->getLeverage());
+        qty_t positionDelta = (exec_->getSide() == "Buy")
+                                  ? exec_->getLastQty()
+                                  : -exec_->getLastQty();
+        qty_t newPosition = currentSize + positionDelta;
+        price_t newCost = currentCost + costDelta;
+        position->setCurrentQty(newPosition);
+        position->setCurrentCost(newCost);
+    }
+    { // set the breakeven price
+        auto positionTotalCost = position->getAvgCostPrice()*position->getCurrentQty();
+        auto bkevenPrice = position->getCurrentQty()/(positionTotalCost);
+        position->setBreakEvenPrice(bkevenPrice);
+    }
+    { // liquidation price
+        auto leverageType = "ISOLATED";
+        auto liqPrice = 0.0;
+        position->setLiquidationPrice(liqPrice);
+    }
+    { // execution qty, cost of position
+        position->setExecCost(position->getExecCost() + exec_->getExecCost());
+        position->setExecQty(position->getExecQty() + exec_->getLastQty());
+    }
+}
+
+
+void TestEnv::operator << (const std::shared_ptr<model::Margin>& margin_) {
+    *_context->marketData() << margin_;
+}
+
+
+void TestEnv::operator << (const std::shared_ptr<model::Quote>& quote_) {
+    *_context->marketData() << quote_;
+    *_context->orderApi() >> _batchWriter;
+}
+
+
+void TestEnv::operator << (const std::shared_ptr<model::Instrument>& instrument_) {
+    *_context->marketData() << instrument_;
+}
+
+std::shared_ptr<model::Execution> TestEnv::operator<<(const std::shared_ptr<model::Trade>& trade_) {
+    for (auto& order : _context->orderApi()->orders()) {
+        auto exec = canTrade(order.second, trade_);
+        return exec;
+    }
+    return nullptr;
+}
+
+
+void TestEnv::operator >> (const std::shared_ptr<model::Position>& position_) {
+
+    auto validation_fields = get_validation_fields();
+    auto& to_validate = validation_fields["Position"].as_array();
+    auto actual_position = _context->marketData()->getPositions().at(position_->getSymbol())->toJson();
+    auto expected_position = position_->toJson();
+    for (auto& field : to_validate) {
+        ASSERT_EQ(
+            actual_position[field.to_string()],
+            expected_position[field.to_string()]
+        );
+    }
+}
+
+
+void TestEnv::operator >> (const std::shared_ptr<model::Margin>& margin_) {
+    auto validation_fields = get_validation_fields();
+    auto& to_validate = validation_fields["Margin"].as_array();
+    auto actual_margin = _context->marketData()->getMargin()->toJson();
+    auto expected_margin = margin_->toJson();
+    for (auto& field : to_validate) {
+        ASSERT_EQ(
+            actual_margin[field.to_string()],
+            expected_margin[field.to_string()]
+        );
+    }
+
+}
+
+
+std::shared_ptr<model::Order> TestEnv::operator >> (const std::shared_ptr<model::Order>& order_) {
+    auto& allocations = _context->strategy()->allocations();
+    allocations->addAllocation(
+        order_->getPrice(),
+        order_->getOrderQty(),
+        order_->getSide()
+    );
+    allocations->placeAllocations();
+    auto placed_order = allocations->get(order_->getPrice())->getOrder();
+    return placed_order;
 }

@@ -159,10 +159,10 @@ void Strategy<TOrdApi, TPositionApi>::init(const std::shared_ptr<Config>& config
 
     _symbol = _config->get("symbol");
 
-    auto instrument = _instrumentService->get(_symbol);
-    auto tickSize = instrument.getTickSize();
-    auto referencePrice = instrument.getPrevPrice24h();
-    auto lotSize = instrument.getLotSize();
+    auto& instrument = _marketData->getInstruments().at(_symbol);
+    auto tickSize = instrument->getTickSize();
+    auto referencePrice = instrument->getPrevPrice24h();
+    auto lotSize = instrument->getLotSize();
 
     LOGINFO("Initialising allocations with " << LOG_VAR(referencePrice) << LOG_VAR(tickSize));
     int cloidSeed = std::chrono::system_clock::now().time_since_epoch().count();
