@@ -485,10 +485,10 @@ void TestEnv::operator >> (const std::shared_ptr<model::Position>& position_) {
     auto actual_position = _context->marketData()->getPositions().at(position_->getSymbol())->toJson();
     auto expected_position = position_->toJson();
     for (auto& field : to_validate) {
-        ASSERT_EQ(
-            actual_position[field.to_string()],
-            expected_position[field.to_string()]
-        );
+        auto key = field.as_string();
+        int actual = actual_position.at(key).as_integer();
+        int expected = expected_position.at(key).as_integer();
+        ASSERT_EQ(actual, expected) << "Position " << LOG_VAR(key) << LOG_VAR(actual) << LOG_VAR(expected);
     }
 }
 
@@ -499,10 +499,11 @@ void TestEnv::operator >> (const std::shared_ptr<model::Margin>& margin_) {
     auto actual_margin = _context->marketData()->getMargin()->toJson();
     auto expected_margin = margin_->toJson();
     for (auto& field : to_validate) {
-        ASSERT_EQ(
-            actual_margin[field.to_string()],
-            expected_margin[field.to_string()]
-        );
+        auto key = field.as_string();
+
+        auto actual = actual_margin.at(key).as_integer();
+        auto expected = expected_margin.at(key).as_integer();
+        ASSERT_EQ(actual, expected) << "Margin " << LOG_VAR(key) << LOG_VAR(actual) << LOG_VAR(expected);
     }
 
 }

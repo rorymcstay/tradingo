@@ -64,7 +64,13 @@ TEST(Replay, scenario) {
         if (object_type == "Position") {
             auto position = std::make_shared<model::Position>();
             position->fromJson(data);
-            env << position;
+            if (event_type == "IN_EVENT") {
+                env << position;
+            } else if (event_type == "ASSERTION") {
+                env >> position;
+            } else {
+                throw std::runtime_error(event_type);
+            }
         } else if (object_type == "Quote") {
             auto quote = std::make_shared<model::Quote>();
             quote->fromJson(data);
@@ -80,6 +86,8 @@ TEST(Replay, scenario) {
                 env << margin;
             } else if (event_type == "ASSERTION") {
                 env >> margin;
+            } else {
+                throw std::runtime_error(event_type);
             }
         } else if (object_type == "Order") {
             auto order = std::make_shared<model::Order>();
