@@ -20,10 +20,10 @@
 #include "Context.h"
 #include "BatchWriter.h"
 #include "Series.h"
-
-
 #include "Functional.h"
 
+
+/// get test meta file
 web::json::value get_validation_fields() {
     std::string validation_fields_file = TESTDATA_LOCATION "/validation_fields.json";
     std::ifstream t(validation_fields_file);
@@ -140,22 +140,23 @@ void TestEnv::init() {
 
 }
 
+
 void TestEnv::operator<<(const std::string &value_) {
     try {
-        *_context->marketData() << value_;
         if (getEventTypeFromString(value_) == "EXECUTION") {
             auto params = Params(value_);
             auto exec = std::make_shared<model::Execution>();
             auto json = params.asJson();
             exec->fromJson(json);
-            _context->orderApi()->addExecToPosition(exec);
+            operator<<(exec);
+        } else {
+            *_context->marketData() << value_;
         }
-        _context->strategy()->evaluate();
-        // TODO make TestException class
     } catch (std::exception& ex) {
         FAIL() << "TEST Exception: " << ex.what() << " during event <<\n\n      " << value_;
     }
 }
+
 
 std::shared_ptr<model::Order> TestEnv::operator>>(const std::string &value_) {
     try {
@@ -364,29 +365,6 @@ void TestEnv::liquidatePositions(const std::string& symbol) {
                     << LOG_NVP("balance", margin->getWalletBalance()));
     operator<<(execution);
 
-}
-
-
-void TestEnv::dispatch(utility::datetime time_,
-                       const std::shared_ptr<model::Quote> &quote_,
-                       const std::shared_ptr<model::Execution>& exec_,
-                       const std::shared_ptr<model::Order>& order_,
-                       const std::shared_ptr<model::Instrument>& instrument_) {
-
-    if (quote_) {
-        LOGDEBUG(AixLog::Color::blue << "quote: " << LOG_NVP("time",time_.to_string(utility::datetime::ISO_8601)) << AixLog::Color::none);
-        *_context->orderApi() << time_;
-        *_context->marketData() << quote_;
-        _context->strategy()->updateSignals();
-    } else if (exec_ and order_) {
-        LOGDEBUG(AixLog::Color::blue << "order event: " << LOG_NVP("time",time_.to_string(utility::datetime::ISO_8601)) << AixLog::Color::none);
-        _context->orderApi()->addExecToPosition(exec_);
-        *_context->marketData() << exec_;
-        *_context->marketData() << order_;
-        *_context->marketData() << _context->orderApi()->getPosition(exec_->getSymbol());
-    } else if (instrument_) {
-        *_context->marketData() << instrument_;
-    }
 }
 
 
