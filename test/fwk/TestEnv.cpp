@@ -1,4 +1,6 @@
+#include "aixlog.hpp"
 #include <gtest/gtest.h>
+#include <iomanip>
 #include <chrono>
 #include <cpprest/json.h>
 #include <fstream>
@@ -9,6 +11,7 @@
 
 #define _TURN_OFF_PLATFORM_STRING
 #include "TestEnv.h"
+#include "Utils.h"
 
 #include <model/Margin.h>
 #include "model/Execution.h"
@@ -397,6 +400,7 @@ void TestEnv::operator << (const std::shared_ptr<model::Execution>& exec_) {
     auto& position = _context->marketData()->getPositions().at(exec_->getSymbol());
     auto& order = _context->orderApi()->orders().at(exec_->getClOrdID());
     auto& instrument = _context->marketData()->getInstruments().at(exec_->getSymbol());
+    auto& margin = _context->marketData()->getMargin();
     position->setLastPrice(exec_->getLastPx());
     position->setLastValue(position->getMarkValue());
     // TODO
@@ -428,12 +432,10 @@ void TestEnv::operator << (const std::shared_ptr<model::Execution>& exec_) {
     { // update costs and quantity of position
         price_t currentCost = position->getCurrentCost();
         qty_t currentSize = position->getCurrentQty();
-        price_t costDelta = func::get_cost(exec_->getLastPx(), exec_->getLastQty(), position->getLeverage());
-        qty_t positionDelta = (exec_->getSide() == "Buy")
-                                  ? exec_->getLastQty()
-                                  : -exec_->getLastQty();
+        qty_t positionDelta = (exec_->getSide() == "Buy") ? exec_->getLastQty() : - exec_->getLastQty();
+        price_t costDelta = func::get_cost(exec_->getLastPx(), positionDelta, position->getLeverage());
         qty_t newPosition = currentSize + positionDelta;
-        price_t newCost = currentCost + costDelta;
+        price_t newCost = currentCost + exec_->getExecCost();
         position->setCurrentQty(newPosition);
         position->setCurrentCost(newCost);
     }
@@ -450,6 +452,10 @@ void TestEnv::operator << (const std::shared_ptr<model::Execution>& exec_) {
     { // execution qty, cost of position
         position->setExecCost(position->getExecCost() + exec_->getExecCost());
         position->setExecQty(position->getExecQty() + exec_->getLastQty());
+    }
+
+    {
+        _margin->setWalletBalance(exec_->getExecCost() + _margin->getMarginBalance()); 
     }
 }
 
@@ -478,36 +484,110 @@ std::shared_ptr<model::Execution> TestEnv::operator<<(const std::shared_ptr<mode
 }
 
 
-void TestEnv::operator >> (const std::shared_ptr<model::Position>& position_) {
+struct TestAssertion {
+    
+    web::json::value validation_fields;
+    bool fail = false;
 
-    auto validation_fields = get_validation_fields();
-    auto& to_validate = validation_fields["Position"].as_array();
-    auto actual_position = _context->marketData()->getPositions().at(position_->getSymbol())->toJson();
-    auto expected_position = position_->toJson();
-    for (auto& field : to_validate) {
-        auto key = field.as_string();
-        int actual = actual_position.at(key).as_integer();
-        int expected = expected_position.at(key).as_integer();
-        ASSERT_EQ(actual, expected) << "Position " << LOG_VAR(key) << LOG_VAR(actual) << LOG_VAR(expected);
+    const char seperator    = ' ';
+    const int nameWidth     = 18;
+    const int numWidth      = 10;
+    const std::string type;
+    std::stringstream fail_message;
+
+    TestAssertion(const std::string& type_)
+    :   validation_fields(get_validation_fields())
+    ,   type(type_) {
+
+        fail_message << type << ":" << '\n' << std::left 
+            << std::setw(nameWidth) << std::setfill(seperator) << "field" 
+            << std::setw(numWidth) << std::setfill(seperator) << "actual" 
+            << std::setw(numWidth) << std::setfill(seperator) << "expected"
+            << std::endl;
     }
-}
+
+    void operator()(const web::json::value& actual_object, const web::json::value& expected_object) {
+
+        auto& to_validate = validation_fields[type].as_array();
+
+        for (auto& field : to_validate) {
+            auto tolerance = field.has_double_field("tolerance") ? field["tolerance"].as_double() : 0.000001;
+            auto key = field["name"].as_string();
+            auto actual_num = [&key, &actual_object]() {
+                return actual_object.has_double_field(key) ? actual_object.at(key).as_double() : actual_object.at(key).as_integer();
+            };
+            auto expected_num = [&key, &expected_object]() {
+                return expected_object.has_double_field(key) ? expected_object.at(key).as_double() : expected_object.at(key).as_integer();
+            };
+            bool actual_is_num = actual_object.has_integer_field(key) or actual_object.has_double_field(key);
+            bool expected_is_num = expected_object.has_integer_field(key) or expected_object.has_double_field(key);
+            if (expected_is_num and actual_is_num) {
+                auto actual = actual_num();
+                auto expected = expected_num();
+                if (not tradingo_utils::almost_equal(actual, expected, tolerance)) {
+                    fail_message << std::left 
+                        << std::setw(nameWidth) << std::setfill(seperator) << key
+                        << std::setw(numWidth) << std::setfill(seperator) << actual 
+                        << std::setw(numWidth) << std::setfill(seperator) << expected
+                        << std::endl;
+                    fail = true;
+                }
+            } else if (expected_object.has_string_field(key)
+                    and actual_object.has_string_field(key)) {
+                auto actual = actual_object.at(key).as_string();
+                auto expected = expected_object.at(key).as_string();
+                if (actual != expected) {
+                    fail_message << std::left 
+                        << std::setw(nameWidth) << std::setfill(seperator) << key
+                        << std::setw(numWidth) << std::setfill(seperator) << actual 
+                        << std::setw(numWidth) << std::setfill(seperator) << expected
+                        << std::endl;
+                    fail = true; 
+                }
+            } else if (not expected_object.has_field(key) and actual_object.has_field(key)) {
+                fail_message << std::left 
+                    << std::setw(nameWidth) << std::setfill(seperator) << key
+                    << std::setw(numWidth) << std::setfill(seperator) << actual_object.at(key).as_integer()
+                    << std::setw(numWidth) << std::setfill(seperator) << "Unset"
+                    << std::endl;
+                fail = true;
+            } else if (not actual_object.has_field(key) and not expected_object.has_field(key)) {
+                continue;
+            } else if (not actual_object.has_field(key)) {
+                fail_message << std::left 
+                    << std::setw(nameWidth) << std::setfill(seperator) << key
+                    << std::setw(numWidth) << std::setfill(seperator) << "Unset"
+                    << std::setw(numWidth) << std::setfill(seperator) << expected_object.at(key).as_integer()
+                    << std::endl;
+                fail = true;
+            }
+        }
+    }
+};
 
 
 void TestEnv::operator >> (const std::shared_ptr<model::Margin>& margin_) {
-    auto validation_fields = get_validation_fields();
-    auto& to_validate = validation_fields["Margin"].as_array();
+    auto assertMarginEqual = TestAssertion("Margin");
     auto actual_margin = _context->marketData()->getMargin()->toJson();
     auto expected_margin = margin_->toJson();
-    for (auto& field : to_validate) {
-        auto key = field.as_string();
-
-        auto actual = actual_margin.at(key).as_integer();
-        auto expected = expected_margin.at(key).as_integer();
-        ASSERT_EQ(actual, expected) << "Margin " << LOG_VAR(key) << LOG_VAR(actual) << LOG_VAR(expected);
-    }
-
+    assertMarginEqual(actual_margin, expected_margin);
+    if (assertMarginEqual.fail)
+        FAIL() << assertMarginEqual.fail_message.str();
+    else
+        LOGINFO(AixLog::Color::GREEN << "Margin: " << expected_margin.serialize() << AixLog::Color::none);
 }
 
+void TestEnv::operator >> (const std::shared_ptr<model::Position>& position_) {
+
+    auto assertPositionEqual = TestAssertion("Position");
+    auto actual_position = _context->marketData()->getMargin()->toJson();
+    auto expected_position = position_->toJson();
+    assertPositionEqual(actual_position, expected_position);
+    if (assertPositionEqual.fail)
+        FAIL() << assertPositionEqual.fail_message.str();
+    else
+        LOGINFO(AixLog::Color::GREEN << "Position: " << expected_position.serialize() << AixLog::Color::none);
+}
 
 std::shared_ptr<model::Order> TestEnv::operator >> (const std::shared_ptr<model::Order>& order_) {
     auto& allocations = _context->strategy()->allocations();

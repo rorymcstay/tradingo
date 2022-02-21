@@ -27,9 +27,9 @@ template <typename T> int sgn(T val) {
 }
 
 template<typename T>
-bool almost_equal(T num1, T num2)
+bool almost_equal(T num1, T num2, double tolerance=0.000001)
 {
-    return std::abs(num1 - num2) < 0.000001;
+    return std::abs(num1 - num2) < tolerance;
 }
 
 template<typename T>
