@@ -6,6 +6,7 @@
 #ifndef TRADINGO_TESTORDERSAPI_H
 #define TRADINGO_TESTORDERSAPI_H
 
+#include "model/Execution.h"
 #include <gtest/gtest.h>
 #include <boost/optional.hpp>
 
@@ -61,6 +62,11 @@ private:
     std::shared_ptr<model::Order> checkOrderExists(const std::shared_ptr<model::Order>& order);
     bool checkValidAmend(std::shared_ptr<model::Order> amendRequest,
                          std::shared_ptr<model::Order> originalOrder);
+
+
+public:
+    void onExecution(const std::shared_ptr<model::Execution>& exec_);
+
 
 public:
     void set_order_timestamp(const std::shared_ptr<model::Order>& order_);

@@ -3,6 +3,7 @@
 //
 #include "TestOrdersApi.h"
 #include "ApiException.h"
+#include "model/Execution.h"
 
 #include <boost/none.hpp>
 #include <memory>
@@ -436,6 +437,22 @@ void TestOrdersApi::operator>>(TestOrdersApi::Writer & outVec) {
 
 void TestOrdersApi::operator<<(const utility::datetime& time_) {
     _time = time_;
+}
+
+
+void TestOrdersApi::onExecution(const std::shared_ptr<model::Execution>& exec_) {
+
+    auto& order = orders().at(exec_->getClOrdID());
+    qty_t qtyDelta = (exec_->getSide() == "Buy") ? exec_->getLastQty() : - exec_->getLastQty();
+    order->setCumQty(order->getCumQty() + qtyDelta);
+    order->setLeavesQty(order->getLeavesQty() - qtyDelta);
+    order->setOrdStatus(exec_->getOrdStatus());
+    auto newCumQty = order->getCumQty() + qtyDelta;
+    auto oldCumQty = order->getCumQty() - qtyDelta;
+    auto newAvgPx = (order->getAvgPx() * oldCumQty/newCumQty) + (exec_->getLastPx() * exec_->getLastQty()/newCumQty);
+    order->setAvgPx(newAvgPx);
+    order->setTimestamp(exec_->getTimestamp());
+
 }
 
 
