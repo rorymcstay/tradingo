@@ -395,12 +395,11 @@ void TestEnv::operator << (const std::shared_ptr<model::Execution>& exec_) {
     qty_t oldQty = position->getCurrentQty();
 
     position->setAvgCostPrice((position->getAvgCostPrice() * oldQty/newQty) + (exec_->getLastPx() * exec_->getLastQty()/newQty));
-    if (exec_->getSide() == "Buy") {
-        position->setAvgEntryPrice((position->getAvgEntryPrice() * oldQty/newQty) + (exec_->getLastPx() * exec_->getLastQty()/newQty));
-    }
+    position->setUnrealisedCost(position->getCurrentCost() - position->getRealisedCost());
     if (exec_->getSide() == "Buy")  {
         position->setExecBuyQty(exec_->getLastQty() + position->getExecBuyQty());
         position->setExecBuyCost(exec_->getExecCost() + position->getExecBuyCost());
+        position->setAvgEntryPrice((position->getAvgEntryPrice() * oldQty/newQty) + (exec_->getLastPx() * exec_->getLastQty()/newQty));
     } else {
         position->setExecSellQty(exec_->getLastQty() + position->getExecSellQty());
         position->setExecSellCost(exec_->getExecCost() + position->getExecSellCost());
@@ -414,6 +413,7 @@ void TestEnv::operator << (const std::shared_ptr<model::Execution>& exec_) {
     position->setCurrentQty(position->getCurrentQty() + positionDelta);
     position->setCurrentCost(position->getCurrentCost() + exec_->getExecCost());
     position->setUnrealisedGrossPnl(position->getMarkValue() - position->getUnrealisedCost());
+    position->setUnrealisedCost(position->getCurrentCost() - position->getRealisedCost());
     if (tradingo_utils::almost_equal(position->getCurrentQty(), 0.0)) {
         position->setRealisedPnl(position->getUnrealisedPnl());
         position->setUnrealisedPnl(0.0);

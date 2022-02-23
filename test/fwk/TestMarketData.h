@@ -36,13 +36,6 @@ public:
     void subscribe() {}
     utility::datetime time() const { return _time; }
 
-    void addPosition(const std::shared_ptr<model::Position>& position_) {
-        _positions[position_->getSymbol()] = position_;
-    }
-    void setMargin(const std::shared_ptr<model::Margin>& margin_) {
-        _margin = margin_;
-    }
-
     void operator << (const std::string& marketDataString);
     void operator << (const std::shared_ptr<model::Quote>& quote_);
 

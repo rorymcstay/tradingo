@@ -1,10 +1,6 @@
 //
 // Created by Rory McStay on 18/06/2021.
 //
-#include "TestOrdersApi.h"
-#include "ApiException.h"
-#include "model/Execution.h"
-
 #include <boost/none.hpp>
 #include <memory>
 #include <stdexcept>
@@ -13,6 +9,9 @@
 #include <utility>
 
 #define _TURN_OFF_PLATFORM_STRING
+#include "TestOrdersApi.h"
+#include "ApiException.h"
+#include "model/Execution.h"
 #include <Object.h>
 #include <Allocation.h>
 #include <model/Margin.h>
