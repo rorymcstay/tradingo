@@ -436,22 +436,6 @@ void TestOrdersApi::operator<<(const utility::datetime& time_) {
 }
 
 
-void TestOrdersApi::onExecution(const std::shared_ptr<model::Execution>& exec_) {
-
-    auto& order = orders().at(exec_->getClOrdID());
-    qty_t qtyDelta = (exec_->getSide() == "Buy") ? exec_->getLastQty() : - exec_->getLastQty();
-    order->setCumQty(order->getCumQty() + qtyDelta);
-    order->setLeavesQty(order->getLeavesQty() - qtyDelta);
-    order->setOrdStatus(exec_->getOrdStatus());
-    auto newCumQty = order->getCumQty() + qtyDelta;
-    auto oldCumQty = order->getCumQty() - qtyDelta;
-    auto newAvgPx = (order->getAvgPx() * oldCumQty/newCumQty) + (exec_->getLastPx() * exec_->getLastQty()/newCumQty);
-    order->setAvgPx(newAvgPx);
-    order->setTimestamp(exec_->getTimestamp());
-
-}
-
-
 void TestOrdersApi::set_order_timestamp(const std::shared_ptr<model::Order>& order_) {
 
     if (!order_->timestampIsSet()) {
@@ -490,7 +474,7 @@ const std::shared_ptr<model::Margin>& TestOrdersApi::getMargin() const {
 
 std::shared_ptr<model::Order> TestOrdersApi::checkOrderExists(const std::shared_ptr<model::Order> &order) {
     if (_orders.find(order->getClOrdID()) != _orders.end()
-        || _orders.find(order->getOrigClOrdID()) != _orders.end()) {
+            || _orders.find(order->getOrigClOrdID()) != _orders.end()) {
         return _orders.find(order->getClOrdID()) != _orders.end() ? _orders[order->getClOrdID()] : _orders[order->getOrigClOrdID()];
     }
     // is amend
@@ -499,6 +483,23 @@ std::shared_ptr<model::Order> TestOrdersApi::checkOrderExists(const std::shared_
         return found;
     }
     return nullptr;
+}
+
+
+void TestOrdersApi::operator << (const std::shared_ptr<model::Execution>& exec_) {
+    if (exec_->getOrderID() == "LIQUIDATION") {
+        return;
+    }
+
+    auto order = _orders.at(exec_->getClOrdID());
+    auto oldQty = order->getCumQty();
+    auto newQty = exec_->getCumQty();
+    order->setAvgPx((order->getAvgPx() * oldQty/newQty) + (exec_->getLastPx() * exec_->getLastQty()/newQty));
+    order->setOrdStatus(exec_->getOrdStatus());
+    order->setCumQty(exec_->getCumQty());
+    order->setLeavesQty(exec_->getLeavesQty());
+    order->setTimestamp(exec_->getTimestamp());
+    *_marketData << order;
 }
 
 

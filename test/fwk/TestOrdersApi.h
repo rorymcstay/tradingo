@@ -54,7 +54,6 @@ public:
     const std::shared_ptr<model::Margin>& getMargin() const;
 
     void setMarketData(const std::shared_ptr<TestMarketData>& _marketData);
-
 private:
 
     // validates and rejects if necessary
@@ -62,10 +61,6 @@ private:
     std::shared_ptr<model::Order> checkOrderExists(const std::shared_ptr<model::Order>& order);
     bool checkValidAmend(std::shared_ptr<model::Order> amendRequest,
                          std::shared_ptr<model::Order> originalOrder);
-
-
-public:
-    void onExecution(const std::shared_ptr<model::Execution>& exec_);
 
 
 public:
@@ -148,10 +143,13 @@ public:
     void operator >> (Writer& outBuffer_);
 
     void operator << (const utility::datetime& time_);
+    void operator << (const std::shared_ptr<model::Execution>& exec_);
 
     std::shared_ptr<model::Order> getEvent(const std::string& event_);
 
     std::map<std::string, std::shared_ptr<model::Order>>& orders() { return _orders; }
+
+
 
 
 };

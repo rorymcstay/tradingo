@@ -182,13 +182,6 @@ std::string format(const std::string& test_message_,
     return ss.str();
 }
 
-/// if trade may not occur, return nullptr, else return exec report and modify order.
-std::shared_ptr<model::Execution> canTrade(const std::shared_ptr<model::Order>& order_,
-        const std::shared_ptr<model::Trade>& trade_) {
-
-
-
-}
 
 struct PlaybackStats {
     utility::datetime start_time;
@@ -315,6 +308,8 @@ void TestEnv::liquidatePositions(const std::string& symbol) {
 
     position->setPosState("Liquidation");
     auto execution = std::make_shared<model::Execution>();
+    execution->setOrderID("LIQUIDATION");
+    execution->setLeavesQty(0.0);
     execution->setLastPx(position->getLiquidationPrice());
     execution->setLastQty(std::abs(position->getCurrentQty()));
     execution->setSide(position->getCurrentQty() >= 0.0 ? "Sell" : "Buy");
@@ -323,6 +318,8 @@ void TestEnv::liquidatePositions(const std::string& symbol) {
     execution->setText("Liquidation");
     execution->setLastLiquidityInd("RemovedLiquidity");
     execution->setOrderQty(std::abs(position->getCurrentQty()));
+    auto cost = ((execution->getSide() == "Buy") ? -1 : 1)  *  func::get_cost(execution->getLastPx(), execution->getLastQty(), position->getLeverage());
+    execution->setExecCost(cost);
 
     LOGINFO("Auto liquidation triggered: "
                     << LOG_VAR(liqPrice) << LOG_VAR(markPrice) << LOG_VAR(qty)
@@ -342,7 +339,6 @@ void TestEnv::operator << (const std::shared_ptr<model::Execution>& exec_) {
     *_context->marketData() << exec_;
 
     auto& position = _context->marketData()->getPositions().at(exec_->getSymbol());
-    auto& order = _context->orderApi()->orders().at(exec_->getClOrdID());
     auto& instrument = _context->marketData()->getInstruments().at(exec_->getSymbol());
     auto& margin = _context->marketData()->getMargin();
 
@@ -379,7 +375,8 @@ void TestEnv::operator << (const std::shared_ptr<model::Execution>& exec_) {
     liquidationPrice: Once markPrice reaches this price, this position will be liquidated.
     bankruptPrice: Once markPrice reaches this price, this position will have no equity.
     */
-    _context->orderApi()->onExecution(exec_);
+
+    *_context->orderApi() << exec_;
 
     if (position->getPosState() == "Liquidation") {
         position->setPosState("Liquidated");
@@ -530,10 +527,18 @@ std::shared_ptr<model::Execution> TestEnv::operator<<(const std::shared_ptr<mode
             exec->setLastQty(fillQty);
             exec->setPrice(orderPx);
             exec->setCumQty(order.second->getCumQty()+fillQty);
-            exec->setLeavesQty(leavesQty);
-            exec->setExecType("Trade");
             exec->setOrderQty(order.second->getOrderQty());
-            exec->setTimestamp(trade_->getTimestamp());
+            exec->setTimeInForce(order.second->getTimeInForce());
+            exec->setOrdType(order.second->getOrdType());
+            exec->setExDestination(order.second->getExDestination());
+            exec->setTrdMatchID(trade_->getTrdMatchID());
+            exec->setLastMkt("XSIM");
+            if (tradingo_utils::almost_equal(order.second->getLeavesQty(), 0.0)) {
+                exec->setOrdStatus("Filled");
+            } else {
+                exec->setOrdStatus("PartiallyFilled");
+            } 
+
             auto cost = ((exec->getSide() == "Buy") ? -1 : 1)  *  func::get_cost(exec->getLastPx(), exec->getLastQty(), position->getLeverage());
             exec->setExecCost(cost);
             exec->setCommission(exec->getLastLiquidityInd() == "RemovedLiquidity" ? instrument->getTakerFee() : instrument->getMakerFee());

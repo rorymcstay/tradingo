@@ -69,7 +69,6 @@ int main(int argc, char **argv) {
         instrument_resolution = vm.at("instrument-resolution").as<long>();
     }
 
-
     auto quotes = Series<model::Quote>(quotes_file, 10000);
     auto trades = Series<model::Trade>(trades_file, 10000);
     auto instruments = Series<model::Instrument>(instruments_file, 10000);
