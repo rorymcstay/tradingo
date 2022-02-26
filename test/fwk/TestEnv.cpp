@@ -338,7 +338,9 @@ void TestEnv::operator << (const std::shared_ptr<model::Position>& position_) {
 
 
 void TestEnv::operator << (const std::shared_ptr<model::Execution>& exec_) {
+
     *_context->marketData() << exec_;
+
     auto& position = _context->marketData()->getPositions().at(exec_->getSymbol());
     auto& order = _context->orderApi()->orders().at(exec_->getClOrdID());
     auto& instrument = _context->marketData()->getInstruments().at(exec_->getSymbol());
@@ -389,42 +391,58 @@ void TestEnv::operator << (const std::shared_ptr<model::Execution>& exec_) {
 
     position->setLiquidationPrice(0.0);
     //position->setLastPrice(exec_->getLastPx());
-    //position->setLastValue(position->get());
     qty_t positionDelta = (exec_->getSide() == "Buy") ? exec_->getLastQty() : - exec_->getLastQty();
     qty_t newQty = exec_->getLastQty() + position->getCurrentQty();
     qty_t oldQty = position->getCurrentQty();
 
+    position->setCurrentQty(position->getCurrentQty() + positionDelta);
+    position->setCurrentCost(position->getCurrentCost() + exec_->getExecCost());
     position->setAvgCostPrice((position->getAvgCostPrice() * oldQty/newQty) + (exec_->getLastPx() * exec_->getLastQty()/newQty));
+
     position->setUnrealisedCost(position->getCurrentCost() - position->getRealisedCost());
+    position->setRealisedPnl(position->getRealisedPnl() - exec_->getExecComm());
+
+    updatePositionFromInstrument(instrument);
     if (exec_->getSide() == "Buy")  {
         position->setExecBuyQty(exec_->getLastQty() + position->getExecBuyQty());
-        position->setExecBuyCost(exec_->getExecCost() + position->getExecBuyCost());
+        position->setExecBuyCost(std::abs(exec_->getExecCost()) + position->getExecBuyCost());
         position->setAvgEntryPrice((position->getAvgEntryPrice() * oldQty/newQty) + (exec_->getLastPx() * exec_->getLastQty()/newQty));
     } else {
         position->setExecSellQty(exec_->getLastQty() + position->getExecSellQty());
         position->setExecSellCost(exec_->getExecCost() + position->getExecSellCost());
     }
-    position->setExecQty(position->getExecSellQty() - position->getExecBuyQty());
+    position->setExecQty(position->getExecBuyQty() - position->getExecSellQty());
     position->setExecCost(position->getExecSellCost() - position->getExecBuyCost());
     position->setExecComm(position->getExecComm() + exec_->getExecComm());
-    position->setMarkValue(instrument->getMarkPrice()*position->getCurrentQty());
-    position->setLastValue(position->getMarkValue());
-    position->setMarkPrice(instrument->getMarkPrice());
-    position->setCurrentQty(position->getCurrentQty() + positionDelta);
-    position->setCurrentCost(position->getCurrentCost() + exec_->getExecCost());
-    position->setUnrealisedGrossPnl(position->getMarkValue() - position->getUnrealisedCost());
-    position->setUnrealisedCost(position->getCurrentCost() - position->getRealisedCost());
-    if (tradingo_utils::almost_equal(position->getCurrentQty(), 0.0)) {
-        position->setRealisedPnl(position->getUnrealisedPnl());
-        position->setUnrealisedPnl(0.0);
-    }
 
-    // TODO realisedCost
+    position->setCurrentComm(position->getCurrentComm() + exec_->getExecComm()); // commission arising from funding + executions
+    price_t exec_cost = (instrument->getMaintMargin() * (((exec_->getSide() == "Buy") ? -1 : 1)* exec_->getExecCost())/ position->getLeverage());
+    margin->setWalletBalance(margin->getAmount() + margin->getRealisedPnl() + exec_cost);
+    margin->setMarginBalance(margin->getWalletBalance() + margin->getUnrealisedPnl());
+
+    // realisedCost
     // realisedCost: The realised cost of this position calculated with regard to average cost accounting.
     // unrealisedCost: currentCost - realisedCost.
+    if (position->getUnrealisedPnl() != 0.0 
+            and tradingo_utils::almost_equal(position->getCurrentQty(), 0.0)) {
+        position->setRealisedPnl(position->getRealisedPnl() + position->getUnrealisedPnl());
+        position->setRealisedCost(position->getRealisedCost() + position->getUnrealisedCost());
+        position->setUnrealisedPnl(0.0);
+        position->setUnrealisedCost(0.0);
+    }
 
+}
 
-    position->setCurrentComm(position->getCurrentComm() + exec_->getExecComm());
+void TestEnv::updatePositionFromInstrument(const std::shared_ptr<model::Instrument>& instrument) {
+    auto& position = _context->marketData()->getPositions().at(instrument->getSymbol());
+    auto& margin = _context->marketData()->getMargin();
+    position->setMarkValue((position->getCurrentQty() >= 0.0 ? -1 : 1) * func::get_cost(instrument->getMarkPrice(), position->getCurrentQty(), 1.0));
+    position->setUnrealisedPnl(position->getMarkValue() - position->getUnrealisedCost());
+    position->setLastValue(position->getMarkValue());
+    position->setMarkPrice(instrument->getMarkPrice());
+
+    position->setUnrealisedGrossPnl(position->getMarkValue() - position->getUnrealisedCost());
+    position->setUnrealisedCost(position->getCurrentCost() - position->getRealisedCost());
 
     { // set the breakeven price
         // TODO
@@ -433,11 +451,9 @@ void TestEnv::operator << (const std::shared_ptr<model::Execution>& exec_) {
         position->setBreakEvenPrice(bkevenPrice);
     }
     { // liquidation price TODO
-        auto leverageType = "ISOLATED";
         auto liqPrice = 0.0;
         position->setLiquidationPrice(liqPrice);
-    }
-    
+    } 
     // margin
     { // gross exec cost
         price_t gross_exec_cost = 0.0;
@@ -456,11 +472,6 @@ void TestEnv::operator << (const std::shared_ptr<model::Execution>& exec_) {
         margin->setGrossComm(gross_comm);
     }
 
-    double maintMargin = instrument->getMaintMargin();
-    price_t exec_cost = (maintMargin * (((exec_->getSide() == "Buy") ? -1 : 1)* exec_->getExecCost())/ position->getLeverage());
-    margin->setWalletBalance(margin->getAmount() + margin->getRealisedPnl() + exec_cost);
-    margin->setMarginBalance(margin->getWalletBalance() + margin->getUnrealisedPnl());
-
 }
 
 
@@ -472,11 +483,14 @@ void TestEnv::operator << (const std::shared_ptr<model::Margin>& margin_) {
 void TestEnv::operator << (const std::shared_ptr<model::Quote>& quote_) {
     *_context->marketData() << quote_;
     *_context->orderApi() >> _batchWriter;
+
 }
 
 
 void TestEnv::operator << (const std::shared_ptr<model::Instrument>& instrument_) {
     *_context->marketData() << instrument_;
+    auto instrument = _context->marketData()->getInstruments().at(instrument_->getSymbol());
+    updatePositionFromInstrument(instrument);
 }
 
 std::shared_ptr<model::Execution> TestEnv::operator<<(const std::shared_ptr<model::Trade>& trade_) {
@@ -520,9 +534,10 @@ std::shared_ptr<model::Execution> TestEnv::operator<<(const std::shared_ptr<mode
             exec->setExecType("Trade");
             exec->setOrderQty(order.second->getOrderQty());
             exec->setTimestamp(trade_->getTimestamp());
-            exec->setExecCost(func::get_cost(exec->getLastPx(), exec->getLastQty(), position->getLeverage()));
+            auto cost = ((exec->getSide() == "Buy") ? -1 : 1)  *  func::get_cost(exec->getLastPx(), exec->getLastQty(), position->getLeverage());
+            exec->setExecCost(cost);
             exec->setCommission(exec->getLastLiquidityInd() == "RemovedLiquidity" ? instrument->getTakerFee() : instrument->getMakerFee());
-            exec->setExecComm(exec->getCommission()*exec->getExecCost());
+            exec->setExecComm(exec->getCommission()*std::abs(exec->getExecCost()));
             LOGDEBUG(AixLog::Color::GREEN << LOG_NVP("Execution", exec->toJson().serialize()) << AixLog::Color::none);
             return exec;
         }
@@ -558,6 +573,7 @@ struct TestAssertion {
         auto& to_validate = validation_fields[type].as_array();
 
         for (auto& field : to_validate) {
+            bool field_failure = false;
             auto tolerance = field.has_double_field("tolerance") ? field["tolerance"].as_double() : 0.000001;
             auto key = field["name"].as_string();
             auto actual_num = [&key, &actual_object]() {
@@ -572,40 +588,58 @@ struct TestAssertion {
                 auto actual = actual_num();
                 auto expected = expected_num();
                 if (not tradingo_utils::almost_equal(actual, expected, tolerance)) {
-                    fail_message << std::left 
+                fail_message << std::left << AixLog::Color::RED
                         << std::setw(nameWidth) << std::setfill(seperator) << key
                         << std::setw(numWidth) << std::setfill(seperator) << actual 
                         << std::setw(numWidth) << std::setfill(seperator) << expected
+                        << AixLog::Color::NONE
                         << std::endl;
-                    fail = true;
+                    field_failure = true;
                 }
             } else if (expected_object.has_string_field(key)
                     and actual_object.has_string_field(key)) {
                 auto actual = actual_object.at(key).as_string();
                 auto expected = expected_object.at(key).as_string();
                 if (actual != expected) {
-                    fail_message << std::left 
+                fail_message << std::left << AixLog::Color::RED
                         << std::setw(nameWidth) << std::setfill(seperator) << key
                         << std::setw(numWidth) << std::setfill(seperator) << actual 
                         << std::setw(numWidth) << std::setfill(seperator) << expected
+                        << AixLog::Color::NONE
                         << std::endl;
-                    fail = true; 
+                    field_failure = true;
                 }
             } else if (not expected_object.has_field(key) and actual_object.has_field(key)) {
-                fail_message << std::left 
+                fail_message << std::left << AixLog::Color::RED
                     << std::setw(nameWidth) << std::setfill(seperator) << key
                     << std::setw(numWidth) << std::setfill(seperator) << actual_object.at(key).as_integer()
                     << std::setw(numWidth) << std::setfill(seperator) << "Unset"
+                    << AixLog::Color::NONE
                     << std::endl;
-                fail = true;
+                field_failure = true;
             } else if (not actual_object.has_field(key) and not expected_object.has_field(key)) {
                 continue;
             } else if (not actual_object.has_field(key)) {
-                fail_message << std::left 
+                fail_message << std::left << AixLog::Color::RED
                     << std::setw(nameWidth) << std::setfill(seperator) << key
                     << std::setw(numWidth) << std::setfill(seperator) << "Unset"
                     << std::setw(numWidth) << std::setfill(seperator) << expected_object.at(key).as_integer()
+                    << AixLog::Color::NONE
                     << std::endl;
+                field_failure = true;
+            }
+            if (not field_failure) {
+                fail_message << std::left << AixLog::Color::GREEN
+                        << std::setw(nameWidth) << std::setfill(seperator) << key;
+                if (actual_is_num) {
+                    fail_message<< std::setw(numWidth) << std::setfill(seperator) << actual_object.at(key).as_integer()
+                         << std::setw(numWidth) << std::setfill(seperator) << expected_object.at(key).as_integer();
+                } else {
+                    fail_message<< std::setw(numWidth) << std::setfill(seperator) << actual_object.at(key).as_string()
+                         << std::setw(numWidth) << std::setfill(seperator) << expected_object.at(key).as_string();
+                }
+                fail_message << AixLog::Color::NONE << std::endl;
+            } else {
                 fail = true;
             }
         }

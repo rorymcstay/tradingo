@@ -7,6 +7,7 @@
 #include <cpprest/json.h>
 #include <boost/program_options.hpp>
 #include <memory>
+#include <sstream>
 #include <unordered_map>
 
 #include <pplx/threadpool.h>
@@ -61,6 +62,12 @@ TEST(Replay, scenario) {
         std::string object_type = json_buffer["object_type"].as_string();
         std::string event_type = json_buffer["event_type"].as_string();
         auto data = json_buffer["data"];
+        std::stringstream description;
+        if (json_buffer.has_string_field("description"))
+            description << LOG_NVP("description", json_buffer["description"].as_string());
+        LOGINFO("Event " LOG_VAR(object_type) 
+                << LOG_VAR(event_type) 
+                << description.str()); 
         if (object_type == "Position") {
             auto position = std::make_shared<model::Position>();
             position->fromJson(data);

@@ -264,9 +264,6 @@ TestOrdersApi::order_new(utility::string_t symbol,
     order->setLeavesQty(order->getOrderQty());
     order->setCumQty(0.0);
     set_order_timestamp(order);
-    // update balance
-    auto total_cost = func::get_cost(order->getPrice(), order->getOrderQty(), getPosition(order->getSymbol())->getLeverage());
-    getMargin()->setWalletBalance(getMargin()->getWalletBalance() - total_cost);
     auto event_order = std::make_shared<model::Order>();
     auto event_json = order->toJson();
     event_order->fromJson(event_json);
@@ -478,122 +475,6 @@ bool TestOrdersApi::hasMatchingOrder(const std::shared_ptr<model::Trade>& trade_
     }
     return false;
 
-}
-
-
-void TestOrdersApi::addExecToPosition(const std::shared_ptr<model::Execution>& exec_) {
-    LOGINFO(AixLog::Color::GREEN
-                    << "OnTrade: "
-                    << LOG_NVP("ClOrdID", exec_->getClOrdID())
-                    << LOG_NVP("OrderID", exec_->getOrderID())
-                    << LOG_NVP("Side", exec_->getSide())
-                    << LOG_NVP("OrderQty", exec_->getOrderQty())
-                    << LOG_NVP("LastQty", exec_->getLastQty())
-                    << LOG_NVP("LastPx", exec_->getLastPx())
-                    << AixLog::Color::none);
-
-    assert(exec_->lastPxIsSet() && exec_->lastQtyIsSet()
-           && "LastPx and LastQty must be specified for executions");
-
-    /*
-     * To Calculate:
-     *  Order:
-     *       last_px
-     *       last_qty
-     *       avg_px
-     *
-     *  Position:
-     *       break_even_price
-     *       last_value
-     *       bankrupt_price
-     *       avg_cost_price
-     *       avg_entry_price
-     *       mark_value
-     *       liquidation_price
-     *       commission
-     *       margin_call_price
-     *       leverage
-     *       last_price
-     *       pos_cost
-     *       realised_cost
-     *       realised_pnl
-     *       unrealised_cost
-     *       unrealised_pnl
-     *       current_comm 
-     *       last_price
-     *
-     * **/
-
-    auto position = getPosition(exec_->getSymbol());
-
-    { // update the order
-        auto order = _orders.at(exec_->getClOrdID());
-        order->setCumQty(order->getCumQty() + exec_->getLastQty());
-        order->setLeavesQty(order->getLeavesQty() - exec_->getLastQty());
-        auto newQty = order->getCumQty();
-        auto oldQty = newQty - exec_->getLastQty();
-        auto newAvgPx = (order->getAvgPx() * oldQty/newQty) + (exec_->getLastPx() * exec_->getLastQty()/newQty);
-        order->setAvgPx(newAvgPx);
-    }
-    { // set avg px on position
-        auto order = _orders.at(exec_->getClOrdID());
-        auto newQty = order->getCumQty() + position->getCurrentQty();
-        auto oldQty = position->getCurrentQty();
-        auto newAvgPx = (position->getAvgCostPrice() * oldQty/newQty) + (order->getAvgPx() * order->getCumQty()/newQty);
-        position->setAvgEntryPrice(newAvgPx);
-        position->setAvgCostPrice(newAvgPx);
-    }
-    { // update costs and quantity of position
-        price_t currentCost = position->getCurrentCost();
-        qty_t currentSize = position->getCurrentQty();
-        price_t costDelta = func::get_cost(exec_->getLastPx(), exec_->getLastQty(), position->getLeverage());
-        qty_t positionDelta = (exec_->getSide() == "Buy")
-                                  ? exec_->getLastQty()
-                                  : -exec_->getLastQty();
-        qty_t newPosition = currentSize + positionDelta;
-        price_t newCost = currentCost + costDelta;
-        position->setCurrentQty(newPosition);
-        position->setCurrentCost(newCost);
-    }
-    { // set the breakeven price
-        auto positionTotalCost = position->getAvgCostPrice()*position->getCurrentQty();
-        auto bkevenPrice = position->getCurrentQty()/(positionTotalCost);
-        position->setBreakEvenPrice(bkevenPrice);
-    }
-    { // unrealised pnl calculation
-        auto unrealisedPnl = _marginCalculator->getUnrealisedPnL(position);
-        position->setUnrealisedPnl(unrealisedPnl);
-    }
-    { // update the margin
-        auto margin = getMargin();
-        auto marginBalance = margin->getWalletBalance() + position->getUnrealisedPnl();
-        margin->setMarginBalance(marginBalance);
-        double maintenanceMargin = _marginCalculator->getMarginAmount(position);
-        position->setMaintMarginReq(maintenanceMargin);
-        margin->setMaintMargin(maintenanceMargin);
-        margin->setAvailableMargin(margin->getWalletBalance() - maintenanceMargin);
-    }
-    { // liquidation price
-        auto leverageType = "ISOLATED";
-        auto liqPrice = _marginCalculator->getLiquidationPrice(
-                position->getLeverage(),
-                leverageType,
-                position->getMarkPrice(),
-                position->getCurrentQty(),
-                getMargin()->getWalletBalance()
-        );
-        position->setLiquidationPrice(liqPrice);
-        position->setExecQty(exec_->getLastQty());
-    }
-    // timestamp
-    position->setTimestamp(exec_->getTimestamp());
-
-    LOGINFO(AixLog::Color::GREEN
-                    << "New Position: "
-                    << LOG_NVP("CurrentCost", position->getCurrentCost())
-                    << LOG_NVP("Size", position->getCurrentQty())
-                    << LOG_NVP("Time", position->getTimestamp().to_string())
-                    << AixLog::Color::none);
 }
 
 

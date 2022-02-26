@@ -140,10 +140,7 @@ public:
 
     // Testing helpers
 private:
-
     bool hasMatchingOrder(const std::shared_ptr<model::Trade>& trade_);
-public:
-    void addExecToPosition(const std::shared_ptr<model::Execution>& exec_);
 
 public:
     void operator >> (const std::string& outEvent_);

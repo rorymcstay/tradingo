@@ -4,6 +4,7 @@
 
 #ifndef TRADINGO_TESTENV_H
 #define TRADINGO_TESTENV_H
+#include "model/Instrument.h"
 #include <gtest/gtest.h>
 
 #include <memory>
@@ -81,6 +82,8 @@ class TestEnv {
     TestOrdersApi::Writer _positionWriter;
 
     void liquidatePositions(const std::string&);
+
+    void updatePositionFromInstrument(const std::shared_ptr<model::Instrument>& instrument);
 
 public:
     /// strategy reference
