@@ -357,6 +357,7 @@ void Allocations<TOrdApi>::placeAllocations() {
                          << LOG_VAR(ex_.what())
                          << LOG_NVP("action", actionMessage.str()));
                 allocation->cancelDelta();
+                allocation->getOrder()->setOrderQty(0.0);
             }
         } else if (allocation->isChangingSide()) {
             actionMessage << " CHANGING_SIDES ";
@@ -479,6 +480,8 @@ void Allocations<TOrdApi>::placeAllocations() {
                          << LOG_VAR(ex_.what())
                          << LOG_NVP("action", actionMessage.str()));
                 allocation->cancelDelta();
+                allocation->getOrder()->setOrderQty(0.0);
+                allocation->getOrder()->setOrdStatus("Rejected");
             }
         } else {
             LOGERROR("Couldn't determine action for " << actionMessage.str());

@@ -21,6 +21,7 @@
 #include <stdexcept>
 
 #include "ModelBase.h"
+#include "aixlog.hpp"
 #include "fwk/TestEnv.h"
 #include "Config.h"
 
@@ -45,13 +46,16 @@ TEST(Replay, scenario) {
     auto env = TestEnv(defaults);
     if (CONFIG_FILE != "NONE") {
         auto config = std::make_shared<Config>(CONFIG_FILE);
-        LOGINFO("Using config " << CONFIG_FILE);
+        LOGINFO("Using config " << LOG_VAR(CONFIG_FILE));
         *defaults += (*config);
     }
 
     std::ifstream dataFile;
 
     dataFile.open(REPLAY_FILE);
+
+    std::shared_ptr<model::Margin> latest_margin;
+    std::shared_ptr<model::Position> latest_position;
 
     std::string str_buffer;
     auto json_buffer = json::value();
@@ -63,14 +67,15 @@ TEST(Replay, scenario) {
         std::string event_type = json_buffer["event_type"].as_string();
         auto data = json_buffer["data"];
         std::stringstream description;
-        if (json_buffer.has_string_field("description"))
-            description << LOG_NVP("description", json_buffer["description"].as_string());
+        if (json_buffer.has_string_field("desciption"))
+            description << LOG_NVP("description", json_buffer["desciption"].as_string());
         LOGINFO("Event " LOG_VAR(object_type) 
                 << LOG_VAR(event_type) 
                 << description.str()); 
         if (object_type == "Position") {
             auto position = std::make_shared<model::Position>();
             position->fromJson(data);
+            latest_position = position;
             if (event_type == "IN_EVENT") {
                 env << position;
             } else if (event_type == "ASSERTION") {
@@ -89,6 +94,7 @@ TEST(Replay, scenario) {
         } else if (object_type == "Margin") {
             auto margin = std::make_shared<model::Margin>();
             margin->fromJson(data);
+            latest_margin = margin;
             if (event_type == "IN_EVENT") {
                 env << margin;
             } else if (event_type == "ASSERTION") {
@@ -97,12 +103,27 @@ TEST(Replay, scenario) {
                 throw std::runtime_error(event_type);
             }
         } else if (object_type == "Order") {
+            LOGINFO(LOG_VAR(json_buffer.serialize()));
             auto order = std::make_shared<model::Order>();
             order->fromJson(data);
             auto test_order = env >> order;
             test_cl_ord_id_lookup[order->getClOrdID()] = test_order->getClOrdID();
             test_order_id_lookup[order->getOrderID()] = test_order->getOrderID();
+            if (order->getOrdStatus() == "Rejected") {
+                EXPECT_FALSE(env.context()->orderApi()->rejects().empty()) 
+                    << AixLog::Color::RED << "No Rejects made" << AixLog::Color::NONE;
+                if (not env.context()->orderApi()->rejects().empty()) {
+                    EXPECT_EQ(env.context()->orderApi()->rejects().front()->getText(),order->getText());
+                    env.context()->orderApi()->rejects().pop();
+                } else {
+                    if (latest_margin)
+                        env << latest_margin;
+                    if (latest_position)
+                        env << latest_position;
+                }
+            }
         } else if (object_type == "Execution") {
+            LOGINFO(LOG_VAR(json_buffer.serialize()));
             auto execution = std::make_shared<model::Execution>();
             execution->fromJson(data);
             execution->setClOrdID(test_cl_ord_id_lookup.at(execution->getClOrdID()));

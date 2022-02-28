@@ -53,6 +53,9 @@ public:
     const std::shared_ptr<model::Position>& getPosition(const std::string& symbol_) const;
     const std::shared_ptr<model::Margin>& getMargin() const;
 
+
+    std::queue<std::shared_ptr<model::Order>>& rejects() {return  _rejects; };
+
     void setMarketData(const std::shared_ptr<TestMarketData>& _marketData);
 private:
 

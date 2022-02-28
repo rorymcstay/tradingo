@@ -388,6 +388,7 @@ void TestEnv::operator << (const std::shared_ptr<model::Execution>& exec_) {
         position->unsetPosState();
     }
 
+    // TODO
     position->setLiquidationPrice(0.0);
     //position->setLastPrice(exec_->getLastPx());
     qty_t positionDelta = (exec_->getSide() == "Buy") ? exec_->getLastQty() : - exec_->getLastQty();
@@ -428,6 +429,8 @@ void TestEnv::operator << (const std::shared_ptr<model::Execution>& exec_) {
         position->setRealisedCost(position->getRealisedCost() + position->getUnrealisedCost());
         position->setUnrealisedPnl(0.0);
         position->setUnrealisedCost(0.0);
+        position->unsetBreakEvenPrice();
+        position->unsetLiquidationPrice();
     }
 
     auto& order = _context->orderApi()->orders().at(exec_->getClOrdID());
@@ -455,26 +458,25 @@ void TestEnv::updatePositionFromInstrument(const std::shared_ptr<model::Instrume
         auto bkevenPrice = position->getCurrentQty()/(positionTotalCost);
         position->setBreakEvenPrice(bkevenPrice);
     }
-    { // liquidation price TODO
-        auto liqPrice = 0.0;
-        position->setLiquidationPrice(liqPrice);
-    } 
     // margin
     { // gross exec cost
         price_t gross_exec_cost = 0.0;
         price_t gross_unrealised_pnl = 0.0;
         price_t gross_mark_value = 0.0;
         price_t gross_comm = 0.0;
+        price_t gross_realised_pnl = 0.0;
         for (auto& pos : _context->marketData()->getPositions()) {
             gross_exec_cost += pos.second->getGrossExecCost();
             gross_unrealised_pnl += pos.second->getUnrealisedPnl();
-            gross_mark_value += pos.second->getMarkValue();
+            gross_mark_value += std::abs(pos.second->getMarkValue());
             gross_comm += pos.second->getCurrentComm();
+            gross_realised_pnl += pos.second->getRealisedPnl();
         }
         margin->setGrossExecCost(gross_exec_cost);
         margin->setUnrealisedPnl(gross_unrealised_pnl);
         margin->setGrossMarkValue(gross_mark_value);
         margin->setGrossComm(gross_comm);
+        margin->setRealisedPnl(gross_realised_pnl);
     }
 
     if ( not tradingo_utils::almost_equal(position->getMarkValue(), old_mark_value)) {
@@ -575,7 +577,7 @@ struct TestAssertion {
 
     const char seperator    = ' ';
     const int nameWidth     = 18;
-    const int numWidth      = 10;
+    const int numWidth      = 20;
     const std::string type;
     std::stringstream fail_message;
 
@@ -596,7 +598,7 @@ struct TestAssertion {
 
         for (auto& field : to_validate) {
             bool field_failure = false;
-            auto tolerance = field.has_double_field("tolerance") ? field["tolerance"].as_double() : 0.000001;
+            auto tolerance = field.has_field("tolerance") ? field["tolerance"].as_double() : 0.000001;
             auto key = field["name"].as_string();
             auto actual_num = [&key, &actual_object]() {
                 return actual_object.has_double_field(key) ? actual_object.at(key).as_double() : actual_object.at(key).as_integer();
@@ -677,7 +679,7 @@ void TestEnv::operator >> (const std::shared_ptr<model::Margin>& margin_) {
     if (assertMarginEqual.fail)
         FAIL() << assertMarginEqual.fail_message.str();
     else
-        LOGINFO(AixLog::Color::GREEN << "Margin: " << expected_margin.serialize() << AixLog::Color::none);
+        LOGINFO("Margin: " << assertMarginEqual.fail_message.str() << AixLog::Color::none);
 }
 
 
@@ -690,7 +692,7 @@ void TestEnv::operator >> (const std::shared_ptr<model::Position>& position_) {
     if (assertPositionEqual.fail)
         FAIL() << assertPositionEqual.fail_message.str();
     else
-        LOGINFO(AixLog::Color::GREEN << "Position: " << expected_position.serialize() << AixLog::Color::none);
+        LOGINFO(AixLog::Color::GREEN << "Position: " << assertPositionEqual.fail_message.str() << AixLog::Color::none);
 }
 
 
@@ -703,5 +705,6 @@ std::shared_ptr<model::Order> TestEnv::operator >> (const std::shared_ptr<model:
     );
     allocations->placeAllocations();
     auto placed_order = allocations->get(order_->getPrice())->getOrder();
+
     return placed_order;
 }
