@@ -171,7 +171,6 @@ void Allocations<TOrdApi>::addAllocation(price_t price_, qty_t qty_, const std::
     if (qty_ > 0 && side_ == "Sell") {
         qty_ = - qty_;
     }
-    LOGINFO("Adding allocation: " << LOG_VAR(price_) << LOG_VAR(qty_) << LOG_VAR(side_));
     auto price_index = allocIndex(price_);
     auto& allocation = _data[price_index];
     // mark occupied if weve not done so
@@ -186,6 +185,12 @@ void Allocations<TOrdApi>::addAllocation(price_t price_, qty_t qty_, const std::
         allocation->setTargetDelta(qty_ + allocation->getTargetDelta());
         allocation->getOrder()->setSymbol(_symbol);
     }
+    LOGINFO("Adding allocation: "
+            << LOG_VAR(price_)
+            << LOG_VAR(qty_)
+            << LOG_VAR(side_)
+            << LOG_VAR(allocation->getTargetDelta())
+            << LOG_VAR(allocation->getSize()));
 }
 
 
@@ -297,15 +302,17 @@ void Allocations<TOrdApi>::placeAllocations() {
     std::vector<std::shared_ptr<model::Order>> _newOrders;
     std::vector<std::shared_ptr<model::Order>> _cancels;
     _amends.clear(); _newOrders.clear(); _cancels.clear();
+    setUnmodified();
     // TODO use ranges ontop of *_allocations iterator. - occupied price level view
-    for (auto& allocation : _data) {
+    for (auto occupiedPrice : _occupiedLevels) {
+        auto& allocation = _data[occupiedPrice];
         if (!allocation) {
             continue;
         }
         if (almost_equal(allocation->getTargetDelta(), 0.0)) {
             continue;
         }
-        LOGDEBUG("Processing allocation "
+        LOGINFO("Processing allocation "
                      << LOG_NVP("targetDelta",allocation->getTargetDelta())
                      << LOG_NVP("currentSize", allocation->getSize())
                      << LOG_NVP("price",allocation->getPrice()));
@@ -333,7 +340,8 @@ void Allocations<TOrdApi>::placeAllocations() {
                                 boost::none, // clOrdLinkId
                                 boost::none, // pegOffsetValue
                                 boost::none, // pegPriceType
-                                order->getOrdType(), order->getTimeInForce(),
+                                order->getOrdType(),
+                                order->getTimeInForce(),
                                 boost::none, // execInst
                                 boost::none, // contingencyType
                                 boost::none  // text
@@ -496,6 +504,7 @@ void Allocations<TOrdApi>::updateFromTask(const std::shared_ptr<Allocation>& all
                         << LOG_NVP("ordStatus", order_->getOrdStatus())
                         << LOG_NVP("orderQty", order_->getOrderQty())
                         << LOG_NVP("leavesQty",order_->getLeavesQty())
+                        << LOG_NVP("side", order_->getSide())
                         << LOG_NVP("cumQty", order_->getCumQty()));
     if (allocation_->isChangingSide() and order_->getOrdStatus() == "Cancelled") {
         allocation_->setTargetDelta(allocation_->getSize() + allocation_->getTargetDelta());

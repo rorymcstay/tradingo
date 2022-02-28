@@ -39,7 +39,10 @@ public:
     /// underlying order accesor
     const std::shared_ptr<model::Order> &getOrder() const { return _order; }
     /// order setter.
-    void setOrder(const std::shared_ptr<model::Order> &order) { _order = order; }
+    void setOrder(const std::shared_ptr<model::Order> &order) {
+        auto update_data = order->toJson();
+        order->fromJson(update_data);
+    }
     // accessors
     price_t getPrice() const { return _price; }
     void setPrice(price_t price) { _price = price; }

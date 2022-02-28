@@ -7,6 +7,7 @@
 
 #include <model/Order.h>
 #include <model/Instrument.h>
+#include <stdexcept>
 
 #include "MarketData.h"
 #include "OrderInterface.h"
@@ -139,8 +140,9 @@ void Strategy<TOrdApi, TPositionApi>::evaluate() {
         auto exec = event->getExec();
         _allocations->update(exec);
         onExecution(event);
+    } else {
+        throw std::runtime_error("unhandled event type");
     }
-
     if (allocations()->modified()) {
         _allocations->placeAllocations();
     }

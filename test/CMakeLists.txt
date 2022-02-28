@@ -62,6 +62,7 @@ set(TEST_LINK_LIBRARIES
         pthread
 )
 
+
 target_link_libraries(testTradingo
     ${TEST_LINK_LIBRARIES}
 )
@@ -75,6 +76,8 @@ install(DIRECTORY
     FILES_MATCHING
     PATTERN
     data/*.json
+    PATTERN
+    data/objects/*.json
     PERMISSIONS OWNER_WRITE OWNER_READ GROUP_READ
     )
 

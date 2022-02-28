@@ -1,4 +1,3 @@
-#include "aixlog.hpp"
 #include <gtest/gtest.h>
 #include <iomanip>
 #include <chrono>
@@ -40,7 +39,7 @@ TestEnv::TestEnv(const std::shared_ptr<Config> &config_)
 ,   _margin(std::make_shared<model::Margin>())
 ,   _positionWriter("replay_positions",
         _config->get("symbol"),
-        _config->get("storage"), 1,
+        _config->get("storage"), 1000,
         [](const std::shared_ptr<model::ModelBase>& order_) {
                 return order_->toJson().serialize();
     }, /*rotate=*/false)
@@ -61,7 +60,7 @@ TestEnv::TestEnv(std::initializer_list<std::pair<std::string,std::string>> confi
 ,   _margin(std::make_shared<model::Margin>())
 ,   _positionWriter("replay_positions",
         _config->get("symbol"),
-        _config->get("storage"), 1,
+        _config->get("storage"), 1000,
         [](const std::shared_ptr<model::ModelBase>& order_) {
                 return order_->toJson().serialize();
     }, /*rotate=*/false)
@@ -251,6 +250,7 @@ void TestEnv::playback(const Series<model::Trade>& trades,
         if (trade != trades.end() and trade->getTimestamp().to_interval() == current_time) {
             auto exec = operator<<(*trade);
             if (exec) {
+                LOGINFO("Simulated execution");
                 operator<<(exec);
             }
             ++trade;
@@ -266,8 +266,9 @@ void TestEnv::playback(const Series<model::Trade>& trades,
         // INSTRUMENT
         } else if (instrument != instruments.end() and instrument->getTimestamp().to_interval() == current_time) {
             auto position = _context->marketData()->getPositions().at(instrument->getSymbol());
-            if ((position->getCurrentQty() > 0.0 && instrument->getMarkPrice() <= position->getLiquidationPrice())
-                    or(position->getCurrentQty() < 0.0 && instrument->getMarkPrice() >= position->getMarkPrice()))
+            if ((position->getLiquidationPrice() > 0.0) and (
+                    (position->getCurrentQty() > 0.0 && instrument->getMarkPrice() <= position->getLiquidationPrice())
+                    or(position->getCurrentQty() < 0.0 && instrument->getMarkPrice() >= position->getMarkPrice())))
             {
                 liquidatePositions(position->getSymbol());
             }
@@ -275,6 +276,7 @@ void TestEnv::playback(const Series<model::Trade>& trades,
             ++instrument;
             stats.instruments_processed += 1;
             stats.current_time = instrument->getTimestamp();
+        // Something has finished.
         } else {
             std::stringstream ss;
             if (not (trade != trades.end())) { ss << "Trades "; }
@@ -284,6 +286,7 @@ void TestEnv::playback(const Series<model::Trade>& trades,
             ss << "Has completed.";
             LOGWARN(ss.str());
         }
+        // STAT interval log
         if (std::chrono::system_clock::now() - stats.last_log > stats.interval) {
             LOG_STATS(stats);
             stats.last_log = std::chrono::system_clock::now();
@@ -318,6 +321,7 @@ void TestEnv::liquidatePositions(const std::string& symbol) {
     execution->setText("Liquidation");
     execution->setLastLiquidityInd("RemovedLiquidity");
     execution->setOrderQty(std::abs(position->getCurrentQty()));
+    execution->setSymbol(symbol);
     auto cost = ((execution->getSide() == "Buy") ? -1 : 1)  *  func::get_cost(execution->getLastPx(), execution->getLastQty(), position->getLeverage());
     execution->setExecCost(cost);
 
@@ -336,7 +340,7 @@ void TestEnv::operator << (const std::shared_ptr<model::Position>& position_) {
 
 void TestEnv::operator << (const std::shared_ptr<model::Execution>& exec_) {
 
-    *_context->marketData() << exec_;
+
 
     auto& position = _context->marketData()->getPositions().at(exec_->getSymbol());
     auto& instrument = _context->marketData()->getInstruments().at(exec_->getSymbol());
@@ -375,8 +379,6 @@ void TestEnv::operator << (const std::shared_ptr<model::Execution>& exec_) {
     liquidationPrice: Once markPrice reaches this price, this position will be liquidated.
     bankruptPrice: Once markPrice reaches this price, this position will have no equity.
     */
-
-    *_context->orderApi() << exec_;
 
     if (position->getPosState() == "Liquidation") {
         position->setPosState("Liquidated");
@@ -428,11 +430,17 @@ void TestEnv::operator << (const std::shared_ptr<model::Execution>& exec_) {
         position->setUnrealisedCost(0.0);
     }
 
+    auto& order = _context->orderApi()->orders().at(exec_->getClOrdID());
+    *_context->marketData() << exec_;
+    *_context->marketData() << order; // deletes the order from market data
+    *_context->orderApi() << exec_;
+
 }
 
 void TestEnv::updatePositionFromInstrument(const std::shared_ptr<model::Instrument>& instrument) {
     auto& position = _context->marketData()->getPositions().at(instrument->getSymbol());
     auto& margin = _context->marketData()->getMargin();
+    auto old_mark_value = position->getMarkValue();
     position->setMarkValue((position->getCurrentQty() >= 0.0 ? -1 : 1) * func::get_cost(instrument->getMarkPrice(), position->getCurrentQty(), 1.0));
     position->setUnrealisedPnl(position->getMarkValue() - position->getUnrealisedCost());
     position->setLastValue(position->getMarkValue());
@@ -469,6 +477,12 @@ void TestEnv::updatePositionFromInstrument(const std::shared_ptr<model::Instrume
         margin->setGrossComm(gross_comm);
     }
 
+    if ( not tradingo_utils::almost_equal(position->getMarkValue(), old_mark_value)) {
+        auto position_event = std::make_shared<model::Position>();
+        auto pos_json = position->toJson();
+        position_event->fromJson(pos_json);
+        _positionWriter.write(position);
+    }
 }
 
 
@@ -505,13 +519,12 @@ std::shared_ptr<model::Execution> TestEnv::operator<<(const std::shared_ptr<mode
 
         if (order.second->getOrdStatus() == "Canceled"
             || order.second->getOrdStatus() == "Rejected"
-            || order.second->getOrdStatus() == "Filled") {
+            || order.second->getOrdStatus() == "Filled"
+            || tradingo_utils::almost_equal(orderQty, 0.0)) {
             // order is completed
             continue;
         } else if ((side == "Buy" ? tradePx <= orderPx : tradePx >= orderPx)) {
-            LOGDEBUG(AixLog::Color::GREEN << "Tradeable order found: "
-                    << LOG_NVP("Order", order.second->toJson().serialize())
-                    << LOG_NVP("Trade", trade_->toJson().serialize()) << AixLog::Color::none);
+
             auto fillQty = std::min(orderQty, tradeQty);
             auto exec = std::make_shared<model::Execution>();
             auto leavesQty = order.second->getLeavesQty() - fillQty;
@@ -521,9 +534,9 @@ std::shared_ptr<model::Execution> TestEnv::operator<<(const std::shared_ptr<mode
             exec->setSymbol(order.second->getSymbol());
             exec->setSide(side);
             exec->setOrderID(order.second->getOrderID());
-            exec->setClOrdID(order.second->getClOrdID());
-            exec->setAccount(1.0);
+            exec->setClOrdID(order.first);
             exec->setLastPx(tradePx);
+            exec->setAccount(order.second->getAccount());
             exec->setLastQty(fillQty);
             exec->setPrice(orderPx);
             exec->setCumQty(order.second->getCumQty()+fillQty);
@@ -532,8 +545,9 @@ std::shared_ptr<model::Execution> TestEnv::operator<<(const std::shared_ptr<mode
             exec->setOrdType(order.second->getOrdType());
             exec->setExDestination(order.second->getExDestination());
             exec->setTrdMatchID(trade_->getTrdMatchID());
+            exec->setLeavesQty(order.second->getLeavesQty() - exec->getLastQty());
             exec->setLastMkt("XSIM");
-            if (tradingo_utils::almost_equal(order.second->getLeavesQty(), 0.0)) {
+            if (tradingo_utils::almost_equal(exec->getLeavesQty(), 0.0)) {
                 exec->setOrdStatus("Filled");
             } else {
                 exec->setOrdStatus("PartiallyFilled");
@@ -543,7 +557,10 @@ std::shared_ptr<model::Execution> TestEnv::operator<<(const std::shared_ptr<mode
             exec->setExecCost(cost);
             exec->setCommission(exec->getLastLiquidityInd() == "RemovedLiquidity" ? instrument->getTakerFee() : instrument->getMakerFee());
             exec->setExecComm(exec->getCommission()*std::abs(exec->getExecCost()));
-            LOGDEBUG(AixLog::Color::GREEN << LOG_NVP("Execution", exec->toJson().serialize()) << AixLog::Color::none);
+            LOGINFO(AixLog::Color::GREEN << "Tradeable order found: "
+                    << LOG_NVP("Order", order.second->toJson().serialize())
+                    << LOG_NVP("Execution", exec->toJson().serialize())
+                    << AixLog::Color::NONE);
             return exec;
         }
     }

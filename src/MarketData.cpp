@@ -315,7 +315,6 @@ void MarketDataInterface::handleInstruments(
             _instruments.erase(symbol);
         }
     }
-    update(instruments_);
 }
 
 void MarketDataInterface::removeOrders(const std::vector<std::shared_ptr<model::Order>> &orders_) {
@@ -332,7 +331,7 @@ void MarketDataInterface::insertOrders(const std::vector<std::shared_ptr<model::
 void MarketDataInterface::updateOrders(const std::vector<std::shared_ptr<model::Order>> &orders_) {
     for (auto& ord : orders_) {
         auto update_json = ord->toJson();
-        _orders[getOrderKey(ord)]->fromJson(update_json);
+        _orders.at(getOrderKey(ord))->fromJson(update_json);
     }
 }
 

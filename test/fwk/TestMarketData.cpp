@@ -3,6 +3,7 @@
 //
 
 #include "TestMarketData.h"
+#include "Utils.h"
 #include "model/Instrument.h"
 #include "model/Trade.h"
 #include <cpprest/asyncrt_utils.h>
@@ -148,14 +149,20 @@ void TestMarketData::operator<<(const std::shared_ptr<model::Instrument> &instru
 
 void TestMarketData::operator<<(const std::shared_ptr<model::Order> &order_) {
     onEvent(order_);
-    std::string action = "insert";
+    std::string action = "update";
     if (order_->getOrdStatus() == "Canceled") {
         action = "delete";
-    } else if (order_->getOrdStatus() == "Filled") {
+    } else if (order_->getOrdStatus() == "Filled" ||
+            tradingo_utils::almost_equal(order_->getLeavesQty(), 0.0)) {
         action = "delete";
     } else if (order_->getOrdStatus() == "Rejected") {
         action = "delete";
+    } else if (order_->getOrdStatus() == "New") {
+        action = "insert";
     }
-    std::vector<std::shared_ptr<model::Order>> orders = {order_};
+    auto order_copy = std::make_shared<model::Order>();
+    auto json_buffer = order_->toJson();
+    order_copy->fromJson(json_buffer);
+    std::vector<std::shared_ptr<model::Order>> orders = {order_copy};
     MarketDataInterface::handleOrders(orders, action);
 }

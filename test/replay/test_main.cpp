@@ -11,9 +11,25 @@
 #include "Config.h"
 #include "Series.h"
 #include "fwk/TestEnv.h"
+#include "model/Margin.h"
+#include "model/Position.h"
 
 
 namespace po = boost::program_options;
+
+/// get test meta file
+template<typename T>
+std::shared_ptr<T> get_object_from_file(const std::string& file_name) {
+    std::string json_file = TESTDATA_LOCATION "/objects/" + file_name + ".json";
+    std::ifstream t(json_file);
+    std::stringstream buffer;
+    buffer << t.rdbuf();
+    std::string val = buffer.str();
+    auto out = std::make_shared<T>();
+    auto json_val = web::json::value::parse(val);
+    out->fromJson(json_val);
+    return out;
+}
 
 int main(int argc, char **argv) {
 
@@ -49,7 +65,7 @@ int main(int argc, char **argv) {
         defaults->set("logFileLocation", vm.at("logdir").as<std::string>());
     }
 
-    auto pplxThreadCount = 2;
+    auto pplxThreadCount = 1;
     crossplat::threadpool::initialize_with_threads(pplxThreadCount);
     auto env = TestEnv(defaults);
     auto trades_file = defaults->get("tickStorage") + "/trades_XBTUSD.json";
@@ -89,6 +105,8 @@ int main(int argc, char **argv) {
             << " end=" <<  quotes.end()->getTimestamp().to_string(utility::datetime::date_format::ISO_8601);
         throw std::runtime_error(ss.str());
     }
+    env << get_object_from_file<model::Margin>("opening_margin");
+    env << get_object_from_file<model::Position>("opening_position");
     env.playback(trades, quotes, instruments);
     LOGINFO("Replay Finished");
 }
