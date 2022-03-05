@@ -12,7 +12,6 @@
 #include <Context.h>
 
 using namespace io::swagger::client;
-namespace ws = web::websockets;
 namespace po = boost::program_options;
 
 
@@ -35,7 +34,7 @@ int main(int argc, char **argv) {
 
     // parse config and create context.
     auto config = std::make_shared<Config>(vm.at("config").as<std::string>());
-    auto pplxThreadCount = std::stoi(config->get("pplxThreadCount", "4"));
+    auto pplxThreadCount = config->get<int>("pplxThreadCount", 4);
     crossplat::threadpool::initialize_with_threads(pplxThreadCount);
 
     auto context = std::make_shared<Context<MarketData, api::OrderApi, api::PositionApi>>(config);

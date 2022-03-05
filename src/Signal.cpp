@@ -50,26 +50,26 @@ void Signal::update() {
 void Signal::init(const std::shared_ptr<Config> &config_, const std::shared_ptr<MarketDataInterface>& marketData_) {
     _config = config_;
     _marketData = marketData_;
-    auto storage = config_->get("storage", "");
+    auto storage = config_->get<std::string>("storage", "");
     if (storage.empty())
         storage = "/tmp/";
     auto printer = [](const std::string& it_) { return it_; };
     _batchWriter = std::make_shared<Signal::Writer>(
             "moving_average_crossover",
-            config_->get("symbol"),
+            config_->get<std::string>("symbol"),
             storage, 100000, printer, false);
-    auto evalInterval = std::stoi(_config->get(_name+"-interval", "1000"));
-    if (_config->get(_name+"-callback") == "true") {
+    auto evalInterval = _config->get<int>(_name+"-interval", 1000);
+    if (_config->get<bool>(_name+"-callback")) {
         // if its a callback siganl, always set as callback.
         _callback = true;
         LOGINFO("strategy callback signal initialised." << LOG_VAR(_name));
-    } else if (_config->get("override-signal-callback", "false") != "true") {
+    } else if (not _config->get<bool>("override-signal-callback", false)) {
         // production mode for timer signals.
         _callback = false;
         LOGINFO("Using callback timer for signal."
             << LOG_VAR(_name) << LOG_VAR(evalInterval));
         _timer.start(evalInterval, [this] { update(); });
-    } else if (_config->get("override-signal-callback") == "true") {
+    } else if (not _config->get<bool>("override-signal-callback")) {
         _timer.set_interval(evalInterval);
     }
 }

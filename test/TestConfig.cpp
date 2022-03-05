@@ -19,8 +19,8 @@ TEST(TestConfig, plus_equal_operator) {
 
     config1 += config2;
 
-    ASSERT_EQ(config1.get("kv2"), "newVal");
-    ASSERT_EQ(config1.get("kv3"), "val3");
+    ASSERT_EQ(config1.get<std::string>("kv2"), "newVal");
+    ASSERT_EQ(config1.get<std::string>("kv3"), "val3");
 }
 
 TEST(Config, DISABLED_read_from_file) {
@@ -31,6 +31,7 @@ TEST(Config, DISABLED_read_from_file) {
     configFile.write(st.c_str(), std::ios::app);
     configFile.close();
     auto config = Config(storage.name() + "/config.cfg");
-    ASSERT_EQ(config.get("val1"), "10");
-    ASSERT_EQ(config.get("val2"), "20");
+    ASSERT_EQ(config.get<std::string>("val1"), "10");
+    ASSERT_EQ(config.get<std::string>("val2"), "20");
+    ASSERT_EQ(config.get<int>("val2"), 20);
 }

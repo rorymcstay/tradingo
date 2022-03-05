@@ -22,7 +22,7 @@ class MovingAverageCrossOver : public Signal {
 public:
     MovingAverageCrossOver(SMA_T::size_t short_, SMA_T::size_t long_);
     void onQuote(const std::shared_ptr<model::Quote>& quote_) override;
-    long read();
+    long read() override;
     bool isReady() override;
     void init(const std::shared_ptr<Config>& config_, const std::shared_ptr<MarketDataInterface>& md_) override;
 

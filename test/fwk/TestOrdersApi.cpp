@@ -110,11 +110,6 @@ TestOrdersApi::order_amend(boost::optional<utility::string_t> orderID,
     origOrder->setClOrdID(order->getClOrdID());
     origOrder->setOrigClOrdID(order->getOrigClOrdID());
     order->setOrderID(origOrder->getOrderID());
-    // negative in the case of amend down, therefore increase in balance.
-    auto qty_delta = order->getLeavesQty() - origOrder->getLeavesQty();
-    auto total_cost = func::get_additional_cost(getPosition(origOrder->getSymbol()), qty_delta, order->getPrice());
-    // in the case of amend up, and long position, we want this to reduce
-    getMargin()->setWalletBalance(getMargin()->getWalletBalance() - total_cost);
     if (order->priceIsSet()) {
         origOrder->setPrice(order->getPrice());
     } else if (order->leavesQtyIsSet()) {
@@ -169,9 +164,6 @@ TestOrdersApi::order_cancel(boost::optional<utility::string_t> orderID,
     auto event_order = std::make_shared<model::Order>();
     auto event_json = _orders[clOrdID.value()]->toJson();
     event_order->fromJson(event_json);
-    // update balance after cancel
-    auto total_cost = func::get_cost(origOrder->getPrice(), origOrder->getOrderQty(), getPosition(origOrder->getSymbol())->getLeverage());
-    getMargin()->setWalletBalance(getMargin()->getWalletBalance() + total_cost);
     //origOrder->setOrderQty(0.0);
     origOrder->setLeavesQty(0.0);
     set_order_timestamp(origOrder);
@@ -469,16 +461,6 @@ bool TestOrdersApi::hasMatchingOrder(const std::shared_ptr<model::Trade>& trade_
 }
 
 
-const std::shared_ptr<model::Position> &TestOrdersApi::getPosition(const std::string& symbol_) const {
-    return _marketData->getPositions().at(symbol_);
-}
-
-
-const std::shared_ptr<model::Margin>& TestOrdersApi::getMargin() const {
-    return _marketData->getMargin();
-}
-
-
 std::shared_ptr<model::Order> TestOrdersApi::checkOrderExists(const std::shared_ptr<model::Order> &order) {
     if (_orders.find(order->getOrigClOrdID()) != _orders.end()) {
         return _orders.at(order->getOrigClOrdID());
@@ -512,7 +494,8 @@ void TestOrdersApi::operator << (const std::shared_ptr<model::Execution>& exec_)
 bool TestOrdersApi::validateOrder(const std::shared_ptr<model::Order> &order_) {
     std::string error;
     auto& instrument = _marketData->getInstruments().at(order_->getSymbol());
-    auto& position = getPosition(order_->getSymbol());
+    auto& position = _marketData->getPositions().at(order_->getSymbol());
+    auto& margin = _marketData->getMargin();
     bool fail = false;
     if (order_->origClOrdIDIsSet() && order_->getOrderID() != "") {
         error = "Must specify only one of orderID or origClOrdId";
@@ -526,10 +509,13 @@ bool TestOrdersApi::validateOrder(const std::shared_ptr<model::Order> &order_) {
         error = "Orderty is not a multiple of lotsize";
         fail = true;
     }
-    auto total_cost = func::get_cost(order_->getPrice(), order_->getOrderQty(), position->getLeverage());
-    if (total_cost > getMargin()->getWalletBalance()) {
+    auto target_quantity = position->getCurrentQty() + (order_->getSide() == "Buy" ? 1 : -1)*order_->getLeavesQty();
+    double mx = (tradingo_utils::almost_equal(position->getCurrentQty(), 0.0) ?  position->getInitMargin() : instrument->getMaintMargin());
+    auto maint_margin_post = std::abs(func::get_cost(instrument->getMarkPrice(), target_quantity, position->getLeverage()));
+    if (maint_margin_post > margin->getMarginBalance()) {
         std::stringstream reason;
-        reason << "Account has insufficient Available Balance, " << total_cost << " XBt required";
+        reason << "Account has insufficient Available Balance, " 
+            << (maint_margin_post - position->getMaintMargin()) << " XBt required";
         error = reason.str();
         fail = true;
     }
@@ -579,16 +565,19 @@ bool TestOrdersApi::checkValidAmend(std::shared_ptr<model::Order> requestedAmend
     if (requestedAmend->orderQtyIsSet()) {
         throw std::runtime_error("Order amends via OrderQty not implemented.");
     }
-    // negative incase of amend down.
-    auto quantity_delta = requestedAmend->getLeavesQty() - originalOrder->getLeavesQty();
-    auto additionalCost = func::get_cost(originalOrder->getPrice(), quantity_delta, getPosition(originalOrder->getSymbol())->getLeverage());
+    auto& position = _marketData->getPositions().at(originalOrder->getSymbol());
+    auto& margin = _marketData->getMargin();
+    auto& instrument = _marketData->getInstruments().at(originalOrder->getSymbol());
+    auto target_quantity = position->getCurrentQty() + (originalOrder->getSide() == "Buy" ? 1 : -1)*requestedAmend->getLeavesQty();
+    double mx = (tradingo_utils::almost_equal(position->getCurrentQty(), 0.0) ?  position->getInitMargin() : instrument->getMaintMargin());
+    auto maint_margin_post = std::abs(func::get_cost(instrument->getMarkPrice(), target_quantity, position->getLeverage()));
     // if amending down, always false
-    if (additionalCost > getMargin()->getWalletBalance()) {
+    if (maint_margin_post > margin->getMarginBalance()) {
         auto msg = requestedAmend->toJson().serialize();
         auto content = std::make_shared<std::istringstream>(msg);
         requestedAmend->setText("Insufficient funds available for amend. additionalCost="
-                + std::to_string(additionalCost)
-                + ", balance=" + std::to_string(getMargin()->getWalletBalance()));
+                + std::to_string((maint_margin_post - position->getMaintMargin()))
+                + ", balance=" + std::to_string(margin->getWalletBalance()));
         requestedAmend->setOrdStatus(originalOrder->getOrdStatus());
         _rejects.push(requestedAmend);
         throw api::ApiException(400, requestedAmend->getText(), content);
@@ -598,19 +587,6 @@ bool TestOrdersApi::checkValidAmend(std::shared_ptr<model::Order> requestedAmend
 }
 
 
-void TestOrdersApi::init(std::shared_ptr<Config> config_) {
-    _config = config_;
-}
-
-
-const std::shared_ptr<MarginCalculator>& TestOrdersApi::getMarginCalculator() const {
-    return _marginCalculator;
-}
-
-
-void TestOrdersApi::setMarginCalculator(const std::shared_ptr<MarginCalculator>& marginCalculator) {
-    _marginCalculator = marginCalculator;
-}
 std::shared_ptr<model::Order>
 TestOrdersApi::getEvent(const std::string& event_) {
     std::shared_ptr<model::Order> order;

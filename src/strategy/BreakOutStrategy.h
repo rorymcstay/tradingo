@@ -12,6 +12,7 @@
 #include "Strategy.h"
 #include "Event.h"
 #include "Functional.h"
+#include "Config.h"
 
 using namespace io::swagger::client;
 
@@ -56,18 +57,23 @@ void BreakOutStrategy<TOrdApi, TPositionApi>::init(const std::shared_ptr<Config>
     // TODO move to constructor
     StrategyApi::init(config_);
 
-    _buyThreshold = std::atof(config_->get("buyThreshold", "0.0").c_str());
-    _shortExpose = std::atof(config_->get("shortExpose", "0.0").c_str());
-    _longExpose = std::atof(config_->get("longExpose", "1000.0").c_str());
-    _displaySize = std::atof(config_->get("displaySize", "200").c_str());
+    _buyThreshold = config_->get<double>("buyThreshold", 0.0);
+    _shortExpose = config_->get<double>("shortExpose", 0.0);
+    _longExpose = config_->get<double>("longExpose", 1000.0);
+    _displaySize = config_->get<double>("displaySize", 200);
 
-    auto primePercent = std::atof(config_->get("primePercent", "1.0").c_str());
-    auto shortTermWindow = std::stoi(config_->get("shortTermWindow"));
-    auto longTermWindow = std::stoi(config_->get("longTermWindow"));
+    auto primePercent = config_->get<double>("primePercent", 1.0);
+    auto shortTermWindow = config_->get<int>("shortTermWindow");
+    auto longTermWindow = config_->get<int>("longTermWindow");
 
     StrategyApi::addSignal(std::make_shared<MovingAverageCrossOver>(shortTermWindow, longTermWindow));
 
-    LOGINFO("Breakout strategy is initialised with " << LOG_VAR(shortTermWindow) << LOG_VAR(longTermWindow) << LOG_VAR(primePercent) << LOG_NVP("buyThreshold", _buyThreshold));
+    LOGINFO("Breakout strategy is initialised with "
+            << LOG_VAR(shortTermWindow)
+            << LOG_VAR(longTermWindow)
+            << LOG_VAR(primePercent)
+            << LOG_NVP("symbol", config_->get<std::string>("symbol"))
+            << LOG_NVP("buyThreshold", _buyThreshold));
 }
 
 template<typename TOrdApi, typename TPositionApi>

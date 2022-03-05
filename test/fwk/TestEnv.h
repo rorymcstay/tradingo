@@ -4,7 +4,6 @@
 
 #ifndef TRADINGO_TESTENV_H
 #define TRADINGO_TESTENV_H
-#include "model/Instrument.h"
 #include <gtest/gtest.h>
 
 #include <memory>
@@ -14,7 +13,6 @@
 #include "TestMarketData.h"
 #include "TestOrdersApi.h"
 #include "TestPositionApi.h"
-#include "MarginCalculator.h"
 
 #include "Strategy.h"
 #include "OrderInterface.h"
@@ -24,6 +22,7 @@
 
 #include "model/Execution.h"
 #include "model/Position.h"
+#include "model/Instrument.h"
 
 #define STRINGIFY(x) #x
 #define TO_STRING(x) STRINGIFY(x)

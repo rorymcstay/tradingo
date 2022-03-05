@@ -84,8 +84,8 @@ void Context<TMarketData, TOrderApi, TPositionApi>::init() {
 template<typename TMarketData, typename TOrderApi, typename TPositionApi>
 typename Context<TMarketData, TOrderApi, TPositionApi>::factoryMethod_t
 Context<TMarketData, TOrderApi, TPositionApi>::loadFactoryMethod() {
-    std::string factoryMethodName = _config->get("factoryMethod");
-    std::string lib = _config->get("libraryLocation");
+    std::string factoryMethodName = _config->get<std::string>("factoryMethod");
+    std::string lib = _config->get<std::string>("libraryLocation");
     LOGINFO("Loading strategy ... " << LOG_VAR(lib) << LOG_VAR(factoryMethodName));
     _handle = dlopen(lib.c_str(), RTLD_LAZY);
     if (!_handle) {
@@ -118,9 +118,9 @@ Context<TMarketData, TOrderApi, TPositionApi>::Context(std::shared_ptr<Config> c
 ,   _apiConfig(std::make_shared<api::ApiConfiguration>())
 ,   _httpConfig(web::http::client::http_client_config())
 {
-    _apiConfig->setBaseUrl(_config->get("baseUrl", "http://localhost:8080"));
-    _apiConfig->setApiKey("api-key", _config->get("apiKey", "NO AUTH"));
-    _apiConfig->setApiKey("api-secret", _config->get("apiSecret", "NO AUTH"));
+    _apiConfig->setBaseUrl(_config->get<std::string>("baseUrl", "http://localhost:8080"));
+    _apiConfig->setApiKey("api-key", _config->get<std::string>("apiKey", "NO AUTH"));
+    _apiConfig->setApiKey("api-secret", _config->get<std::string>("apiSecret", "NO AUTH"));
     _apiConfig->setHttpConfig(_httpConfig);
     _apiClient = std::make_shared<api::ApiClient>(_apiConfig);
     _instrumentService = std::make_shared<InstrumentService>(_apiClient, _config);
@@ -144,20 +144,20 @@ Context<TMarketData, TOrderApi, TPositionApi>::~Context() {
 
 template<typename TMarketData, typename TOrderApi, typename TPositionApi>
 void Context<TMarketData, TOrderApi, TPositionApi>::setupLogger() {
-    auto logLevel = AixLog::Filter(AixLog::to_severity(_config->get("logLevel", "info")));
+    auto logLevel = AixLog::Filter(AixLog::to_severity(_config->get<std::string>("logLevel", "info")));
     std::vector<std::shared_ptr<AixLog::Sink>> sinks = {
         std::make_shared<AixLog::SinkCout>(logLevel),
         std::make_shared<AixLog::SinkCerr>(AixLog::Severity::error),
     };
-    auto logDir =_config->get("logFileLocation", "");
+    auto logDir =_config->get<std::string>("logFileLocation", "");
     if (not logDir.empty()) {
         if (not std::filesystem::exists(logDir)) {
             LOGINFO("Creating new directory " << LOG_VAR(logDir));
             std::filesystem::create_directories(logDir);
         }
 
-        auto logFile = _config->get("logFileLocation") + "/"
-                + _config->get("symbol") + "_" + formatTime(std::chrono::system_clock::now())+".log";
+        auto logFile = _config->get<std::string>("logFileLocation") + "/"
+                + _config->get<std::string>("symbol") + "_" + formatTime(std::chrono::system_clock::now())+".log";
         LOGINFO("Logging to " << LOG_VAR(logFile));
         auto sink = std::make_shared<AixLog::SinkFile>(logLevel, logFile);
         sinks.emplace_back(sink);

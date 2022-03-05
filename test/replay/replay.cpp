@@ -34,7 +34,6 @@ std::string REPLAY_FILE;
 std::string CONFIG_FILE;
 
 
-
 TEST(Replay, scenario) {
 
     std::unordered_map<std::string, std::string> test_cl_ord_id_lookup;
@@ -44,11 +43,9 @@ TEST(Replay, scenario) {
     crossplat::threadpool::initialize_with_threads(pplxThreadCount);
     auto defaults = std::make_shared<Config>(std::initializer_list<std::pair<std::string,std::string>>({DEFAULT_ARGS}));
     auto env = TestEnv(defaults);
-    if (CONFIG_FILE != "NONE") {
-        auto config = std::make_shared<Config>(CONFIG_FILE);
-        LOGINFO("Using config " << LOG_VAR(CONFIG_FILE));
-        *defaults += (*config);
-    }
+    auto config = std::make_shared<Config>(CONFIG_FILE);
+    LOGINFO("Using config " << LOG_VAR(CONFIG_FILE));
+    *defaults += (*config);
 
     std::ifstream dataFile;
 

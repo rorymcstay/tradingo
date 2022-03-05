@@ -29,7 +29,7 @@ static void BM_read_quotes_json(benchmark::State& state) {
     auto signal = std::make_shared<MovingAverageCrossOver>(1000, 8000);
     signal->init(config, marketdata);
     marketdata->setCallback([&](){ signal->update(); });
-    quoteFile.open(config->get("tickStorage")+"/quotes_XBTUSD.json");
+    quoteFile.open(config->get<std::string>("tickStorage")+"/quotes_XBTUSD.json");
     if (!quoteFile.is_open()) {
         throw std::runtime_error("No quotes file found.");
     }

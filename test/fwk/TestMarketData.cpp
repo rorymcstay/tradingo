@@ -15,6 +15,17 @@ const utility::datetime& get_time(const T& modelBase_) {
 }
 
 
+/// get object
+template<typename T>
+std::shared_ptr<T> get_object_from_file(const std::string& file_name) {
+    std::string json_file = TESTDATA_LOCATION "/objects/" + file_name + ".json";
+    auto out = std::make_shared<T>();
+    auto json_val = read_json_file(json_file);
+    out->fromJson(json_val);
+    return out;
+}
+
+
 void TestMarketData::operator<<(const std::string &marketDataString) {
 
     auto params = Params(marketDataString);
@@ -49,7 +60,7 @@ void TestMarketData::operator<<(const std::string &marketDataString) {
 TestMarketData::TestMarketData(const std::shared_ptr<Config>& ptr, const std::shared_ptr<InstrumentService>& instSvc_)
 : MarketDataInterface(ptr, instSvc_)
 ,    _config(ptr)
-,    _realtime(ptr->get("realtime", "false") == "true")
+,    _realtime(ptr->get<bool>("realtime", false))
 ,    _time(utility::datetime::utc_now()) 
 ,    _lastDispatch() {
 
@@ -94,6 +105,10 @@ void TestMarketData::sleep(const utility::datetime& time_) const {
 }
 
 void TestMarketData::init() {
+    // populate initial test data
+    operator<<(get_object_from_file<model::Instrument>("opening_instrument"));
+    operator<<(get_object_from_file<model::Position>("opening_position"));
+    operator<<(get_object_from_file<model::Margin>("opening_margin"));
 
 }
 

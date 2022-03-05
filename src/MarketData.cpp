@@ -40,14 +40,14 @@ MarketData::~MarketData() {
 
 MarketData::MarketData(const std::shared_ptr<Config>& config_, std::shared_ptr<InstrumentService> instrumentSvc_)
 :   MarketDataInterface(config_, instrumentSvc_)
-,   _connectionString(config_->get("connectionString"))
-,   _apiKey(config_->get("apiKey", "NO_AUTH"))
-,   _apiSecret(config_->get("apiSecret", "NO_AUTH"))
+,   _connectionString(config_->get<std::string>("connectionString"))
+,   _apiKey(config_->get<std::string>("apiKey", "NO_AUTH"))
+,   _apiSecret(config_->get<std::string>("apiSecret", "NO_AUTH"))
 ,   _wsClient(std::make_shared<ws::client::websocket_callback_client>())
 ,   _initialised(false)
-,   _shouldAuth(config_->get("shouldAuth", "Yes") == "Yes")
-,   _cancelAllAfter(config_->get("cancelAllAfter", "Yes") == "Yes")
-,   _cancelAllTimeout(std::stoi(config_->get("cancelAllTimeout", "15000")))
+,   _shouldAuth(config_->get<bool>("shouldAuth", true))
+,   _cancelAllAfter(config_->get<bool>("cancelAllAfter", true))
+,   _cancelAllTimeout(config_->get<int>("cancelAllTimeout", 15000))
 ,   _heartBeat(nullptr)
 ,   _cycle(0)
 {
@@ -377,7 +377,7 @@ const std::unordered_map<std::string, std::shared_ptr<model::Instrument>>& Marke
 MarketDataInterface::MarketDataInterface(const std::shared_ptr<Config>& config_,
                                          std::shared_ptr<InstrumentService>  instSvc_)
 :   _instSvc(std::move(instSvc_))
-,   _symbol(config_->get("symbol"))
+,   _symbol(config_->get<std::string>("symbol"))
 ,   _callback([]() {}) {
 
 

@@ -5,6 +5,8 @@
 #include "gtest/gtest.h"
 // cpprestsdk
 #include <cpprest/asyncrt_utils.h>
+#include <cpprest/json.h>
+#include <memory>
 #include <pplx/threadpool.h>
 #include <boost/program_options.hpp>
 #include "Utils.h"
@@ -17,19 +19,8 @@
 
 namespace po = boost::program_options;
 
-/// get test meta file
-template<typename T>
-std::shared_ptr<T> get_object_from_file(const std::string& file_name) {
-    std::string json_file = TESTDATA_LOCATION "/objects/" + file_name + ".json";
-    std::ifstream t(json_file);
-    std::stringstream buffer;
-    buffer << t.rdbuf();
-    std::string val = buffer.str();
-    auto out = std::make_shared<T>();
-    auto json_val = web::json::value::parse(val);
-    out->fromJson(json_val);
-    return out;
-}
+
+
 
 int main(int argc, char **argv) {
 
@@ -44,6 +35,8 @@ int main(int argc, char **argv) {
             ("instrument-resolution", po::value<long>(), "instrument time resolution for series")
             ("quote-resolution", po::value<long>(), "quote time resolution for series")
             ("storage", po::value<std::string>(), "override storage location in config.");
+            ("config-overrides", po::value<std::vector<std::string> >()->multitoken(), "apply overrides to config");
+
     po::variables_map vm;
     po::store(po::parse_command_line(argc, argv, desc), vm);
     po::notify(vm);
@@ -64,13 +57,24 @@ int main(int argc, char **argv) {
     if (vm.contains("logdir")) {
         defaults->set("logFileLocation", vm.at("logdir").as<std::string>());
     }
+    if (vm.contains("config-overrides")) {
+        Params override_params;
+        size_t pos = 0;
+        std::string token;
+        std::vector<std::string> values;
+        for (auto kvp : vm.at("config-overrides").as<std::vector<std::string>>()) {
+            parse_params_string(kvp, override_params);
+        }
+        auto config_overrides = std::make_shared<Config>(override_params.asJson());
+        (*defaults) += (*config_overrides);
+    }
 
     auto pplxThreadCount = 1;
     crossplat::threadpool::initialize_with_threads(pplxThreadCount);
     auto env = TestEnv(defaults);
-    auto trades_file = defaults->get("tickStorage") + "/trades_XBTUSD.json";
-    auto quotes_file = defaults->get("tickStorage") + "/quotes_XBTUSD.json";
-    auto instruments_file = defaults->get("tickStorage") + "/instruments_XBTUSD.json";
+    auto trades_file = defaults->get<std::string>("tickStorage") + "/trades_XBTUSD.json";
+    auto quotes_file = defaults->get<std::string>("tickStorage") + "/quotes_XBTUSD.json";
+    auto instruments_file = defaults->get<std::string>("tickStorage") + "/instruments_XBTUSD.json";
 
     auto trade_resolution = 10000;
     if (vm.contains("trade-resolution")) {
@@ -105,8 +109,7 @@ int main(int argc, char **argv) {
             << " end=" <<  quotes.end()->getTimestamp().to_string(utility::datetime::date_format::ISO_8601);
         throw std::runtime_error(ss.str());
     }
-    env << get_object_from_file<model::Margin>("opening_margin");
-    env << get_object_from_file<model::Position>("opening_position");
+
     env.playback(trades, quotes, instruments);
     LOGINFO("Replay Finished");
 }

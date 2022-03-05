@@ -1,14 +1,15 @@
 {
     "Margin": [
-        {"name": "walletBalance","tolerance": 1},
-        {"name": "marginBalance","tolerance": 1},
-        {"name": "realisedPnl","tolerance": 1},
-        {"name": "unrealisedPnl","tolerance": 1},
-        {"name": "marginLeverage","tolerance": 1},
-        {"name": "amount","tolerance": 1},
-        {"name": "grossMarkValue","tolerance": 1},
-        {"name": "grossComm","tolerance": 1},
-        {"name": "unrealisedProfit","tolerance": 1}
+        {"name": "walletBalance","tolerance": 1.5},
+        {"name": "marginBalance","tolerance": 1.5},
+        {"name": "maintMargin", "tolerance": 1.5},
+        {"name": "realisedPnl","tolerance": 1.5},
+        {"name": "unrealisedPnl","tolerance": 1.5},
+        {"name": "marginLeverage","tolerance": 1.5},
+        {"name": "amount","tolerance": 1.5},
+        {"name": "grossMarkValue","tolerance": 1.5},
+        {"name": "grossComm","tolerance": 1.5},
+        {"name": "unrealisedProfit","tolerance": 1.5}
     ],
     "Position": [
         {"name": "currentQty","tolerance": 1.5},
