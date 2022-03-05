@@ -66,7 +66,9 @@ void BreakOutStrategy<TOrdApi, TPositionApi>::init(const std::shared_ptr<Config>
     auto shortTermWindow = config_->get<int>("shortTermWindow");
     auto longTermWindow = config_->get<int>("longTermWindow");
 
-    StrategyApi::addSignal(std::make_shared<MovingAverageCrossOver>(shortTermWindow, longTermWindow));
+    StrategyApi::addSignal(std::make_shared<MovingAverageCrossOver>(
+                StrategyApi::getMD(),
+                shortTermWindow, longTermWindow));
 
     LOGINFO("Breakout strategy is initialised with "
             << LOG_VAR(shortTermWindow)

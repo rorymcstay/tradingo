@@ -23,6 +23,10 @@
 #include "api/InstrumentApi.h"
 #include "InstrumentService.h"
 
+static char git_tag[] = GIT_TAG;
+static char git_revision[] = GIT_REV;
+static char git_branch[] = GIT_BRANCH;
+
 
 template<typename TMarketData,
     typename TOrderApi,

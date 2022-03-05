@@ -189,7 +189,7 @@ void Strategy<TOrdApi, TPositionApi>::updateSignals() {
 
 template<typename TOrdApi, typename TPositionApi>
 void Strategy<TOrdApi, TPositionApi>::addSignal(const std::shared_ptr<Signal> &signal_) {
-    signal_->init(_config, _marketData);
+    signal_->init(_config);
     // signals are either globally callback to disable timer thread during tests.
     if (signal_->callback() or _config->get<bool>("override-signal-callback")) {
         _callback_signals.emplace(signal_->name(), signal_);

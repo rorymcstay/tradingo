@@ -5,6 +5,23 @@
 #include "Signal.h"
 #include "Config.h"
 
+
+Signal::Signal(
+            const std::shared_ptr<MarketDataInterface>& marketData_,
+            const std::string& name_,
+            const std::string& header_
+)
+:   _config(nullptr)
+,   _name(name_)
+,   _marketData(marketData_)
+,   _timer()
+,   _time()
+,   _callback(false)
+,   _header(header_) {
+
+};
+
+
 void Signal::update() {
 
     /*
@@ -47,17 +64,21 @@ void Signal::update() {
         _batchWriter->write(read_as_string());
 }
 
-void Signal::init(const std::shared_ptr<Config> &config_, const std::shared_ptr<MarketDataInterface>& marketData_) {
+void Signal::init(const std::shared_ptr<Config> &config_) {
     _config = config_;
-    _marketData = marketData_;
     auto storage = config_->get<std::string>("storage", "");
     if (storage.empty())
         storage = "/tmp/";
     auto printer = [](const std::string& it_) { return it_; };
     _batchWriter = std::make_shared<Signal::Writer>(
-            "moving_average_crossover",
-            config_->get<std::string>("symbol"),
-            storage, 100000, printer, false);
+            /*tableName_=*/_name,
+            /*symbol_=*/config_->get<std::string>("symbol"),
+            /*storage_=*/storage,
+            /*batchSize_=*/100000,
+            /*print_=*/printer,
+            /*rotate_=*/false,
+            /*fileExtension_=*/"csv",
+            /*header_=*/_header);
     auto evalInterval = _config->get<int>(_name+"-interval", 1000);
     if (_config->get<bool>(_name+"-callback")) {
         // if its a callback siganl, always set as callback.

@@ -5,6 +5,7 @@
 #ifndef TRADING_BOT_BATCHWRITER_H
 #define TRADING_BOT_BATCHWRITER_H
 
+#include <fstream>
 #include <iomanip>
 #include <mutex>
 #include <ModelBase.h>
@@ -32,9 +33,11 @@ class BatchWriter
     std::string _tableName;
     std::string _symbol;
     std::string _storage;
+    std::string _fileExtension;
     std::string _fileLocation;
-    bool        _rotate;
     std::function<std::string(const Item&)> _print;
+    bool        _rotate;
+    std::string _header;
 
     void update_file_location();
 
@@ -44,7 +47,9 @@ public:
                 std::string storage_,
                 int batchSize_,
                 std::function<std::string(const Item&)> print_,
-                bool rotate_);
+                bool rotate_,
+                const std::string& fileExtension_,
+                const std::string& header_="");
     void write(Item item_);
     void write_batch();
     const std::string& location() { return _fileLocation; }
@@ -62,7 +67,7 @@ void BatchWriter<T>::update_file_location() {
         LOGINFO("Creating new directory " << LOG_VAR(directoryLocation));
         std::filesystem::create_directories(directoryLocation);
     }
-    _fileLocation = location + "/" + _tableName + "_" + _symbol + ".json";
+    _fileLocation = location + "/" + _tableName + "_" + _symbol + "." + _fileExtension;
 }
 
 template<typename T>
@@ -71,7 +76,9 @@ BatchWriter<T>::BatchWriter(std::string tableName_,
                             std::string storage_,
                             int batchSize_,
                             std::function<std::string(const T&)> print_,
-                            bool rotate_)
+                            bool rotate_,
+                            const std::string& fileExtension_,
+                            const std::string& header_)
         :   _batchSize(batchSize_)
         ,   _filehandle()
         ,   _batch()
@@ -79,14 +86,15 @@ BatchWriter<T>::BatchWriter(std::string tableName_,
         ,   _tableName(std::move(tableName_))
         ,   _symbol(std::move(symbol_))
         ,   _storage(std::move(storage_))
-        ,   _fileLocation(_storage + "/" +_dateString + "/" + _tableName + "_"+ _symbol +".json")
+        ,   _fileExtension(fileExtension_)
+        ,   _fileLocation(_storage + "/" +_dateString + "/" + _tableName + "_"+ _symbol +"."+_fileExtension)
         ,   _print(print_)
         ,   _rotate(rotate_)
+        ,   _header(header_)
 {
     _batch.reserve(_batchSize);
     update_file_location();
     _filehandle.open(_fileLocation, std::ios::app);
-    _filehandle << '\n';
     _filehandle.close();
 }
 
@@ -102,8 +110,11 @@ template<typename T>
 void BatchWriter<T>::write_batch() {
     LOGINFO("Writing batch " << LOG_VAR(_tableName) << " to " << LOG_VAR(_fileLocation));
     _filehandle.open(_fileLocation, std::ios::app);
+    if (_filehandle.peek() == std::ifstream::traits_type::eof() 
+            and not _header.empty())
+        _filehandle << _header << '\n';
     for (auto& message : _batch) {
-        _filehandle << _print(message) << "\n";
+        _filehandle << _print(message) << '\n';
     }
     _filehandle.close();
     _batch.clear();

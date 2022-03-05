@@ -33,16 +33,20 @@ protected:
     std::shared_ptr<MarketDataInterface> _marketData;
     utility::datetime _time;
     bool _callback;
+    std::string _header;
 
 public:
     using Ptr = std::shared_ptr<Signal>;
     using Map = std::unordered_map<std::string, std::shared_ptr<Signal>>;
     using Writer = BatchWriter<std::string>;
-    explicit Signal() : _config(nullptr), _marketData(nullptr), _timer(), _callback(false) {};
+    Signal(
+            const std::shared_ptr<MarketDataInterface>& marketData_,
+            const std::string& name_,
+            const std::string& header_=""
+    );
     virtual std::string read_as_string() = 0;
 
-
-    virtual void init(const std::shared_ptr<Config>& config_, const std::shared_ptr<MarketDataInterface>& marketData_);;
+    virtual void init(const std::shared_ptr<Config>& config_);
     void update();
     virtual void onTrade(const std::shared_ptr<model::Trade>& trade_) {};
     virtual void onQuote(const std::shared_ptr<model::Quote>& quote_) {};
