@@ -135,7 +135,6 @@ private:
 
 public:
     void operator >> (const std::string& outEvent_);
-    void operator >> (std::vector<std::shared_ptr<model::ModelBase>>& outBuffer_);
     void operator >> (Writer& outBuffer_);
 
     void operator << (const utility::datetime& time_);

@@ -73,11 +73,10 @@ class TestEnv {
 
     std::shared_ptr<Config> _config;
     std::shared_ptr<Context<TestMarketData, OrderApi, PositionApi>> _context;
-    std::shared_ptr<model::Position> _position;
-    std::shared_ptr<model::Margin> _margin;
     long _events;
 
-    TestOrdersApi::Writer _batchWriter;
+    TestOrdersApi::Writer _orderWriter;
+    TestOrdersApi::Writer _executionWriter;
     TestOrdersApi::Writer _positionWriter;
 
     void liquidatePositions(const std::string&);

@@ -26,6 +26,7 @@ TestOrdersApi::TestOrdersApi(std::shared_ptr<io::swagger::client::api::ApiClient
 ,   _rejects()
 ,   _orderAmends()
 ,   _orderCancels()
+,   _allEvents()
 ,   _oidSeed(0) {
 
     LOGINFO("TestOrdersApi initialised!");
@@ -67,15 +68,19 @@ TestOrdersApi::order_amend(boost::optional<utility::string_t> orderID,
     auto order = std::make_shared<model::Order>();
     order->setClOrdID(clOrdID.value());
     order->setOrigClOrdID(origClOrdID.value());
+    order->setTimestamp(_time);
     auto origOrder = checkOrderExists(order);
     std::stringstream str;
     if (!origOrder) {
+        order->setOrdStatus("Rejected");
+        order->setText("Original order not found");
         _rejects.push(order);
         std::stringstream str;
         auto content = std::make_shared<std::istringstream>(order->toJson().serialize());
         str << "Original order " << LOG_NVP("OrderID",order->getOrderID())
             << LOG_NVP("ClOrdID", order->getClOrdID())
             << LOG_NVP("OrigClOrdID", order->getOrigClOrdID()) << " not found.";
+        _allEvents.push(order);
         throw api::ApiException(404, str.str(), content);
     }
     double new_price;
@@ -164,6 +169,7 @@ TestOrdersApi::order_cancel(boost::optional<utility::string_t> orderID,
     auto event_order = std::make_shared<model::Order>();
     auto event_json = _orders[clOrdID.value()]->toJson();
     event_order->fromJson(event_json);
+    event_order->setTimestamp(_time);
     //origOrder->setOrderQty(0.0);
     origOrder->setLeavesQty(0.0);
     set_order_timestamp(origOrder);
@@ -237,6 +243,7 @@ TestOrdersApi::order_new(utility::string_t symbol,
     order->setOrdType(ordType.value());
     order->setOrderQty(orderQty.value());
     order->setTimeInForce(timeInForce.value());
+    order->setTimestamp(_time);
     if (displayQty.has_value())
         order->setDisplayQty(displayQty.value());
     if (stopPx.has_value())
@@ -406,18 +413,6 @@ void TestOrdersApi::operator >> (const std::string &outEvent_) {
 }
 
 
-void TestOrdersApi::operator>>(std::vector<std::shared_ptr<model::ModelBase>>& outVec) {
-    while (!_allEvents.empty()){
-        auto top = _allEvents.front();
-        auto val = top->toJson();
-        LOGINFO(AixLog::Color::GREEN << "TestOrdersApi::OUT>> " << AixLog::Color::GREEN << val.serialize() << AixLog::Color::none);
-        top->fromJson(val);
-        outVec.push_back(top);
-        _allEvents.pop();
-    }
-}
-
-
 void TestOrdersApi::operator>>(TestOrdersApi::Writer & outVec) {
     while (!_allEvents.empty()){
         auto top = _allEvents.front();
@@ -525,6 +520,7 @@ bool TestOrdersApi::validateOrder(const std::shared_ptr<model::Order> &order_) {
         order_->setText(error);
         order_->setOrdStatus("Rejected");
         _rejects.push(order_);
+        _allEvents.push(order_);
         throw api::ApiException(400, error, content);
     }
 
@@ -541,6 +537,7 @@ bool TestOrdersApi::checkValidAmend(std::shared_ptr<model::Order> requestedAmend
         requestedAmend->setText("Cannot specify both OrderQty and LeavesQty");
         requestedAmend->setOrdStatus(originalOrder->getOrdStatus());
         _rejects.push(requestedAmend);
+        _allEvents.push(requestedAmend);
         throw api::ApiException(400, requestedAmend->getText(), content);
     }
     if (originalOrder->getOrdStatus() == "Canceled" 
@@ -551,6 +548,7 @@ bool TestOrdersApi::checkValidAmend(std::shared_ptr<model::Order> requestedAmend
         requestedAmend->setText("Order is " + originalOrder->getOrdStatus());
         requestedAmend->setOrdStatus(originalOrder->getOrdStatus());
         _rejects.push(requestedAmend);
+        _allEvents.push(requestedAmend);
         throw api::ApiException(400, requestedAmend->getText(), content);
     }
     if ((requestedAmend->leavesQtyIsSet() || requestedAmend->orderQtyIsSet())
@@ -560,6 +558,7 @@ bool TestOrdersApi::checkValidAmend(std::shared_ptr<model::Order> requestedAmend
         requestedAmend->setText("Cannot specify both Qty and Price amend");
         requestedAmend->setOrdStatus(originalOrder->getOrdStatus());
         _rejects.push(requestedAmend);
+        _allEvents.push(requestedAmend);
         throw api::ApiException(400, requestedAmend->getText(),content);
     }
     if (requestedAmend->orderQtyIsSet()) {
@@ -580,6 +579,7 @@ bool TestOrdersApi::checkValidAmend(std::shared_ptr<model::Order> requestedAmend
                 + ", balance=" + std::to_string(margin->getWalletBalance()));
         requestedAmend->setOrdStatus(originalOrder->getOrdStatus());
         _rejects.push(requestedAmend);
+        _allEvents.push(requestedAmend);
         throw api::ApiException(400, requestedAmend->getText(), content);
     }
 

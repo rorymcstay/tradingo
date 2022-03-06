@@ -11,6 +11,7 @@
 #include <ModelBase.h>
 
 #include <sstream>
+#include <stdexcept>
 #include <string>
 #include <map>
 #include <iostream>
@@ -50,6 +51,7 @@ public:
                 bool rotate_,
                 const std::string& fileExtension_="json",
                 const std::string& header_="");
+    ~BatchWriter();
     void write(Item item_);
     void write_batch();
     const std::string& location() { return _fileLocation; }
@@ -60,9 +62,9 @@ public:
 template<typename T>
 void BatchWriter<T>::update_file_location() {
     _dateString = formatTime(std::chrono::system_clock::now());
-    std::string location = _storage+ "/";
+    std::string location = _storage;
     if (_rotate) {
-        location += _dateString;
+        location = location + "/" + _dateString;
     }
     auto directoryLocation = std::filesystem::path(location);
     if (not std::filesystem::exists(directoryLocation))
@@ -71,6 +73,15 @@ void BatchWriter<T>::update_file_location() {
         std::filesystem::create_directories(directoryLocation);
     }
     _fileLocation = location + "/" + _tableName + "_" + _symbol + "." + _fileExtension;
+    _filehandle.open(_fileLocation, std::fstream::in);
+    if (!_filehandle and not _header.empty()) {
+        _filehandle.open(_fileLocation, std::fstream::in 
+                                        | std::fstream::out 
+                                        | std::fstream::trunc);
+        LOGINFO("Writing header to new file");
+        _filehandle << _header << '\n';
+    }
+    _filehandle.close();
 }
 
 template<typename T>
@@ -82,18 +93,22 @@ BatchWriter<T>::BatchWriter(std::string tableName_,
                             bool rotate_,
                             const std::string& fileExtension_,
                             const std::string& header_)
-        :   _batchSize(batchSize_)
-        ,   _filehandle()
-        ,   _batch()
-        ,   _dateString(formatTime(std::chrono::system_clock::now()))
-        ,   _tableName(std::move(tableName_))
-        ,   _symbol(std::move(symbol_))
-        ,   _storage(std::move(storage_))
-        ,   _fileExtension(fileExtension_)
-        ,   _fileLocation(_storage + "/" +_dateString + "/" + _tableName + "_"+ _symbol +"."+_fileExtension)
-        ,   _print(print_)
-        ,   _rotate(rotate_)
-        ,   _header(header_)
+:   _batchSize(batchSize_)
+,   _filehandle()
+,   _batch()
+,   _dateString(formatTime(std::chrono::system_clock::now()))
+,   _tableName(std::move(tableName_))
+,   _symbol(std::move(symbol_))
+,   _storage(std::move(storage_))
+,   _fileExtension(fileExtension_)
+,   _fileLocation(_storage 
+        + (rotate_ ? ("/" +  _dateString) : "")
+        + "/" + _tableName 
+        + "_"+ _symbol 
+        +"."+_fileExtension)
+,   _print(print_)
+,   _rotate(rotate_)
+,   _header(header_)
 {
     _batch.reserve(_batchSize);
     update_file_location();
@@ -102,8 +117,16 @@ BatchWriter<T>::BatchWriter(std::string tableName_,
 template<typename T>
 void BatchWriter<T>::write(T item_) {
     _batch.emplace_back(std::move(item_));
-    if (_batch.size() > _batchSize)
+    if (_batch.size() >= _batchSize)
         write_batch();
+}
+
+
+template<typename T>
+BatchWriter<T>::~BatchWriter() {
+    write_batch();
+    if (_filehandle)
+        _filehandle.close();
 }
 
 
@@ -111,9 +134,12 @@ template<typename T>
 void BatchWriter<T>::write_batch() {
     LOGINFO("Writing batch " << LOG_VAR(_tableName) << " to " << LOG_VAR(_fileLocation));
     _filehandle.open(_fileLocation, std::ios::app | std::ios::out);
-    if (_filehandle.peek() == std::ifstream::traits_type::eof() 
-            and not _header.empty())
-        _filehandle << _header << '\n';
+    if (!_filehandle) {
+        std::stringstream errmsg;
+        errmsg << "Failed to open " << LOG_VAR(_fileLocation);
+        LOGERROR(errmsg.str());
+        throw std::runtime_error(errmsg.str());
+    }
     for (auto& message : _batch) {
         _filehandle << _print(message) << '\n';
     }

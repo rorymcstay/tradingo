@@ -37,7 +37,10 @@ web::json::value get_validation_fields() {
 
 TestEnv::TestEnv(const std::shared_ptr<Config>& config_)
     : _config(config_),
-      _margin(std::make_shared<model::Margin>()),
+      _events(),
+      _context(
+        std::make_shared<Context<TestMarketData, OrderApi, TestPositionApi>>(_config)
+      ),
       _positionWriter(
           /*tableName_=*/"replay_positions",
           /*symbol=_*/_config->get<std::string>("symbol"),
@@ -48,7 +51,17 @@ TestEnv::TestEnv(const std::shared_ptr<Config>& config_)
           },
           /*rotate=*/false,
           /*fileExtension_=*/"json"),
-      _batchWriter(
+      _executionWriter(
+          /*tableName_=*/"replay_executions",
+          /*symbol=_*/_config->get<std::string>("symbol"),
+          /*storage_=*/_config->get<std::string>("storage"),
+          /*batchSize_=*/100,
+          /*print_=*/[](const std::shared_ptr<model::ModelBase>& exec_) {
+              return exec_->toJson().serialize();
+          },
+          /*rotate=*/false,
+          /*fileExtension_=*/"json"),
+      _orderWriter(
           /*tableName_=*/"replay_orders",
           /*symbol_=*/_config->get<std::string>("symbol"),
           /*storage_=*/_config->get<std::string>("storage"),
@@ -64,24 +77,40 @@ TestEnv::TestEnv(const std::shared_ptr<Config>& config_)
 TestEnv::TestEnv(
     std::initializer_list<std::pair<std::string, std::string>> config_)
     : _config(std::make_shared<Config>(config_)),
-      _margin(std::make_shared<model::Margin>()),
+      _events(),
+      _context(
+        std::make_shared<Context<TestMarketData, OrderApi, TestPositionApi>>(_config)
+      ),
       _positionWriter(
-          "replay_positions",
-          _config->get<std::string>("symbol"),
-          _config->get<std::string>("storage"),
-          1000,
-          [](const std::shared_ptr<model::ModelBase>& order_) {
+          /*tableName_=*/"replay_positions",
+          /*symbol=_*/_config->get<std::string>("symbol"),
+          /*storage_=*/_config->get<std::string>("storage"),
+          /*batchSize_=*/1000,
+          /*print_=*/[](const std::shared_ptr<model::ModelBase>& order_) {
               return order_->toJson().serialize();
           },
-          /*rotate=*/false),
-      _batchWriter(
-          "replay_orders",
-          _config->get<std::string>("symbol"),
-          _config->get<std::string>("storage"), 1,
-          [](const std::shared_ptr<model::ModelBase>& order_) {
+          /*rotate=*/false,
+          /*fileExtension_=*/"json"),
+      _executionWriter(
+          /*tableName_=*/"replay_executions",
+          /*symbol=_*/_config->get<std::string>("symbol"),
+          /*storage_=*/_config->get<std::string>("storage"),
+          /*batchSize_=*/100,
+          /*print_=*/[](const std::shared_ptr<model::ModelBase>& exec_) {
+              return exec_->toJson().serialize();
+          },
+          /*rotate=*/false,
+          /*fileExtension_=*/"json"),
+      _orderWriter(
+          /*tableName_=*/"replay_orders",
+          /*symbol_=*/_config->get<std::string>("symbol"),
+          /*storage_=*/_config->get<std::string>("storage"),
+          /*batchSize_=*/1,
+          /*print_=*/[](const std::shared_ptr<model::ModelBase>& order_) {
               return order_->toJson().serialize();
           },
-          /*rotate=*/false) {
+          /*rotate=*/false,
+          /*fileExtension_=*/"json") {
     init();
 }
 
@@ -97,10 +126,6 @@ void TestEnv::init() {
     _config->set("lotSize", "100");
     _config->set("callback-signals", "true");
     _config->set("cloidSeed", "0");
-
-    _context =
-        std::make_shared<Context<TestMarketData, OrderApi, TestPositionApi>>(
-            _config);
 
     _context->orderApi()->setMarketData(_context->marketData());
     _context->positionApi()->setMarketData(_context->marketData());
@@ -218,6 +243,9 @@ void TestEnv::playback(const Series<model::Trade>& trades,
     utility::datetime::interval_type max_interval =
         std::numeric_limits<utility::datetime::interval_type>::max();
 
+    _context->marketData()->getPositions().at(symbol)->setTimestamp(
+                                                        quote->getTimestamp());
+
     while (quote != quotes.end() or trade != trades.end() or
            instrument != instruments.end()) {
 
@@ -289,8 +317,6 @@ void TestEnv::playback(const Series<model::Trade>& trades,
             stats.last_log = std::chrono::system_clock::now();
         }
     }
-    _batchWriter.write_batch();
-    _positionWriter.write_batch();
 }
 
 void TestEnv::liquidatePositions(const std::string& symbol) {
@@ -386,6 +412,8 @@ void TestEnv::operator<<(const std::shared_ptr<model::Execution>& exec_) {
         bankruptPrice: Once markPrice reaches this price, this position will have
             no equity.
     */
+
+    _executionWriter.write(exec_);
 
     if (position->getPosState() == "Liquidation") {
         position->setPosState("Liquidated");
@@ -533,11 +561,12 @@ void TestEnv::updatePositionFromInstrument(
         margin->setGrossComm(gross_comm);
         margin->setRealisedPnl(gross_realised_pnl);
     }
-
-    auto position_event = std::make_shared<model::Position>();
-    auto pos_json = position->toJson();
-    position_event->fromJson(pos_json);
-    _positionWriter.write(position);
+    if (old_mark_value != position->getMarkValue()) {
+        auto position_event = std::make_shared<model::Position>();
+        auto pos_json = position->toJson();
+        position_event->fromJson(pos_json);
+        _positionWriter.write(position_event);
+    }
 }
 
 void TestEnv::operator<<(const std::shared_ptr<model::Margin>& margin_) {
@@ -546,7 +575,7 @@ void TestEnv::operator<<(const std::shared_ptr<model::Margin>& margin_) {
 
 void TestEnv::operator<<(const std::shared_ptr<model::Quote>& quote_) {
     *_context->marketData() << quote_;
-    *(_context->orderApi()) >> _batchWriter;
+    *(_context->orderApi()) >> _orderWriter;
 }
 
 void TestEnv::operator<<(
@@ -590,6 +619,7 @@ TestEnv::operator<<(const std::shared_ptr<model::Trade>& trade_) {
                 (side == "Buy" ? orderPx >= askPrice : orderPx <= bidPrice)
                     ? "RemovedLiquidity"
                     : "AddedLiquidity";
+            exec->setTimestamp(trade_->getTimestamp());
             exec->setExecType("Trade");
             exec->setLastLiquidityInd(liquidityIndicator);
             exec->setSymbol(order.second->getSymbol());
