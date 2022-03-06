@@ -6,9 +6,11 @@
 // cpprestsdk
 #include <cpprest/asyncrt_utils.h>
 #include <cpprest/json.h>
+#include <exception>
 #include <memory>
 #include <pplx/threadpool.h>
 #include <boost/program_options.hpp>
+#include <sstream>
 #include "Utils.h"
 #include "Config.h"
 #include "Series.h"
@@ -29,13 +31,15 @@ int main(int argc, char **argv) {
     desc.add_options()
             ("help", "produce help message")
             ("config", po::value<std::string>(), "config file")
+            ("config-json", po::value<std::string>(), "config in json string")
             ("tick-storage", po::value<std::string>(), "override tick storage location in config.")
             ("logdir", po::value<std::string>(), "override logFilelocation in config.")
             ("trade-resolution", po::value<long>(), "trade time resolution for series")
             ("instrument-resolution", po::value<long>(), "instrument time resolution for series")
             ("quote-resolution", po::value<long>(), "quote time resolution for series")
-            ("storage", po::value<std::string>(), "override storage location in config.");
-            ("config-overrides", po::value<std::vector<std::string> >()->multitoken(), "apply overrides to config");
+            ("storage", po::value<std::string>(), "override storage location in config.")
+            ("initial-margin", po::value<std::string>(), "override the initial margin object")
+            ("initial-position", po::value<std::string>(), "override the initial position");
 
     po::variables_map vm;
     po::store(po::parse_command_line(argc, argv, desc), vm);
@@ -48,6 +52,22 @@ int main(int argc, char **argv) {
         LOGINFO("Using config " << vm.at("config").as<std::string>());
         *defaults += (*config);
     }
+    if (vm.contains("config-json")) {
+        auto json_str = vm.at("config-json").as<std::string>();
+        web::json::value json_val;
+        try {
+            json_val = web::json::value::parse(json_str);
+        } catch (const std::exception& ex) {
+            std::stringstream errmsg;
+            errmsg << "Invalid config dict passed"
+                << LOG_VAR(ex.what()) << LOG_VAR(json_str);
+            LOGERROR(errmsg.str());
+            return 1;
+        }
+        auto config = std::make_shared<Config>(json_val);
+        LOGINFO("Using config " << vm.at("config-json").as<std::string>());
+        *defaults += (*config);
+    }
     if (vm.contains("tick-storage")) {
         defaults->set("tickStorage", vm.at("tick-storage").as<std::string>());
     }
@@ -56,17 +76,6 @@ int main(int argc, char **argv) {
     }
     if (vm.contains("logdir")) {
         defaults->set("logFileLocation", vm.at("logdir").as<std::string>());
-    }
-    if (vm.contains("config-overrides")) {
-        Params override_params;
-        size_t pos = 0;
-        std::string token;
-        std::vector<std::string> values;
-        for (auto kvp : vm.at("config-overrides").as<std::vector<std::string>>()) {
-            parse_params_string(kvp, override_params);
-        }
-        auto config_overrides = std::make_shared<Config>(override_params.asJson());
-        (*defaults) += (*config_overrides);
     }
 
     auto pplxThreadCount = 1;
@@ -89,9 +98,42 @@ int main(int argc, char **argv) {
         instrument_resolution = vm.at("instrument-resolution").as<long>();
     }
 
-    auto quotes = Series<model::Quote>(quotes_file, 10000);
-    auto trades = Series<model::Trade>(trades_file, 10000);
-    auto instruments = Series<model::Instrument>(instruments_file, 10000);
+    auto initial_margin = std::shared_ptr<model::Margin>();
+    if (vm.contains("initial-margin")) {
+        initial_margin = std::make_shared<model::Margin>();
+        auto json_str = vm.at("initial-margin").as<std::string>();
+        web::json::value json_val;
+        try {
+            json_val = web::json::value::parse(json_str);
+        } catch (const std::exception& ex) {
+            std::stringstream errmsg;
+            errmsg << "Invalid initial margin passed"
+                << LOG_VAR(ex.what()) << LOG_VAR(json_str);
+            LOGERROR(errmsg.str());
+            return 1;
+        }
+        initial_margin->fromJson(json_val);
+    }
+    auto initial_position = std::shared_ptr<model::Position>();
+    if (vm.contains("initial-position")) {
+        initial_position = std::make_shared<model::Position>();
+        auto json_str = vm.at("initial-position").as<std::string>();
+        web::json::value json_val;
+        try {
+            json_val = web::json::value::parse(json_str);
+        } catch (const std::exception& ex) {
+            std::stringstream errmsg;
+            errmsg << "Invalid initial position passed"
+                << LOG_VAR(ex.what()) << LOG_VAR(json_str);
+            LOGERROR(errmsg.str());
+            return 1;
+        }
+        initial_position->fromJson(json_val);
+    }
+
+    auto quotes = Series<model::Quote>(quotes_file, quote_resolution);
+    auto trades = Series<model::Trade>(trades_file, trade_resolution);
+    auto instruments = Series<model::Instrument>(instruments_file, instrument_resolution);
     if (vm.contains("start-time")) {
         quotes.set_start(vm.at("start-time").as<std::string>());
         trades.set_start(vm.at("start-time").as<std::string>());
@@ -109,7 +151,10 @@ int main(int argc, char **argv) {
             << " end=" <<  quotes.end()->getTimestamp().to_string(utility::datetime::date_format::ISO_8601);
         throw std::runtime_error(ss.str());
     }
-
+    if (initial_margin)
+        env << initial_margin;
+    if (initial_position)
+        env << initial_position;
     env.playback(trades, quotes, instruments);
     LOGINFO("Replay Finished");
 }

@@ -56,8 +56,8 @@ add_test(NAME "orderbook-tests" COMMAND test_orderbook)
 # install regression tests
 configure_file(
     regression/tradingo.json.in
-    ${CAMKE_INSTALL_PREFIX}/etc/test/regression/tradgino.json
-    )
+    ${CMAKE_INSTALL_PREFIX}/etc/test/regression/tradgino.json
+)
 file(GLOB files "regression/generated/*.json")
 install(DIRECTORY
     regression/generated/ DESTINATION etc/test/regression/

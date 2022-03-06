@@ -9,6 +9,7 @@
 #include <boost/optional.hpp>
 #include <utility>
 
+
 #include "Utils.h"
 #include "ApiException.h"
 
@@ -36,6 +37,10 @@ private:
     std::shared_ptr<TOrdApi> _orderApi;
     void updateFromTask(const std::shared_ptr<Allocation>& allocation_,
     const std::shared_ptr<model::Order>&);
+    /// declare all allocations fulfilled.
+    void restAll();
+    /// declare allocations fulfilled
+    void rest(const std::function<bool(const std::shared_ptr<Allocation>&)>& predicate_);
 public:
 
     class iterator_type {
@@ -102,14 +107,16 @@ public:
     iterator_type begin() const;
     iterator_type end() const;
     size_t size() const ;
-    /// declare all allocations fulfilled.
-    void restAll();
-    /// declare allocations fulfilled
-    void rest(const std::function<bool(const std::shared_ptr<Allocation>&)>& predicate_);
-    /// reset the desired allocation delta.
-    void cancel(const std::function<bool(const std::shared_ptr<Allocation>& )>& predicate_);
+    std::vector<price_t> occupiedLevels() const {
+        std::vector<price_t> out;
+        std::transform(_occupiedLevels.begin(), _occupiedLevels.end(), out.begin(),
+                [](const std::shared_ptr<Allocation>& alloc_) { return alloc_->getPrice(); });
+        return out;
+    }
+
     /// cancel all price levels
     void cancelOrders(const std::function<bool(const std::shared_ptr<Allocation> &)> &predicate_);
+    void cancel(const std::function<bool(const std::shared_ptr<Allocation>&)>& predicate_);
     void placeAllocations();
 
 };

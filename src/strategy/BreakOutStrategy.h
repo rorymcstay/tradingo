@@ -5,6 +5,7 @@
 #ifndef TRADINGO_BREAKOUTSTRATEGY_H
 #define TRADINGO_BREAKOUTSTRATEGY_H
 
+#include "Utils.h"
 #include "api/OrderApi.h"
 
 #include "SimpleMovingAverage.h"
@@ -136,6 +137,16 @@ void BreakOutStrategy<TOrdApi, TPositionApi>::onBBO(const std::shared_ptr<Event>
         LOGDEBUG("No quantity to trade");
         return;
     }
+    StrategyApi::allocations()->cancelOrders(
+            [price, side](const std::shared_ptr<Allocation>& alloc_) {
+                auto allocside = alloc_->getSide();
+                if (allocside != side
+                        or (allocside == "Buy" and alloc_->getPrice() > price)
+                        or (allocside == "Sell" and alloc_->getPrice() < price))
+                    return true;
+                return false;
+            }
+    );
     auto alloc =std::make_shared<Allocation>(price, qtyToTrade);
     const std::shared_ptr<model::Position>& position = md->getPositions().at(StrategyApi::_symbol);
     auto additional_cost = func::get_additional_cost(position, alloc->getTargetDelta(), alloc->getPrice());
