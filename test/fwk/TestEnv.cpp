@@ -39,22 +39,25 @@ TestEnv::TestEnv(const std::shared_ptr<Config>& config_)
     : _config(config_),
       _margin(std::make_shared<model::Margin>()),
       _positionWriter(
-          "replay_positions",
-          _config->get<std::string>("symbol"),
-          _config->get<std::string>("storage"),
-          1000,
-          [](const std::shared_ptr<model::ModelBase>& order_) {
+          /*tableName_=*/"replay_positions",
+          /*symbol=_*/_config->get<std::string>("symbol"),
+          /*storage_=*/_config->get<std::string>("storage"),
+          /*batchSize_=*/1000,
+          /*print_=*/[](const std::shared_ptr<model::ModelBase>& order_) {
               return order_->toJson().serialize();
           },
-          /*rotate=*/false),
+          /*rotate=*/false,
+          /*fileExtension_=*/"json"),
       _batchWriter(
-          "replay_orders",
-          _config->get<std::string>("symbol"),
-          _config->get<std::string>("storage"), 1,
-          [](const std::shared_ptr<model::ModelBase>& order_) {
+          /*tableName_=*/"replay_orders",
+          /*symbol_=*/_config->get<std::string>("symbol"),
+          /*storage_=*/_config->get<std::string>("storage"),
+          /*batchSize_=*/1,
+          /*print_=*/[](const std::shared_ptr<model::ModelBase>& order_) {
               return order_->toJson().serialize();
           },
-          /*rotate=*/false) {
+          /*rotate=*/false,
+          /*fileExtension_=*/"json") {
     init();
 }
 
@@ -531,13 +534,10 @@ void TestEnv::updatePositionFromInstrument(
         margin->setRealisedPnl(gross_realised_pnl);
     }
 
-    if (not tradingo_utils::almost_equal(position->getMarkValue(),
-                                         old_mark_value)) {
-        auto position_event = std::make_shared<model::Position>();
-        auto pos_json = position->toJson();
-        position_event->fromJson(pos_json);
-        _positionWriter.write(position);
-    }
+    auto position_event = std::make_shared<model::Position>();
+    auto pos_json = position->toJson();
+    position_event->fromJson(pos_json);
+    _positionWriter.write(position);
 }
 
 void TestEnv::operator<<(const std::shared_ptr<model::Margin>& margin_) {
@@ -546,7 +546,7 @@ void TestEnv::operator<<(const std::shared_ptr<model::Margin>& margin_) {
 
 void TestEnv::operator<<(const std::shared_ptr<model::Quote>& quote_) {
     *_context->marketData() << quote_;
-    *_context->orderApi() >> _batchWriter;
+    *(_context->orderApi()) >> _batchWriter;
 }
 
 void TestEnv::operator<<(

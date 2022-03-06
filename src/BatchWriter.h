@@ -48,7 +48,7 @@ public:
                 int batchSize_,
                 std::function<std::string(const Item&)> print_,
                 bool rotate_,
-                const std::string& fileExtension_,
+                const std::string& fileExtension_="json",
                 const std::string& header_="");
     void write(Item item_);
     void write_batch();
@@ -60,7 +60,10 @@ public:
 template<typename T>
 void BatchWriter<T>::update_file_location() {
     _dateString = formatTime(std::chrono::system_clock::now());
-    std::string location = _storage+ "/" + _dateString;
+    std::string location = _storage+ "/";
+    if (_rotate) {
+        location += _dateString;
+    }
     auto directoryLocation = std::filesystem::path(location);
     if (not std::filesystem::exists(directoryLocation))
     {
@@ -94,8 +97,6 @@ BatchWriter<T>::BatchWriter(std::string tableName_,
 {
     _batch.reserve(_batchSize);
     update_file_location();
-    _filehandle.open(_fileLocation, std::ios::app);
-    _filehandle.close();
 }
 
 template<typename T>
@@ -109,7 +110,7 @@ void BatchWriter<T>::write(T item_) {
 template<typename T>
 void BatchWriter<T>::write_batch() {
     LOGINFO("Writing batch " << LOG_VAR(_tableName) << " to " << LOG_VAR(_fileLocation));
-    _filehandle.open(_fileLocation, std::ios::app);
+    _filehandle.open(_fileLocation, std::ios::app | std::ios::out);
     if (_filehandle.peek() == std::ifstream::traits_type::eof() 
             and not _header.empty())
         _filehandle << _header << '\n';

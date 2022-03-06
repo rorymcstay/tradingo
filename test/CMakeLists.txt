@@ -52,6 +52,27 @@ add_test(NAME "tradingo-tests" COMMAND testTradingo)
 add_test(NAME "tradingo-longrunning--tests" COMMAND testTradingo-lr)
 add_test(NAME "orderbook-tests" COMMAND test_orderbook)
 
+
+# install regression tests
+file(GLOB files "regression/generated/*.json")
+install(DIRECTORY
+    regression/generated/ DESTINATION etc/test/regression/
+    FILES_MATCHING
+    PATTERN
+    regression/generated/*.json
+    PATTERN
+    regression/*.json
+    PERMISSIONS OWNER_WRITE OWNER_READ GROUP_READ
+)
+# add them to run
+foreach(file ${files})
+    add_test(NAME "regression-test-${file}"
+        COMMAND tradingo_replay 
+                    --config ${CMAKE_INSTALL_REFIX}/etc/test/regression/tradingo-cfg.json
+                    --scenario-file ${CMAKE_INSTALL_REFIX}/etc/test/regression/${file}.json
+    )
+endforeach()
+
 set(TEST_LINK_LIBRARIES 
         test_trading_funcs
         ${GTEST_LIBRARY}
