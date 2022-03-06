@@ -54,6 +54,10 @@ add_test(NAME "orderbook-tests" COMMAND test_orderbook)
 
 
 # install regression tests
+configure_file(
+    regression/tradingo.json.in
+    ${CAMKE_INSTALL_PREFIX}/etc/test/regression/tradgino.json
+    )
 file(GLOB files "regression/generated/*.json")
 install(DIRECTORY
     regression/generated/ DESTINATION etc/test/regression/
@@ -68,7 +72,7 @@ install(DIRECTORY
 foreach(file ${files})
     add_test(NAME "regression-test-${file}"
         COMMAND tradingo_replay 
-                    --config ${CMAKE_INSTALL_REFIX}/etc/test/regression/tradingo-cfg.json
+                    --config ${CMAKE_INSTALL_REFIX}/etc/test/regression/tradingo.json
                     --scenario-file ${CMAKE_INSTALL_REFIX}/etc/test/regression/${file}.json
     )
 endforeach()
