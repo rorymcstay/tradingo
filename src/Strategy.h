@@ -70,7 +70,7 @@ public:
     /// strategies
     const std::shared_ptr<TAllocations>& allocations() { return _allocations; }
     /// market data accessor
-    std::shared_ptr<MarketDataInterface> getMD() const { return _marketData; }
+    const std::shared_ptr<MarketDataInterface>& getMD() const { return _marketData; }
     /// conduct function_ on each signal. Optionally only evaluate on callback types
     /// update siganls on the current event
     void updateSignals();
