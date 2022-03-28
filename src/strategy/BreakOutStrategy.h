@@ -149,7 +149,6 @@ void BreakOutStrategy<TOrdApi, TPositionApi>::onBBO(const std::shared_ptr<Event>
             }
     );
     */
-    auto alloc =std::make_shared<Allocation>(price, qtyToTrade);
     const std::shared_ptr<model::Position>& position = md->getPositions().at(StrategyApi::_symbol);
     auto currentBalance = md->getMargin()->getWalletBalance();
     auto currentQty = position->getCurrentQty();
@@ -158,6 +157,7 @@ void BreakOutStrategy<TOrdApi, TPositionApi>::onBBO(const std::shared_ptr<Event>
             << LOG_VAR(price)
             << LOG_VAR(currentQty)
             << LOG_VAR(currentBalance));
+    StrategyApi::allocations()->addAllocation(price, qtyToTrade);
 }
 
 template<typename TOrdApi, typename TPositionApi>
@@ -203,7 +203,7 @@ qty_t BreakOutStrategy<TOrdApi, TPositionApi>::getQtyToTrade(const std::string& 
             return 0;
         }
     } else {
-        if (greater_equal(currentSize, _shortExpose)) {
+        if (less_equal(-_shortExpose, currentSize)) {
             return -100;
         } else {
             return 0;
