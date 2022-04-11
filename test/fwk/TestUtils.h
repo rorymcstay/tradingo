@@ -14,7 +14,7 @@ std::string getEventTypeFromString(const std::string &marketDataString) {
 
 
 template<typename T>
-std::shared_ptr<T> fromJson(web::json::value value_) {
+std::shared_ptr<T> fromJson(web::json::value& value_) {
     auto obj = std::make_shared<T>();
     obj->fromJson(value_);
     return obj;

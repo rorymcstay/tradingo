@@ -15,7 +15,8 @@ TEST(StrategyTimeControl, test_time_control) {
         {"shortTermWindow", "5"},
         {"longTermWindow", "10"},
         {"realtime", "true"},
-});
+    });
+    DEFAULT_START;
 
     auto timebegin = utility::datetime::utc_now();
     env << "QUOTE timestamp=2021-07-09T01:38:24.992Z askPrice=100.0 askSize=100.0 bidPrice=99.0 bidSize=1000.0 symbol=XBTUSD" LN;

@@ -10,7 +10,7 @@
 
 
 template<typename T>
-const utility::datetime& get_time(const T& modelBase_) {
+utility::datetime get_time(const T& modelBase_) {
     return modelBase_->getTimestamp();
 }
 
@@ -114,7 +114,7 @@ void TestMarketData::init() {
 
 template<typename T>
 void TestMarketData::onEvent(const T& event_) {
-    auto& time = get_time(event_);
+    auto time = get_time(event_);
     if (_realtime) {
         sleep(time);
     }

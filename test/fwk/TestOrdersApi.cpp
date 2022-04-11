@@ -358,7 +358,8 @@ void TestOrdersApi::operator >> (const std::string &outEvent_) {
         return;
     }
     auto params = Params(outEvent_);
-    auto expectedOrder = fromJson<model::Order>(params.asJson());
+    auto json_params = params.asJson();
+    auto expectedOrder = fromJson<model::Order>(json_params);
     if (eventType == "ORDER_NEW") {
         if (_newOrders.empty()) {
             failMessage << "No new orders made\n";

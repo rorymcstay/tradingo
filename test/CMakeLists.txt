@@ -49,7 +49,7 @@ add_executable(testTradingo-lr
 )
 
 add_test(NAME "tradingo-tests" COMMAND testTradingo)
-add_test(NAME "tradingo-longrunning--tests" COMMAND testTradingo-lr)
+#add_test(NAME "tradingo-longrunning--tests" COMMAND testTradingo-lr)
 add_test(NAME "orderbook-tests" COMMAND test_orderbook)
 
 
