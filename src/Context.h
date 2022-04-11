@@ -149,8 +149,9 @@ Context<TMarketData, TOrderApi, TPositionApi>::~Context() {
 template<typename TMarketData, typename TOrderApi, typename TPositionApi>
 void Context<TMarketData, TOrderApi, TPositionApi>::setupLogger() {
     auto logLevel = AixLog::Filter(AixLog::to_severity(_config->get<std::string>("logLevel", "info")));
+    auto terminalLogLevel = AixLog::Filter(AixLog::to_severity(_config->get<std::string>("terminalLogLevel", "info")));
     std::vector<std::shared_ptr<AixLog::Sink>> sinks = {
-        std::make_shared<AixLog::SinkCout>(logLevel),
+        std::make_shared<AixLog::SinkCout>(terminalLogLevel),
         std::make_shared<AixLog::SinkCerr>(AixLog::Severity::error),
     };
     auto logDir =_config->get<std::string>("logFileLocation", "");

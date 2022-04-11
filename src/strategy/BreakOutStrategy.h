@@ -120,18 +120,27 @@ void BreakOutStrategy<TOrdApi, TPositionApi>::onBBO(const std::shared_ptr<Event>
     bool isReady = StrategyApi::getSignal("moving_average_crossover")->isReady();
     auto signalValue = isReady ? StrategyApi::getSignal("moving_average_crossover")->read() : -1 ;
 
-    if (isReady && signalValue > 0) {  // _shortTermAvg - _longTermAvg > _buyThreshold
+    if (isReady && signalValue > _buyThreshold) {  // _shortTermAvg - _longTermAvg > _buyThreshold
         // short term average is higher than longterm, buy
+        StrategyApi::allocations()->cancelOrders([bidPrice](const std::shared_ptr<Allocation>& alloc_) {
+            return alloc_->getSide() != "Buy" or (bidPrice - alloc_->getPrice() > 50) ;
+        });
         qtyToTrade = getQtyToTrade("Buy");
         price = bidPrice;
         side = "Buy";
     } else if (isReady) {
+
         qtyToTrade = getQtyToTrade("Sell");
         price = askPrice;
         side = "Sell";
     } else {
         LOGDEBUG("Signal is not ready.");
     }
+    StrategyApi::allocations()->cancelOrders([side, bidPrice, askPrice]
+            (const std::shared_ptr<Allocation>& alloc_) {
+                return alloc_->getSize() != 0.0 and (alloc_->getSide() != side 
+                    or (std::abs(alloc_->getPrice() - (bidPrice+askPrice)/2) > 25));
+    });
 
     if (almost_equal(qtyToTrade, 0.0)) {
         LOGDEBUG("No quantity to trade");

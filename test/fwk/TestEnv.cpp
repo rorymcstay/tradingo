@@ -437,9 +437,11 @@ void TestEnv::operator<<(const std::shared_ptr<model::Execution>& exec_) {
         position->setCurrentQty(position->getCurrentQty() + positionDelta);
         position->setCurrentCost(position->getCurrentCost() +
                                  exec_->getExecCost());
-        position->setAvgCostPrice(
-            (position->getAvgCostPrice() * oldQty / newQty) +
-            (exec_->getLastPx() * exec_->getLastQty() / newQty));
+        if (not tradingo_utils::almost_equal(newQty, 0.0)) {
+            position->setAvgCostPrice(
+                (position->getAvgCostPrice() * oldQty / newQty) +
+                (exec_->getLastPx() * exec_->getLastQty() / newQty));
+        }
 
         position->setUnrealisedCost(position->getCurrentCost() -
                                     position->getRealisedCost());
@@ -451,9 +453,11 @@ void TestEnv::operator<<(const std::shared_ptr<model::Execution>& exec_) {
                                     position->getExecBuyQty());
             position->setExecBuyCost(std::abs(exec_->getExecCost()) +
                                      position->getExecBuyCost());
-            position->setAvgEntryPrice(
-                (position->getAvgEntryPrice() * oldQty / newQty) +
-                (exec_->getLastPx() * exec_->getLastQty() / newQty));
+            if (not tradingo_utils::almost_equal(newQty, 0.0)) {
+                position->setAvgEntryPrice(
+                    (position->getAvgEntryPrice() * oldQty / newQty) +
+                    (exec_->getLastPx() * exec_->getLastQty() / newQty));
+            }
         } else {
             position->setExecSellQty(exec_->getLastQty() +
                                      position->getExecSellQty());
@@ -532,12 +536,14 @@ void TestEnv::updatePositionFromInstrument(
     position->setUnrealisedCost(position->getCurrentCost() -
                                 position->getRealisedCost());
 
-    { // set the breakeven price
-        // TODO
+    // TODO Ensure this is correct
+    if (not tradingo_utils::almost_equal(position->getCurrentQty(), 0.0)) {
         auto positionTotalCost =
             position->getAvgCostPrice() * position->getCurrentQty();
         auto bkevenPrice = position->getCurrentQty() / (positionTotalCost);
         position->setBreakEvenPrice(bkevenPrice);
+    } else {
+        position->setBreakEvenPrice(0.0);
     }
     // margin
     { // gross exec cost

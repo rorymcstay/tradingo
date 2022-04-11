@@ -12,7 +12,7 @@ using namespace io::swagger::client;
 
 class MovingAverageCrossOver : public Signal {
 
-    using SMA_T = SimpleMovingAverage<uint64_t, uint64_t>;
+    using SMA_T = SimpleMovingAverage<long, long>;
 
     SMA_T _shortTerm;
     long _shortTermVal;

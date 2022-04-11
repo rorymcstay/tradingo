@@ -37,6 +37,10 @@ void Allocation::rest() {
 void Allocation::cancelDelta() {
     if (isAmendUp() || isAmendDown()) {
         _version--;
+    } else if (isNew()) {
+        _size = 0.0;
+        _order->setOrderQty(0.0);
+        _order->setLeavesQty(0.0);
     }
     _targetDelta = 0;
 }

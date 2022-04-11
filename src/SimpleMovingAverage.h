@@ -8,16 +8,16 @@
 #include <stdint.h>
 #include "Utils.h"
 
-template <class input_t = uint16_t, class sum_t = uint32_t>
+template <class input_t = long, class sum_t = long>
 class SimpleMovingAverage {
     long count;
 public:
     using input_type = input_t;
-    using size_t = uint8_t;
+    using size_t = long;
     input_t operator()(input_t input);
     SimpleMovingAverage() = default;
 
-    SimpleMovingAverage(uint8_t N_, double primedCount_)
+    SimpleMovingAverage(long N_, double primedCount_)
     :   N(N_)
     ,   previousInputs(new input_t[N_]{})
     ,   primed(false)
@@ -25,9 +25,9 @@ public:
     ,   count(0){}
 
 private:
-    uint8_t N                 = 10;
+    long N                 = 10;
     long primedCount       = 10;
-    uint8_t index             = 0;
+    long index             = 0;
     input_t * previousInputs;
     sum_t sum                 = 0;
     bool primed;
