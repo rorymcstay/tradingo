@@ -73,8 +73,9 @@ set(TEST_CASE_FILES
     "TradingoReplayTestCases_testing_enter_position_extend_and_then_exit"
     "TradingoReplayTestCases_testing_order_value_exceeds_balance"
     )
-foreach(test_case${TEST_CASE_FILES})
-    add_test(NAME "regression-test-${file}"
+
+foreach(test_case ${TEST_CASE_FILES})
+    add_test(NAME "regression-test-${test_case}"
         COMMAND tradingo_replay 
                     --config ${CMAKE_INSTALL_PREFIX}/etc/test/regression/tradingo.json
                     --scenario-file ${CMAKE_INSTALL_PREFIX}/etc/test/regression/${test_case}.json
