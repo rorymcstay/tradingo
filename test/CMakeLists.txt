@@ -56,11 +56,10 @@ add_test(NAME "orderbook-tests" COMMAND test_orderbook)
 # install regression tests
 configure_file(
     regression/tradingo.json.in
-    ${CMAKE_INSTALL_PREFIX}/etc/test/regression/tradgino.json
+    ${CMAKE_INSTALL_PREFIX}/etc/test/regression/tradingo.json
 )
-file(GLOB files "regression/generated/*.json")
 install(DIRECTORY
-    regression/generated/ DESTINATION etc/test/regression/
+    regression/generated/ DESTINATION ${CMAKE_INSTALL_PREFIX}/etc/test/regression/
     FILES_MATCHING
     PATTERN
     regression/generated/*.json
@@ -69,12 +68,19 @@ install(DIRECTORY
     PERMISSIONS OWNER_WRITE OWNER_READ GROUP_READ
 )
 # add them to run
-foreach(file ${files})
+
+set(TEST_CASE_FILES
+    "TradingoReplayTestCases_testing_enter_position_extend_and_then_exit"
+    "TradingoReplayTestCases_testing_order_value_exceeds_balance"
+    )
+foreach(test_case${TEST_CASE_FILES})
     add_test(NAME "regression-test-${file}"
         COMMAND tradingo_replay 
-                    --config ${CMAKE_INSTALL_REFIX}/etc/test/regression/tradingo.json
-                    --scenario-file ${CMAKE_INSTALL_REFIX}/etc/test/regression/${file}.json
+                    --config ${CMAKE_INSTALL_PREFIX}/etc/test/regression/tradingo.json
+                    --scenario-file ${CMAKE_INSTALL_PREFIX}/etc/test/regression/${test_case}.json
     )
+
+
 endforeach()
 
 set(TEST_LINK_LIBRARIES 
