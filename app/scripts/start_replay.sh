@@ -64,4 +64,4 @@ replay_tradingo_on() {
     aws s3 sync "$STORAGE" "s3://$BUCKET_NAME/replays/"
 
 }
-replay_tradingo_on $trade_date
+replay_tradingo_on $trade_date "$@"
