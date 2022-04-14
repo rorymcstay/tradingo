@@ -7,6 +7,7 @@
 #include "model/Instrument.h"
 #include "model/Trade.h"
 #include <cpprest/asyncrt_utils.h>
+#include <cstdlib>
 
 
 template<typename T>
@@ -18,7 +19,12 @@ utility::datetime get_time(const T& modelBase_) {
 /// get object
 template<typename T>
 std::shared_ptr<T> get_object_from_file(const std::string& file_name) {
-    std::string json_file = TESTDATA_LOCATION "/objects/" + file_name + ".json";
+    std::string json_file;
+    if (std::getenv("TESTDATA_LOCATION"))
+        json_file = std::string(std::getenv("TESTDATA_LOCATION")) + "/objects/" + file_name + ".json";
+    else
+        json_file = TESTDATA_LOCATION "/objects/" + file_name + ".json";
+    LOGINFO("Reading "<< json_file);
     auto out = std::make_shared<T>();
     auto json_val = read_json_file(json_file);
     out->fromJson(json_val);
@@ -106,8 +112,11 @@ void TestMarketData::sleep(const utility::datetime& time_) const {
 
 void TestMarketData::init() {
     // populate initial test data
+    LOGINFO("Loading default objects for instrument");
     operator<<(get_object_from_file<model::Instrument>("opening_instrument"));
+    LOGINFO("Loading default objects for position");
     operator<<(get_object_from_file<model::Position>("opening_position"));
+    LOGINFO("Loading default objects for margin");
     operator<<(get_object_from_file<model::Margin>("opening_margin"));
 
 }

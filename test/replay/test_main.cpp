@@ -56,6 +56,7 @@ int main(int argc, char **argv) {
         auto json_str = vm.at("config-json").as<std::string>();
         web::json::value json_val;
         try {
+            LOGINFO("Applying config overrides");
             json_val = web::json::value::parse(json_str);
         } catch (const std::exception& ex) {
             std::stringstream errmsg;
@@ -113,6 +114,8 @@ int main(int argc, char **argv) {
             return 1;
         }
         initial_margin->fromJson(json_val);
+        LOGINFO("Read initial margin from command line "
+                << initial_margin->toJson().serialize());
     }
     auto initial_position = std::shared_ptr<model::Position>();
     if (vm.contains("initial-position")) {
@@ -129,6 +132,8 @@ int main(int argc, char **argv) {
             return 1;
         }
         initial_position->fromJson(json_val);
+        LOGINFO("Read initial position from command line "
+                    << initial_position->toJson().serialize());
     }
 
     auto quotes = Series<model::Quote>(quotes_file, quote_resolution);
@@ -153,8 +158,10 @@ int main(int argc, char **argv) {
     }
     if (initial_margin)
         env << initial_margin;
+        LOGINFO("Applied initial margin from command line");
     if (initial_position)
         env << initial_position;
+        LOGINFO("Applied initial position from command line");
     env.playback(trades, quotes, instruments);
     LOGINFO("Replay Finished");
 }
