@@ -8,6 +8,8 @@
 #include "Utils.h"
 #include <stdexcept>
 
+static const double SATOSHI = 10e7;
+
 model::Instrument
 func::get_instrument(const std::shared_ptr<api::InstrumentApi> &_instrumentApi, const std::string &symbol_) {
     std::shared_ptr<model::Instrument> inst;
@@ -68,5 +70,5 @@ price_t func::get_cost(price_t price_, qty_t qty_, double leverage_)
     if (tradingo_utils::almost_equal(price_, 0.0)) {
         return 0.0;
     }
-    return  qty_ * (1 /( price_* leverage_));
+    return  qty_ * (1 /( price_* leverage_)) * SATOSHI;
 }

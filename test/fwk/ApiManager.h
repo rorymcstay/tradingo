@@ -29,13 +29,13 @@ struct ApiManager {
         config->set("symbol", "XBTUSD");
         config->set("baseUrl", "https://testnet.bitmex.com/api/v1/");
         config->set("connectionString", "wss://testnet.bitmex.com");
-        std::string base_url = config->get("baseUrl");
+        std::string base_url = config->get<std::string>("baseUrl");
         auto apiConfig = std::make_shared<api::ApiConfiguration>();
         auto httpConfig = web::http::client::http_client_config();
         apiConfig->setHttpConfig(httpConfig);
         apiConfig->setBaseUrl(base_url);
-        apiConfig->setApiKey("api-key", config->get("apiKey"));
-        apiConfig->setApiKey("api-secret", config->get("apiSecret"));
+        apiConfig->setApiKey("api-key", config->get<std::string>("apiKey"));
+        apiConfig->setApiKey("api-secret", config->get<std::string>("apiSecret"));
         auto apiClient = std::make_shared<api::ApiClient>(apiConfig);
         orderApi = std::make_shared<api::OrderApi>(apiClient);
         positionApi = std::make_shared<api::PositionApi>(apiClient);

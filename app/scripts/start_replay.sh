@@ -31,36 +31,26 @@ replay_tradingo_on() {
         aws s3 cp "s3://$BUCKET_NAME/tickRecorder/storage/$1/trades_$SYMBOL.json" $tick_location
     fi
 
-    config_file=$REPLAY_STORAGE/$RUN_ID/tradingo.cfg
+    common_config=$REPLAY_STORAGE/$RUN_ID/common.json
+    config_file=$REPLAY_STORAGE/$RUN_ID/replayTradingo.json
     echo "config_file="$config_file
     export STORAGE=$REPLAY_STORAGE
     mkdir -p $STORAGE/$RUN_ID
 
-    echo "# Tradingo Replay" > $config_file
-    echo "# run_id=${RUN_ID}" >> $config_file
-    echo "# replay config" >> $config_file
-    echo "" >> $config_file
     TICK_STORAGE=$TICK_STORAGE \
     DATESTR=$DATESTR \
     LIB_NAME_PREFIX="test" \
-    REALTIME=${REALTIME:-false} \
     INSTALL_LOCATION=$INSTALL_LOCATION \
-    STARTING_BALANCE=${STARTING_BALANCE:-0.01} \
-    INITIAL_LEVERAGE=${INITIAL_LEVERAGE:-15} \
-    LEVERAGE_TYPE=${LEVERAGE_TYPE:-ISOLATED} \
-    MAINT_MARGIN=${MAINT_MARGIN:-0.035} \
-        envsubst < $INSTALL_LOCATION/etc/config/replayTradingo.cfg  \
-    >> $config_file
+        envsubst < $INSTALL_LOCATION/etc/config/replayTradingo.json \
+    > $config_file
 
-    populate_common_params $config_file
-    LIB_NAME_PREFIX="test_" \
-        populate_strategy_params $INSTALL_LOCATION/etc/config/strategy/${STRATEGY}.cfg $config_file
-    cat $config_file
+    populate_common_params $common_config
     # run the replay in the RUN_ID directory to capture core files.
     cd $STORAGE/$RUN_ID
     set +e
-    replayTradingo --config $config_file "$@"
+    echo replayTradingo --config $config_file "${@:2}"
+    replayTradingo --config $common_config --config $config_file "${@:2}"
     aws s3 sync "$STORAGE" "s3://$BUCKET_NAME/replays/"
 
 }
-replay_tradingo_on $trade_date
+replay_tradingo_on $trade_date "$@"

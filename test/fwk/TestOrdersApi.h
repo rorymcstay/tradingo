@@ -1,8 +1,6 @@
 //
 // Created by Rory McStay on 18/06/2021.
 //
-
-
 #ifndef TRADINGO_TESTORDERSAPI_H
 #define TRADINGO_TESTORDERSAPI_H
 
@@ -12,19 +10,22 @@
 #define _TURN_OFF_PLATFORM_STRING
 #include <model/Order.h>
 #include <model/Margin.h>
+#include <model/Execution.h>
+#include <model/Position.h>
 #include <Object.h>
 #include <ApiClient.h>
-#include <model/Position.h>
 
 // src
 #include "BatchWriter.h"
 #include "Config.h"
 #include "Utils.h"
 
+
 // test/fwk
 #include "TestUtils.h"
 #include "Params.h"
-#include "MarginCalculator.h"
+#include "TestMarketData.h"
+
 
 using namespace io::swagger::client;
 using namespace tradingo_utils;
@@ -41,22 +42,15 @@ private:
     std::queue<std::shared_ptr<model::ModelBase>> _allEvents;
     long _oidSeed;
     utility::datetime _time;
-    std::shared_ptr<model::Position> _position;
-    std::shared_ptr<model::Margin> _margin;
     std::shared_ptr<Config> _config;
-    std::shared_ptr<MarginCalculator> _marginCalculator;
-    double _leverage;
-    std::string _leverageType;
+    std::shared_ptr<TestMarketData> _marketData;
 
 public:
-    const std::shared_ptr<MarginCalculator>& getMarginCalculator() const;
-    void setMarginCalculator(const std::shared_ptr<MarginCalculator>& marginCalculator);
     using Writer = BatchWriter<std::shared_ptr<model::ModelBase>>;
-    const std::shared_ptr<model::Position>& getPosition() const;
-    void setPosition(const std::shared_ptr<model::Position>& position_);
-    const std::shared_ptr<model::Margin>& getMargin() const;
-    void setMargin(const std::shared_ptr<model::Margin>& margin_);
 
+    std::queue<std::shared_ptr<model::Order>>& rejects() {return  _rejects; };
+
+    void setMarketData(const std::shared_ptr<TestMarketData>& _marketData);
 private:
 
     // validates and rejects if necessary
@@ -65,10 +59,10 @@ private:
     bool checkValidAmend(std::shared_ptr<model::Order> amendRequest,
                          std::shared_ptr<model::Order> originalOrder);
 
+
 public:
     void set_order_timestamp(const std::shared_ptr<model::Order>& order_);
     TestOrdersApi(std::shared_ptr<io::swagger::client::api::ApiClient> ptr);
-    void init(std::shared_ptr<Config> config_);
 
     // API
     pplx::task<std::shared_ptr<model::Order>> order_amend(
@@ -137,21 +131,20 @@ public:
 
     // Testing helpers
 private:
-
     bool hasMatchingOrder(const std::shared_ptr<model::Trade>& trade_);
-public:
-    void addExecToPosition(const std::shared_ptr<model::Execution>& exec_);
 
 public:
     void operator >> (const std::string& outEvent_);
-    void operator >> (std::vector<std::shared_ptr<model::ModelBase>>& outBuffer_);
     void operator >> (Writer& outBuffer_);
 
     void operator << (const utility::datetime& time_);
+    void operator << (const std::shared_ptr<model::Execution>& exec_);
 
     std::shared_ptr<model::Order> getEvent(const std::string& event_);
 
     std::map<std::string, std::shared_ptr<model::Order>>& orders() { return _orders; }
+
+
 
 
 };

@@ -5,6 +5,23 @@
 #include "Signal.h"
 #include "Config.h"
 
+
+Signal::Signal(
+            const std::shared_ptr<MarketDataInterface>& marketData_,
+            const std::string& name_,
+            const std::string& header_
+)
+:   _config(nullptr)
+,   _name(name_)
+,   _marketData(marketData_)
+,   _timer()
+,   _time()
+,   _callback(false)
+,   _header(header_) {
+
+};
+
+
 void Signal::update() {
 
     /*
@@ -25,9 +42,8 @@ void Signal::update() {
             if (_time.is_initialized()) {
                 mkt_time_past = time_diff(quote->getTimestamp(), _time);
             }
-            LOGDEBUG("REPLAYE_MODE: Market time past " << LOG_VAR(mkt_time_past) << LOG_VAR(_timer.interval()));
+            LOGDEBUG("REPLAY_MODE: Market time past " << LOG_VAR(mkt_time_past) << LOG_VAR(_timer.interval()));
             if (mkt_time_past >= _timer.interval()) {
-                LOGDEBUG("REPLAY_MODE: Time to update " << _timer.interval());
                 onQuote(quote);
                 _time = quote->getTimestamp();
             }
@@ -48,29 +64,33 @@ void Signal::update() {
         _batchWriter->write(read_as_string());
 }
 
-void Signal::init(const std::shared_ptr<Config> &config_, const std::shared_ptr<MarketDataInterface>& marketData_) {
+void Signal::init(const std::shared_ptr<Config> &config_) {
     _config = config_;
-    _marketData = marketData_;
-    auto storage = config_->get("storage", "");
+    auto storage = config_->get<std::string>("storage", "");
     if (storage.empty())
         storage = "/tmp/";
     auto printer = [](const std::string& it_) { return it_; };
     _batchWriter = std::make_shared<Signal::Writer>(
-            "moving_average_crossover",
-            config_->get("symbol"),
-            storage, 100000, printer, false);
-    auto evalInterval = std::stoi(_config->get(_name+"-interval", "1000"));
-    if (_config->get(_name+"-callback") == "true") {
+            /*tableName_=*/_name,
+            /*symbol_=*/config_->get<std::string>("symbol"),
+            /*storage_=*/storage,
+            /*batchSize_=*/100000,
+            /*print_=*/printer,
+            /*rotate_=*/false,
+            /*fileExtension_=*/"csv",
+            /*header_=*/_header);
+    auto evalInterval = _config->get<int>(_name+"-interval", 1000);
+    if (_config->get<bool>(_name+"-callback")) {
         // if its a callback siganl, always set as callback.
         _callback = true;
         LOGINFO("strategy callback signal initialised." << LOG_VAR(_name));
-    } else if (_config->get("override-signal-callback", "false") != "true") {
+    } else if (not _config->get<bool>("override-signal-callback", false)) {
         // production mode for timer signals.
         _callback = false;
         LOGINFO("Using callback timer for signal."
             << LOG_VAR(_name) << LOG_VAR(evalInterval));
         _timer.start(evalInterval, [this] { update(); });
-    } else if (_config->get("override-signal-callback") == "true") {
+    } else if (not _config->get<bool>("override-signal-callback")) {
         _timer.set_interval(evalInterval);
     }
 }

@@ -263,6 +263,7 @@ public:
     const std::shared_ptr<model::Quote> quote() const;
     /// get instrument static.
     const std::shared_ptr<model::Instrument>& instrument() const;
+    const std::unordered_map<std::string, std::shared_ptr<model::Instrument>>& getInstruments() const;
 
 };
 

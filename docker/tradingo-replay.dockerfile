@@ -1,6 +1,10 @@
 FROM rmcstay95/tradingo-base:0ee37ab-dirty as builder
 
 # build tradingo
+# TODO break this up into compilation of targets one at a time
+# and then install only at the end. This is in order to take
+# advantage of layer caching if possible. And to only build what
+# image needs
 ARG install_base=/usr/from-src/
 WORKDIR /usr/src/tradingo
 ADD . .
@@ -108,6 +112,8 @@ RUN adduser \
     --no-create-home \
     --uid "$UID" \
     "$USER"
+
+ENV TESTDATA_LOCATION=/usr/local/etc/test/data
 
 ARG install_base=/usr/from-src/
 COPY --from=builder ${install_base}/cpprest/lib /usr/local/lib

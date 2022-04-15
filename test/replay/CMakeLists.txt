@@ -1,7 +1,12 @@
+
+
+add_compile_definitions("TESTDATA_LOCATION=\"${CMAKE_INSTALL_PREFIX}/etc/test/data\"")
+
 add_executable(replayTradingo
         test_main.cpp)
 add_executable(tradingo_replay
     replay.cpp)
+
 
 if(${REPLAY_MODE})
     message(STATUS "Replay mode is active")

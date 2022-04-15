@@ -9,6 +9,7 @@
 #include <boost/optional.hpp>
 #include <utility>
 
+
 #include "Utils.h"
 #include "ApiException.h"
 
@@ -36,6 +37,10 @@ private:
     std::shared_ptr<TOrdApi> _orderApi;
     void updateFromTask(const std::shared_ptr<Allocation>& allocation_,
     const std::shared_ptr<model::Order>&);
+    /// declare all allocations fulfilled.
+    void restAll();
+    /// declare allocations fulfilled
+    void rest(const std::function<bool(const std::shared_ptr<Allocation>&)>& predicate_);
 public:
 
     class iterator_type {
@@ -102,14 +107,16 @@ public:
     iterator_type begin() const;
     iterator_type end() const;
     size_t size() const ;
-    /// declare all allocations fulfilled.
-    void restAll();
-    /// declare allocations fulfilled
-    void rest(const std::function<bool(const std::shared_ptr<Allocation>&)>& predicate_);
-    /// reset the desired allocation delta.
-    void cancel(const std::function<bool(const std::shared_ptr<Allocation>& )>& predicate_);
+    std::vector<price_t> occupiedLevels() const {
+        std::vector<price_t> out;
+        std::transform(_occupiedLevels.begin(), _occupiedLevels.end(), out.begin(),
+                [](const std::shared_ptr<Allocation>& alloc_) { return alloc_->getPrice(); });
+        return out;
+    }
+
     /// cancel all price levels
     void cancelOrders(const std::function<bool(const std::shared_ptr<Allocation> &)> &predicate_);
+    void cancel(const std::function<bool(const std::shared_ptr<Allocation>&)>& predicate_);
     void placeAllocations();
 
 };
@@ -171,7 +178,6 @@ void Allocations<TOrdApi>::addAllocation(price_t price_, qty_t qty_, const std::
     if (qty_ > 0 && side_ == "Sell") {
         qty_ = - qty_;
     }
-    LOGINFO("Adding allocation: " << LOG_VAR(price_) << LOG_VAR(qty_) << LOG_VAR(side_));
     auto price_index = allocIndex(price_);
     auto& allocation = _data[price_index];
     // mark occupied if weve not done so
@@ -186,6 +192,12 @@ void Allocations<TOrdApi>::addAllocation(price_t price_, qty_t qty_, const std::
         allocation->setTargetDelta(qty_ + allocation->getTargetDelta());
         allocation->getOrder()->setSymbol(_symbol);
     }
+    LOGINFO("Adding allocation: "
+            << LOG_VAR(price_)
+            << LOG_VAR(qty_)
+            << LOG_VAR(side_)
+            << LOG_VAR(allocation->getTargetDelta())
+            << LOG_VAR(allocation->getSize()));
 }
 
 
@@ -226,9 +238,10 @@ void Allocations<TOrdApi>::update(const std::shared_ptr<model::Execution> &exec_
     auto alloc = get(exec_->getPrice());
     alloc->update(exec_);
     if (almost_equal(exec_->getLeavesQty(), 0.0)) {
-        _occupiedLevels.erase(
-                std::find(_occupiedLevels.begin(), _occupiedLevels.end(), allocIndex(exec_->getPrice()))
-        );
+
+        auto ref = std::find(_occupiedLevels.begin(), _occupiedLevels.end(), allocIndex(exec_->getPrice()));
+        if (ref != _occupiedLevels.end())
+            _occupiedLevels.erase(ref);
     }
 }
 
@@ -269,9 +282,10 @@ template<typename TOrdApi>
 void Allocations<TOrdApi>::cancelOrders(const std::function<bool(const std::shared_ptr<Allocation>&)>& predicate_) {
 
     std::for_each(begin(), end(), [this, predicate_](const std::shared_ptr<Allocation>& alloc_ ) {
-      if (predicate_(alloc_)) {
+      if (alloc_->getSize() != 0.0 and predicate_(alloc_)) {
           alloc_->setTargetDelta(-alloc_->getSize());
           LOGINFO("cancelOrders: Cancelling allocation orders "
+                  << LOG_NVP("OrderID", alloc_->getOrder()->getOrderID())
                   << LOG_NVP("Price", alloc_->getPrice())
                   << LOG_NVP("Side", alloc_->getSide())
                   << LOG_NVP("Size", alloc_->getSize()));
@@ -296,15 +310,17 @@ void Allocations<TOrdApi>::placeAllocations() {
     std::vector<std::shared_ptr<model::Order>> _newOrders;
     std::vector<std::shared_ptr<model::Order>> _cancels;
     _amends.clear(); _newOrders.clear(); _cancels.clear();
+    setUnmodified();
     // TODO use ranges ontop of *_allocations iterator. - occupied price level view
-    for (auto& allocation : _data) {
+    for (auto occupiedPrice : _occupiedLevels) {
+        auto& allocation = _data[occupiedPrice];
         if (!allocation) {
             continue;
         }
         if (almost_equal(allocation->getTargetDelta(), 0.0)) {
             continue;
         }
-        LOGDEBUG("Processing allocation "
+        LOGINFO("Processing allocation "
                      << LOG_NVP("targetDelta",allocation->getTargetDelta())
                      << LOG_NVP("currentSize", allocation->getSize())
                      << LOG_NVP("price",allocation->getPrice()));
@@ -321,8 +337,8 @@ void Allocations<TOrdApi>::placeAllocations() {
                               std::to_string(allocation->getVersion()));
             try {
                 order->setSymbol(_symbol);
-                _orderApi
-                    ->order_new(order->getSymbol(), order->getSide(),
+                _orderApi->order_new(order->getSymbol(),
+                                order->getSide(),
                                 boost::none, // simpleOrderQty
                                 order->getOrderQty(),
                                 order->getPrice(),
@@ -332,7 +348,8 @@ void Allocations<TOrdApi>::placeAllocations() {
                                 boost::none, // clOrdLinkId
                                 boost::none, // pegOffsetValue
                                 boost::none, // pegPriceType
-                                order->getOrdType(), order->getTimeInForce(),
+                                order->getOrdType(),
+                                order->getTimeInForce(),
                                 boost::none, // execInst
                                 boost::none, // contingencyType
                                 boost::none  // text
@@ -357,6 +374,7 @@ void Allocations<TOrdApi>::placeAllocations() {
                               + "_v"
                               + std::to_string(allocation->getVersion())
             );
+            bool originalOrderCancelled = false;
             try {
                 auto task = _orderApi->order_cancel(
                     boost::none, // orderId
@@ -367,16 +385,9 @@ void Allocations<TOrdApi>::placeAllocations() {
                       this->updateFromTask(allocation, order_.get()[0]);
                     });
                 task.wait();
-            } catch (api::ApiException &ex_) {
-                LOGERROR("Error cancelling order "
-                             << LOG_NVP("response", ex_.getContent()->rdbuf())
-                             << LOG_VAR(ex_.what())
-                             << LOG_NVP("action", actionMessage.str()));
-                allocation->cancelDelta();
-            }
-            try {
+                originalOrderCancelled = true;
                 order->setSymbol(_symbol);
-                auto task = _orderApi->order_new(
+                auto new_order_task = _orderApi->order_new(
                     order->getSymbol(),
                     allocation->targetSide(),
                     boost::none, // simpleOrderQty
@@ -397,9 +408,9 @@ void Allocations<TOrdApi>::placeAllocations() {
                     [this, allocation, &order](const pplx::task<std::shared_ptr<model::Order>> &order_) {
                       this->updateFromTask(allocation, order_.get());
                     });
-                task.wait();
+                new_order_task.wait();
             } catch (api::ApiException &ex_) {
-                LOGERROR("Error placing new order "
+                LOGERROR("Error changing sides "
                              << LOG_NVP("response", ex_.getContent()->rdbuf())
                              << LOG_VAR(ex_.what())
                              << LOG_NVP("action", actionMessage.str()));
@@ -470,6 +481,8 @@ void Allocations<TOrdApi>::placeAllocations() {
                          << LOG_VAR(ex_.what())
                          << LOG_NVP("action", actionMessage.str()));
                 allocation->cancelDelta();
+                allocation->getOrder()->setOrderQty(0.0);
+                allocation->getOrder()->setOrdStatus("Rejected");
             }
         } else {
             LOGERROR("Couldn't determine action for " << actionMessage.str());
@@ -495,6 +508,7 @@ void Allocations<TOrdApi>::updateFromTask(const std::shared_ptr<Allocation>& all
                         << LOG_NVP("ordStatus", order_->getOrdStatus())
                         << LOG_NVP("orderQty", order_->getOrderQty())
                         << LOG_NVP("leavesQty",order_->getLeavesQty())
+                        << LOG_NVP("side", order_->getSide())
                         << LOG_NVP("cumQty", order_->getCumQty()));
     if (allocation_->isChangingSide() and order_->getOrdStatus() == "Cancelled") {
         allocation_->setTargetDelta(allocation_->getSize() + allocation_->getTargetDelta());

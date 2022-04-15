@@ -1,0 +1,16 @@
+{
+  "longExpose": 1000,
+  "shortExpose": 1000,
+  "moving_average_crossover-callback": false,
+  "moving_average_crossover-interval": 1000,
+  "shortTermWindow": 1000,
+  "longTermWindow": 8000,
+  "clOrdPrefix": "MCST",
+  "symbol": "XBTUSD",
+  "factoryMethod": "RegisterBreakOutStrategy",
+  "storage": "/tmp/tradingo/",
+  "tickStorage": "${CMAKE_INSTALL_PREFIX}/etc/test/data/",
+  "realtime": false,
+  "logLevel": "info",
+  "libraryLocation": "${CMAKE_INSTALL_PREFIX}/lib/libtest_trading_strategies.so"
+}

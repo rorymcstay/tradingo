@@ -26,10 +26,10 @@ static void BM_read_quotes_json(benchmark::State& state) {
 
     std::ifstream quoteFile;
     auto marketdata = std::make_shared<TestMarketData>(config, nullptr);
-    auto signal = std::make_shared<MovingAverageCrossOver>(1000, 8000);
-    signal->init(config, marketdata);
+    auto signal = std::make_shared<MovingAverageCrossOver>(marketdata,1000, 8000);
+    signal->init(config);
     marketdata->setCallback([&](){ signal->update(); });
-    quoteFile.open(config->get("tickStorage")+"/quotes_XBTUSD.json");
+    quoteFile.open(config->get<std::string>("tickStorage")+"/quotes_XBTUSD.json");
     if (!quoteFile.is_open()) {
         throw std::runtime_error("No quotes file found.");
     }

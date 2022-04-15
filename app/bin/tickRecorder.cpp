@@ -17,7 +17,6 @@
 
 
 using namespace io::swagger::client;
-namespace ws = web::websockets;
 namespace po = boost::program_options;
 
 using ModelBatchWriter = BatchWriter<std::shared_ptr<model::ModelBase>>;
@@ -52,13 +51,13 @@ int main(int argc, char **argv) {
     std::string storage;
     if (vm.contains("config")) {
         config = std::make_shared<Config>(vm.at("config").as<std::string>());
-        storage = config->get("storage");
-        symbol = config->get("symbol");
+        storage = config->get<std::string>("storage");
+        symbol = config->get<std::string>("symbol");
     } else {
         return 1;
     }
     // first initialise threadpool
-    auto pplxThreadCount = std::stoi(config->get("pplxThreadCount", "4"));
+    auto pplxThreadCount = config->get<int>("pplxThreadCount", 4);
     crossplat::threadpool::initialize_with_threads(pplxThreadCount);
 
     // then initialise context
@@ -70,7 +69,6 @@ int main(int argc, char **argv) {
     LOGINFO("Starting tick recording with " << LOG_VAR(symbol) << LOG_VAR(storage));
 
 
-
     // table writers
     auto printer = [](const std::shared_ptr<model::ModelBase>& order_) {
         return order_->toJson().serialize();
@@ -80,21 +78,21 @@ int main(int argc, char **argv) {
         "trades",
         symbol,
         storage,
-        std::stoi(config->get("tradesBatchSize", "100")),
+        config->get<int>("tradesBatchSize", 100),
         printer,
         false);
     auto quotes = std::make_shared<ModelBatchWriter>(
         "quotes",
         symbol,
         storage,
-        std::stoi(config->get("quotesBatchSize", "1000")),
+        config->get<int>("quotesBatchSize", 1000),
         printer,
         false);
     auto instruments = std::make_shared<ModelBatchWriter>(
         "instruments",
         symbol,
         storage,
-        std::stoi(config->get("instrumentsBatchSize", "1000")),
+        config->get<int>("instrumentsBatchSize", 1000),
         printer,
         false);
 

@@ -1,0 +1,40 @@
+{
+    "Margin": [
+        {"name": "walletBalance","tolerance": 1.5},
+        {"name": "marginBalance","tolerance": 1.5},
+        {"name": "maintMargin", "tolerance": 1.5},
+        {"name": "realisedPnl","tolerance": 1.5},
+        {"name": "unrealisedPnl","tolerance": 1.5},
+        {"name": "marginLeverage","tolerance": 1.5},
+        {"name": "amount","tolerance": 1.5},
+        {"name": "grossMarkValue","tolerance": 1.5},
+        {"name": "grossComm","tolerance": 1.5},
+        {"name": "unrealisedProfit","tolerance": 1.5}
+    ],
+    "Position": [
+        {"name": "currentQty","tolerance": 1.5},
+        {"name": "currentCost","tolerance": 1.5},
+        {"name": "currentComm","tolerance": 1.5},
+        {"name": "execComm","tolerance": 1.5},
+        {"name": "posState"},
+        {"name": "realisedCost","tolerance": 1.5},
+        {"name": "unrealisedCost","tolerance": 1.5},
+        {"name": "execQty","tolerance": 1.5},
+        {"name": "execCost","tolerance": 1.5},
+        {"name": "execBuyCost","tolerance": 1.5},
+        {"name": "execBuyQty","tolerance": 1.5},
+        {"name": "execSellCost","tolerance": 1.5},
+        {"name": "execSellQty","tolerance": 1.5},
+        {"name": "averageEntryPrice","tolerance": 1.5},
+        {"name": "averageCostPrice","tolerance": 1.5},
+        {"name": "maintMargin","tolerance": 1.5},
+        {"name": "execCost","tolerance": 1.5},
+        {"name": "execQty","tolerance": 1.5},
+        {"name": "liquidationPrice","tolerance": 1.5},
+        {"name": "realisedPnl","tolerance": 1.5},
+        {"name": "markValue","tolerance": 1.5},
+        {"name": "lastValue","tolerance": 1.5},
+        {"name": "lastValue","tolerance": 1.5},
+        {"name": "unrealisedPnl","tolerance": 1.5}
+    ]
+}

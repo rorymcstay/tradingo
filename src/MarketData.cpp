@@ -40,14 +40,14 @@ MarketData::~MarketData() {
 
 MarketData::MarketData(const std::shared_ptr<Config>& config_, std::shared_ptr<InstrumentService> instrumentSvc_)
 :   MarketDataInterface(config_, instrumentSvc_)
-,   _connectionString(config_->get("connectionString"))
-,   _apiKey(config_->get("apiKey", "NO_AUTH"))
-,   _apiSecret(config_->get("apiSecret", "NO_AUTH"))
+,   _connectionString(config_->get<std::string>("connectionString"))
+,   _apiKey(config_->get<std::string>("apiKey", "NO_AUTH"))
+,   _apiSecret(config_->get<std::string>("apiSecret", "NO_AUTH"))
 ,   _wsClient(std::make_shared<ws::client::websocket_callback_client>())
 ,   _initialised(false)
-,   _shouldAuth(config_->get("shouldAuth", "Yes") == "Yes")
-,   _cancelAllAfter(config_->get("cancelAllAfter", "Yes") == "Yes")
-,   _cancelAllTimeout(std::stoi(config_->get("cancelAllTimeout", "15000")))
+,   _shouldAuth(config_->get<bool>("shouldAuth", true))
+,   _cancelAllAfter(config_->get<bool>("cancelAllAfter", true))
+,   _cancelAllTimeout(config_->get<int>("cancelAllTimeout", 15000))
 ,   _heartBeat(nullptr)
 ,   _cycle(0)
 {
@@ -315,7 +315,6 @@ void MarketDataInterface::handleInstruments(
             _instruments.erase(symbol);
         }
     }
-    update(instruments_);
 }
 
 void MarketDataInterface::removeOrders(const std::vector<std::shared_ptr<model::Order>> &orders_) {
@@ -332,7 +331,7 @@ void MarketDataInterface::insertOrders(const std::vector<std::shared_ptr<model::
 void MarketDataInterface::updateOrders(const std::vector<std::shared_ptr<model::Order>> &orders_) {
     for (auto& ord : orders_) {
         auto update_json = ord->toJson();
-        _orders[getOrderKey(ord)]->fromJson(update_json);
+        _orders.at(getOrderKey(ord))->fromJson(update_json);
     }
 }
 
@@ -370,11 +369,15 @@ const std::shared_ptr<model::Instrument>& MarketDataInterface::instrument() cons
     return _instruments.at(_symbol);
 }
 
+const std::unordered_map<std::string, std::shared_ptr<model::Instrument>>& MarketDataInterface::getInstruments() const {
+    return _instruments;
+}
+
 
 MarketDataInterface::MarketDataInterface(const std::shared_ptr<Config>& config_,
                                          std::shared_ptr<InstrumentService>  instSvc_)
 :   _instSvc(std::move(instSvc_))
-,   _symbol(config_->get("symbol"))
+,   _symbol(config_->get<std::string>("symbol"))
 ,   _callback([]() {}) {
 
 
@@ -384,7 +387,10 @@ void MarketDataInterface::setCallback(const std::function<void()> &callback) {
     _callback = callback;
 }
 
-MarketDataInterface::MarketDataInterface() {
+MarketDataInterface::MarketDataInterface()
+:   _instSvc(nullptr)
+,   _symbol("XBTUSD")
+,   _callback([]() {}) {
 
 }
 

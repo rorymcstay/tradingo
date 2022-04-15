@@ -1,7 +1,7 @@
 link_directories(/usr/local/lib)
 
-add_executable(tickRecorder bin/tickRecorder.cpp etc/config/tickRecorder.cfg)
-add_executable(tradingo bin/tradingo.cpp etc/config/tradingo.cfg)
+add_executable(tickRecorder bin/tickRecorder.cpp etc/config/tickRecorder.json)
+add_executable(tradingo bin/tradingo.cpp etc/config/tradingo.json)
 
 
 
@@ -31,8 +31,8 @@ include_directories(${OPENSSL_INCLUDE_DIR})
 include_directories(${CPPLOGGER_INCLUDES})
 
 message("Configuring config files")
-configure_file(etc/config/tradingo.cfg etc/config/tradingo.cfg @ONLY)
-configure_file(etc/config/tickRecorder.cfg etc/config/tickRecorder.cfg @ONLY)
+configure_file(etc/config/tradingo.json etc/config/tradingo.json @ONLY)
+configure_file(etc/config/tickRecorder.json etc/config/tickRecorder.json @ONLY)
 configure_file(etc/tickrecorder.service  etc/tickrecorder.service @ONLY)
 configure_file(etc/tradingo.service etc/tradingo.service @ONLY)
 configure_file(scripts/profile.env scripts/profile.env @ONLY)
@@ -48,10 +48,10 @@ install(DIRECTORY
     etc/config DESTINATION etc/
     FILES_MATCHING
     PATTERN
-    etc/config/*.cfg
+    etc/config/*.json
     PERMISSIONS OWNER_WRITE OWNER_READ GROUP_READ
     PATTERN
-    etc/config/strategy/*.cfg
+    etc/config/strategy/*.json
     PERMISSIONS OWNER_WRITE OWNER_READ GROUP_READ
     )
 

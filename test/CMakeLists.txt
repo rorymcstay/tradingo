@@ -34,16 +34,60 @@ add_executable(testTradingo
         TestStrategy.cpp
         TestMarketData.cpp
         TestConfig.cpp
-        TestSeries.cpp
 
+        test_main.cpp
+)
+
+add_executable(testTradingo-lr
+
+        TestSeries.cpp
+        TestTimeControl.cpp
         test_api_OrderApi.cpp
         test_api_PositionApi.cpp
+
         test_main.cpp
 )
 
 add_test(NAME "tradingo-tests" COMMAND testTradingo)
+#add_test(NAME "tradingo-longrunning--tests" COMMAND testTradingo-lr)
 add_test(NAME "orderbook-tests" COMMAND test_orderbook)
-target_link_libraries(testTradingo
+
+
+# install regression tests
+configure_file(
+    regression/tradingo.json.in
+    ${CMAKE_INSTALL_PREFIX}/etc/test/regression/tradingo.json
+)
+install(DIRECTORY
+    regression/generated/ DESTINATION ${CMAKE_INSTALL_PREFIX}/etc/test/regression/
+    FILES_MATCHING
+    PATTERN
+    regression/generated/*.json
+    PATTERN
+    regression/*.json
+    PERMISSIONS OWNER_WRITE OWNER_READ GROUP_READ
+)
+# add them to run
+
+set(TEST_CASE_FILES
+    "TradingoReplayTestCases_testing_enter_position_extend_and_then_exit"
+    "TradingoReplayTestCases_testing_order_value_exceeds_balance"
+    )
+
+if (${WITH_REGRESSION_TEST})
+    foreach(test_case ${TEST_CASE_FILES})
+        add_test(NAME "regression-test-${test_case}"
+            COMMAND tradingo_replay 
+                        --config ${CMAKE_INSTALL_PREFIX}/etc/test/regression/tradingo.json
+                        --scenario-file ${CMAKE_INSTALL_PREFIX}/etc/test/regression/${test_case}.json
+        )
+endforeach()
+endif(${WITH_REGRESSION_TEST})
+
+
+
+
+set(TEST_LINK_LIBRARIES 
         test_trading_funcs
         ${GTEST_LIBRARY}
         ${OPENSSL_CRYPTO_LIBRARY}
@@ -53,17 +97,28 @@ target_link_libraries(testTradingo
         pthread
 )
 
+
+target_link_libraries(testTradingo
+    ${TEST_LINK_LIBRARIES}
+)
+target_link_libraries(testTradingo-lr
+    ${TEST_LINK_LIBRARIES}
+)
+
 add_compile_definitions("TESTDATA_LOCATION=\"${CMAKE_INSTALL_PREFIX}/etc/test/data\"")
 install(DIRECTORY
     data/ DESTINATION etc/test/data/
     FILES_MATCHING
     PATTERN
     data/*.json
+    PATTERN
+    data/objects/*.json
     PERMISSIONS OWNER_WRITE OWNER_READ GROUP_READ
     )
 
 install(TARGETS
             testTradingo
+            testTradingo-lr
         RUNTIME DESTINATION bin
         LIBRARY DESTINATION lib
 )

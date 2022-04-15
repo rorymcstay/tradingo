@@ -7,6 +7,7 @@
 
 #include <model/Order.h>
 #include <model/Instrument.h>
+#include <stdexcept>
 
 #include "MarketData.h"
 #include "OrderInterface.h"
@@ -63,15 +64,13 @@ public:
 
     /// read config, get instrument and create allocations
     virtual void init(const std::shared_ptr<Config>& config_);
-    /// convenience method on the above, instead read config_ from file.
-    void init(const std::string& config_);
-    /// if evaluate should be called.
+    /// if we should continue trading.
     virtual bool shouldEval();
     /// the strategies allocations, in the future, might be need for > 1 set of allocations. i.e multi instrument
     /// strategies
     const std::shared_ptr<TAllocations>& allocations() { return _allocations; }
     /// market data accessor
-    std::shared_ptr<MarketDataInterface> getMD() const { return _marketData; }
+    const std::shared_ptr<MarketDataInterface>& getMD() const { return _marketData; }
     /// conduct function_ on each signal. Optionally only evaluate on callback types
     /// update siganls on the current event
     void updateSignals();
@@ -139,8 +138,9 @@ void Strategy<TOrdApi, TPositionApi>::evaluate() {
         auto exec = event->getExec();
         _allocations->update(exec);
         onExecution(event);
+    } else {
+        throw std::runtime_error("unhandled event type");
     }
-
     if (allocations()->modified()) {
         _allocations->placeAllocations();
     }
@@ -148,28 +148,23 @@ void Strategy<TOrdApi, TPositionApi>::evaluate() {
 }
 
 template<typename TOrdApi, typename TPositionApi>
-void Strategy<TOrdApi, TPositionApi>::init(const std::string& config_) {
-    init(config_);
-}
-
-template<typename TOrdApi, typename TPositionApi>
 void Strategy<TOrdApi, TPositionApi>::init(const std::shared_ptr<Config>& config_) {
     LOGINFO("Initializing strategy");
     _config = config_;
 
-    _symbol = _config->get("symbol");
+    _symbol = _config->get<std::string>("symbol");
 
-    auto instrument = _instrumentService->get(_symbol);
-    auto tickSize = instrument.getTickSize();
-    auto referencePrice = instrument.getPrevPrice24h();
-    auto lotSize = instrument.getLotSize();
+    auto& instrument = _marketData->getInstruments().at(_symbol);
+    auto tickSize = instrument->getTickSize();
+    auto referencePrice = instrument->getPrevPrice24h();
+    auto lotSize = instrument->getLotSize();
 
     LOGINFO("Initialising allocations with " << LOG_VAR(referencePrice) << LOG_VAR(tickSize));
     int cloidSeed = std::chrono::system_clock::now().time_since_epoch().count();
-    if (not _config->get("cloidSeed", "").empty()) {
-        cloidSeed = std::stoi(_config->get("cloidSeed"));
+    if (not (_config->get<int>("cloidSeed", -1) == -1)) {
+        cloidSeed = _config->get<int>("cloidSeed");
     }
-    _clOrdIdPrefix = _config->get("clOrdPrefix");
+    _clOrdIdPrefix = _config->get<std::string>("clOrdPrefix");
     _allocations = std::make_shared<TAllocations>(_orderEngine,
                                                   _symbol,
                                                   _clOrdIdPrefix,
@@ -177,7 +172,7 @@ void Strategy<TOrdApi, TPositionApi>::init(const std::shared_ptr<Config>& config
                                                   referencePrice,
                                                   tickSize, lotSize);
  
-    double initialLeverage = std::atof(_config->get("initialLeverage", "10.0").c_str());
+    double initialLeverage = _config->get<double>("initialLeverage", 10.0);
     setLeverage(initialLeverage);
 }
 
@@ -194,9 +189,9 @@ void Strategy<TOrdApi, TPositionApi>::updateSignals() {
 
 template<typename TOrdApi, typename TPositionApi>
 void Strategy<TOrdApi, TPositionApi>::addSignal(const std::shared_ptr<Signal> &signal_) {
-    signal_->init(_config, _marketData);
+    signal_->init(_config);
     // signals are either globally callback to disable timer thread during tests.
-    if (signal_->callback() or _config->get("override-signal-callback", "false") == "true") {
+    if (signal_->callback() or _config->get<bool>("override-signal-callback")) {
         _callback_signals.emplace(signal_->name(), signal_);
     } else {
         _timed_signals.emplace(signal_->name(), signal_);

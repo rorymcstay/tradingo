@@ -20,7 +20,6 @@
 
 
 using namespace io::swagger::client;
-namespace ws = web::websockets;
 
 enum class EventType {TradeUpdate, BBO, Instrument, Exec};
 enum class ActionType {Update, Delete, Insert, Partial};

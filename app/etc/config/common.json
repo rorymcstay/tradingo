@@ -1,0 +1,5 @@
+{
+    "storage": "${STORAGE}/${RUN_ID}",
+    "logFileLocation": "${STORAGE}/${RUN_ID}/log",
+    "logLevel": "${LOG_LEVEL}"
+}

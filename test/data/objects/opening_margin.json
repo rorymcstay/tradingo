@@ -1,0 +1,15 @@
+{
+  "account": 365570.0,
+  "currency": "XBt",
+  "riskLimit": 1000000000000.0,
+  "amount": 207735.0,
+  "prevRealisedPnl": -2701.0,
+  "walletBalance": 207735.0,
+  "marginBalance": 207735.0,
+  "marginBalancePcnt": 1.0,
+  "excessMargin": 207735.0,
+  "excessMarginPcnt": 1.0,
+  "availableMargin": 207735.0,
+  "withdrawableMargin": 207735.0,
+  "timestamp": "2022-03-02T08:00:00.054000+00:00"
+}

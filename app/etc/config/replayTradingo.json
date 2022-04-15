@@ -1,0 +1,4 @@
+{
+    "tickStorage": "${TICK_STORAGE}/${DATESTR}",
+    "realtime": false
+}

@@ -23,7 +23,7 @@ add_library(trading_funcs SHARED
         Strategy.h # templated
         Context.h # templated
         Series.h # templated
-        Config.cpp
+        Config.h # partial templating
         SimpleMovingAverage.cpp
         Utils.cpp
         Allocation.cpp

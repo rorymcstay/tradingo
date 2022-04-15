@@ -3,11 +3,20 @@
 //
 
 #include "MovingAverageCrossOver.h"
+#include <string>
 
-MovingAverageCrossOver::MovingAverageCrossOver(SMA_T::size_t short_, SMA_T::size_t long_)
-        : Signal(),  _shortTerm(short_, 1.0)
-        , _longTerm(long_, 1.0)  {
-    _name = "moving_average_crossover";
+MovingAverageCrossOver::MovingAverageCrossOver(
+            const std::shared_ptr<MarketDataInterface>& marketData_,
+            SMA_T::size_t short_,
+            SMA_T::size_t long_)
+:   Signal(marketData_,
+        "moving_average_crossover",
+        "short_term_"+std::to_string(short_)
+            +",long_term_"+std::to_string(long_)
+            +",timestamp"
+    )
+,   _shortTerm(short_, 1.0)
+,   _longTerm(long_, 1.0)  {
 }
 
 
@@ -25,8 +34,8 @@ bool MovingAverageCrossOver::isReady() {
     return _longTerm.is_ready() && _shortTerm.is_ready();
 }
 
-void MovingAverageCrossOver::init(const std::shared_ptr<Config>& config_, const std::shared_ptr<MarketDataInterface>& md_) {
-    Signal::init(config_, md_);
+void MovingAverageCrossOver::init(const std::shared_ptr<Config>& config_) {
+    Signal::init(config_);
 }
 
 std::string MovingAverageCrossOver::read_as_string() {
