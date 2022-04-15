@@ -8,6 +8,9 @@
 #include "model/Trade.h"
 #include <cpprest/asyncrt_utils.h>
 #include <cstdlib>
+#include <exception>
+#include <filesystem>
+#include <stdexcept>
 
 
 template<typename T>
@@ -24,6 +27,12 @@ std::shared_ptr<T> get_object_from_file(const std::string& file_name) {
         json_file = std::string(std::getenv("TESTDATA_LOCATION")) + "/objects/" + file_name + ".json";
     else
         json_file = TESTDATA_LOCATION "/objects/" + file_name + ".json";
+    if (not std::filesystem::exists(json_file)) {
+        std::stringstream err;
+        err << "object file " << LOG_VAR(json_file) << " was not found";
+        LOGWARN(err.str());
+        throw std::runtime_error(err.str());
+    }
     LOGINFO("Reading "<< json_file);
     auto out = std::make_shared<T>();
     auto json_val = read_json_file(json_file);
