@@ -1,4 +1,5 @@
 {
     "tickStorage": "${TICK_STORAGE}/${DATESTR}",
+    "libraryLocation": "${INSTALL_LOCATION}/lib/libtest_trading_strategies.so",
     "realtime": false
 }
