@@ -1,7 +1,7 @@
 link_directories(/usr/local/lib)
 
-add_executable(tickRecorder bin/tickRecorder.cpp etc/config/tickRecorder.cfg)
-add_executable(tradingo bin/tradingo.cpp etc/config/tradingo.cfg)
+add_executable(tickRecorder bin/tickRecorder.cpp etc/config/tickRecorder.json)
+add_executable(tradingo bin/tradingo.cpp etc/config/tradingo.json)
 
 
 
