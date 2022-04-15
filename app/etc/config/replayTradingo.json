@@ -1,8 +1,4 @@
 {
     "tickStorage": "${TICK_STORAGE}/${DATESTR}",
-    "realtime": "${REALTIME}",
-    "startingBalance": "${STARTING_BALANCE}",
-    "initialLeverage": "${INITIAL_LEVERAGE}",
-    "leverageType": "${LEVERAGE_TYPE}",
-    "maintMargin": "${MAINT_MARGIN}"
+    "realtime": false
 }

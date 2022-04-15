@@ -42,14 +42,14 @@ replay_tradingo_on() {
     LIB_NAME_PREFIX="test" \
     INSTALL_LOCATION=$INSTALL_LOCATION \
         envsubst < $INSTALL_LOCATION/etc/config/replayTradingo.json \
-    >> $config_file
+    > $config_file
 
     populate_common_params $common_config
     # run the replay in the RUN_ID directory to capture core files.
     cd $STORAGE/$RUN_ID
     set +e
-    echo replayTradingo --config $config_file "$@"
-    replayTradingo --config $common_config --config $config_file "$@"
+    echo replayTradingo --config $config_file "${@:2}"
+    replayTradingo --config $common_config --config $config_file "${@:2}"
     aws s3 sync "$STORAGE" "s3://$BUCKET_NAME/replays/"
 
 }
