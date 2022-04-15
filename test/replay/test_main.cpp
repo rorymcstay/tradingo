@@ -4,6 +4,7 @@
 
 #include "gtest/gtest.h"
 // cpprestsdk
+#include <boost/program_options/errors.hpp>
 #include <cpprest/asyncrt_utils.h>
 #include <cpprest/json.h>
 #include <exception>
@@ -28,9 +29,10 @@ int main(int argc, char **argv) {
 
 
     po::options_description desc("Allowed options");
+    std::vector<std::string> config_files;
     desc.add_options()
             ("help", "produce help message")
-            ("config", po::value<std::string>(), "config file")
+            ("config", po::value<std::vector<std::string>>(&config_files), "config file, may be specified multiple times")
             ("config-json", po::value<std::string>(), "config in json string")
             ("tick-storage", po::value<std::string>(), "override tick storage location in config.")
             ("logdir", po::value<std::string>(), "override logFilelocation in config.")
@@ -43,14 +45,20 @@ int main(int argc, char **argv) {
 
     po::variables_map vm;
     po::store(po::parse_command_line(argc, argv, desc), vm);
-    po::notify(vm);
-    std::string config;
+    try {
+        po::notify(vm);
+    } catch (const po::error& e ) {
+        LOGERROR("Error parsing program options: " << e.what());
+        return 1;
+    }
 
     auto defaults = std::make_shared<Config>(std::initializer_list<std::pair<std::string,std::string>>({DEFAULT_ARGS}));
-    if (vm.contains("config")) {
-        auto config = std::make_shared<Config>(vm.at("config").as<std::string>());
-        LOGINFO("Using config " << vm.at("config").as<std::string>());
-        *defaults += (*config);
+    if (not config_files.empty()) {
+        for (auto& filepath : config_files) {
+            auto config = std::make_shared<Config>(filepath);
+            LOGINFO("Applying config " << filepath);
+            *defaults += (*config);
+        }
     }
     if (vm.contains("config-json")) {
         auto json_str = vm.at("config-json").as<std::string>();
@@ -69,6 +77,7 @@ int main(int argc, char **argv) {
         LOGINFO("Using config " << vm.at("config-json").as<std::string>());
         *defaults += (*config);
     }
+    LOGINFO("Config: " << defaults->toJson().serialize());
     if (vm.contains("tick-storage")) {
         defaults->set("tickStorage", vm.at("tick-storage").as<std::string>());
     }

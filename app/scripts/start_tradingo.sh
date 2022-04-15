@@ -8,7 +8,8 @@ start_tradingo() {
     set -e
     ping -c 5 testnet.bitmex.com
     ping -c 5 bitmex.com
-    config_file=$STORAGE/${RUN_ID}/tradingo.cfg
+    common_config=$STORAGE/${RUN_ID}/common.json
+    config_file=$STORAGE/${RUN_ID}/tradingo.json
     mkdir -p $STORAGE/$RUN_ID
 
     echo "# Tradingo Start config" > $config_file
@@ -18,16 +19,14 @@ start_tradingo() {
     BASE_URL=${BASE_URL} \
     API_KEY=${API_KEY} \
     API_SECRET=${API_SECRET} \
-        envsubst < $INSTALL_LOCATION/etc/config/tradingo.cfg  \
+        envsubst < $INSTALL_LOCATION/etc/config/tradingo.json \
     >> $config_file
-    populate_common_params $config_file
-    populate_strategy_params $INSTALL_LOCATION/etc/config/strategy/${STRATEGY}.cfg $config_file
-    cat $config_file
+    populate_common_params $common_config
 
     # start tradingo
     cd $STORAGE/$RUN_ID
     set +e
-    tradingo --config $config_file
+    tradingo --config $commong_conig --config $config_file "$@"
     aws s3 sync "$STORAGE/" "s3://$BUCKET_NAME/tradingo/"
 }
-start_tradingo
+start_tradingo "$@"

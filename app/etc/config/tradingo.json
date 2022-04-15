@@ -1,0 +1,6 @@
+{
+    "connectionString": "${CONNECTION_STRING}",
+    "baseUrl": "${BASE_URL}",
+    "apiKey": "${API_KEY}",
+    "apiSecret": "${API_SECRET}"
+}

@@ -35,6 +35,7 @@ public:
     void set(const std::string& key_, const std::string& val_);
     void operator+=(const Config& config_);
     bool empty() const { return _data.empty(); }
+    web::json::value toJson() const;
 };
 
 
@@ -84,6 +85,15 @@ Config::Config(const std::string& file_)
         throw std::runtime_error("Uknown config file type: " + file_);
     }
 
+}
+
+inline
+web::json::value Config::toJson() const {
+    auto out = web::json::value::parse("{}");
+    for (auto& val : _data) {
+        out.as_object()[val.first] = val.second;
+    }
+    return out;
 }
 
 

@@ -282,7 +282,7 @@ template<typename TOrdApi>
 void Allocations<TOrdApi>::cancelOrders(const std::function<bool(const std::shared_ptr<Allocation>&)>& predicate_) {
 
     std::for_each(begin(), end(), [this, predicate_](const std::shared_ptr<Allocation>& alloc_ ) {
-      if (predicate_(alloc_)) {
+      if (alloc_->getSize() != 0.0 and predicate_(alloc_)) {
           alloc_->setTargetDelta(-alloc_->getSize());
           LOGINFO("cancelOrders: Cancelling allocation orders "
                   << LOG_NVP("OrderID", alloc_->getOrder()->getOrderID())

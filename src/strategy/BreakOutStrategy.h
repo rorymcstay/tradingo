@@ -146,18 +146,6 @@ void BreakOutStrategy<TOrdApi, TPositionApi>::onBBO(const std::shared_ptr<Event>
         LOGDEBUG("No quantity to trade");
         return;
     }
-    /*
-    StrategyApi::allocations()->cancelOrders(
-            [price, side](const std::shared_ptr<Allocation>& alloc_) {
-                auto allocside = alloc_->getSide();
-                if (allocside != side
-                        or (allocside == "Buy" and alloc_->getPrice() > price)
-                        or (allocside == "Sell" and alloc_->getPrice() < price))
-                    return true;
-                return false;
-            }
-    );
-    */
     const std::shared_ptr<model::Position>& position = md->getPositions().at(StrategyApi::_symbol);
     auto currentBalance = md->getMargin()->getWalletBalance();
     auto currentQty = position->getCurrentQty();
