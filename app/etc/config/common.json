@@ -1,5 +1,6 @@
 {
     "storage": "${STORAGE}/${RUN_ID}",
     "logFileLocation": "${STORAGE}/${RUN_ID}/log",
-    "logLevel": "${LOG_LEVEL}"
+    "logLevel": "${LOG_LEVEL}",
+    "libraryLocation": "${INSTALL_LOCATION}/lib/libtrading_strategies.so"
 }
