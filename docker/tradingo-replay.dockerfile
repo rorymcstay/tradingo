@@ -6,12 +6,15 @@ FROM rmcstay95/tradingo-base:0ee37ab-dirty as builder
 # advantage of layer caching if possible. And to only build what
 # image needs
 ARG install_base=/usr/from-src/
+
+ARG CMAKE_BUILD_TYPE=RelWithDebInfo
+
 WORKDIR /usr/src/tradingo
 ADD . .
 RUN git submodule update --init
 RUN mkdir build.release \
     && cd build.release \
-    && cmake -DCMAKE_BUILD_TYPE=Release \
+    && cmake -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE \
         -DCPPREST_ROOT=${install_base}/cpprest \
         -DREPLAY_MODE=1 \
         -DBOOST_ASIO_DISABLE_CONCEPTS=1 \
