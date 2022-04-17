@@ -50,7 +50,11 @@ replay_tradingo_on() {
     set +e
     echo replayTradingo --config $config_file "${@:2}"
     replayTradingo --config $common_config --config $config_file "${@:2}"
-    aws s3 sync "$STORAGE" "s3://$BUCKET_NAME/replays/"
+    ls -l ./
+    aws s3 sync "$STORAGE/$RUN_ID" "s3://$BUCKET_NAME/replays/$RUN_ID"
+    if [[ -f $STORAGE/$RUN_ID/core ]]; then
+        aws s3 cp $STORAGE/$RUN_ID/core s3://$BUCKET_NAME/replays/$RUND_ID/core
+    fi
 
 }
 replay_tradingo_on $trade_date "$@"
