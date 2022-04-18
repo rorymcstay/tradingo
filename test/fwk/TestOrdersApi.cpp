@@ -51,6 +51,12 @@ get_order_for_amend(
     return nullptr;
 }
 
+void TestOrdersApi::flush() {
+    while (not _newOrders.empty()) _newOrders.pop();
+    while (not _orderAmends.empty()) _orderAmends.pop();
+    while (not _newOrders.empty()) _newOrders.pop();
+}
+
 
 /// support only amend through clOrdId and origClOrdId and leavesQty or price
 pplx::task<std::shared_ptr<model::Order>>
@@ -177,8 +183,8 @@ TestOrdersApi::order_cancel(boost::optional<utility::string_t> orderID,
 
     _orderCancels.push(event_order);
     _allEvents.push(event_order);
-    _orders.erase(clOrdID.value());
     *_marketData << origOrder;
+    _orders.erase(clOrdID.value());
     return pplx::task_from_result(ordersRet);
 }
 

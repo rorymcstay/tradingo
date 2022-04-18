@@ -1,6 +1,6 @@
 # strategy container dockerfile definiton
 
-FROM alpine:3.14 as builder
+FROM alpine:3.12 as builder
 
 RUN apk --no-cache add ca-certificates 
 
@@ -14,7 +14,6 @@ RUN apk add \
       git \
       make
 
-
 # install thirdparty libs
 RUN apk add \
   gtest-dev \
@@ -25,8 +24,6 @@ RUN apk add \
 ARG make_flags
 RUN echo $make_flags
 ENV GNUMAKEFLAGS=${make_flags}
-
-
 
 WORKDIR /usr/src
 
@@ -44,8 +41,7 @@ RUN cd casablanca \
         -DCMAKE_INSTALL_PREFIX=${install_base}/cpprest \
         ../ \
     && make install -j3
-
-RUN ls /${install_base}/cpprest/lib/
+RUN ls -l ${install_base}/cpprest/
 
 # Install benchmark
 RUN git clone https://github.com/google/benchmark.git /usr/src/benchmark

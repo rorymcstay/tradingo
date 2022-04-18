@@ -1,4 +1,4 @@
-FROM rmcstay95/tradingo-base:0ee37ab-dirty as builder
+FROM rmcstay95/tradingo-base:2da4186-dirty as builder
 
 # build tradingo
 # TODO break this up into compilation of targets one at a time
@@ -46,7 +46,7 @@ RUN install -d -m 0755 -o tradingo -g tradingo /data/benchmarks/storage
 RUN install -d -m 0755 -o tradingo -g tradingo /data/benchmarks/log
 
 # runtime image
-FROM alpine:3.14
+FROM alpine:3.12
 
 # install thirdpary libraries
 RUN apk add \
@@ -76,7 +76,9 @@ ENV AWS_REGION ${aws_region}
 ENV GLIBC_VER=2.31-r0
 RUN apk --no-cache add \
         binutils \
+        gdb \
         curl \
+        musl-dbg \
     && curl -sL https://alpine-pkgs.sgerrand.com/sgerrand.rsa.pub -o /etc/apk/keys/sgerrand.rsa.pub \
     && curl -sLO https://github.com/sgerrand/alpine-pkg-glibc/releases/download/${GLIBC_VER}/glibc-${GLIBC_VER}.apk \
     && curl -sLO https://github.com/sgerrand/alpine-pkg-glibc/releases/download/${GLIBC_VER}/glibc-bin-${GLIBC_VER}.apk \
@@ -119,9 +121,9 @@ RUN adduser \
 ENV TESTDATA_LOCATION=/usr/local/etc/test/data
 
 ARG install_base=/usr/from-src/
-COPY --from=builder ${install_base}/cpprest/lib /usr/local/lib
+COPY --from=builder ${install_base}/cpprest/lib64 /usr/local/lib
 COPY --from=builder ${install_base}/cpprest/include /usr/local/include
-COPY --from=builder ${install_base}/benchmark/lib /usr/local/lib
+COPY --from=builder ${install_base}/benchmark/lib64 /usr/local/lib
 COPY --from=builder ${install_base}/benchmark/include /usr/local/include
 COPY --from=builder ${install_base}/tradingo/lib /usr/local/lib
 COPY --from=builder ${install_base}/tradingo/bin /usr/local/bin

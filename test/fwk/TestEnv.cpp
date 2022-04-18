@@ -316,6 +316,7 @@ void TestEnv::playback(const Series<model::Trade>& trades,
             LOG_STATS(stats);
             stats.last_log = std::chrono::system_clock::now();
         }
+        _context->orderApi()->flush();
     }
 }
 
