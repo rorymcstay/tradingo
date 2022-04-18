@@ -49,6 +49,9 @@ replay_tradingo_on() {
     cd $STORAGE/$RUN_ID
     echo replayTradingo --config $config_file "${@:2}"
     replayTradingo --config $common_config --config $config_file "${@:2}"
+    if [[ -f $STORAGE/$RUN_ID/core ]]; then
+        gdb replayTradingo --core=$STORAGE/$RUN_ID/core --eval-command=where --eval-command=quit
+    fi
     ls -l $STORAGE/$RUN_ID/
     aws s3 sync "$STORAGE/$RUN_ID" "s3://$BUCKET_NAME/replays/$RUN_ID"
 
