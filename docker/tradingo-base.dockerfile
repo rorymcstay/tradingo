@@ -25,8 +25,6 @@ ARG make_flags
 RUN echo $make_flags
 ENV GNUMAKEFLAGS=${make_flags}
 
-
-
 WORKDIR /usr/src
 
 # install cpprest
@@ -43,6 +41,7 @@ RUN cd casablanca \
         -DCMAKE_INSTALL_PREFIX=${install_base}/cpprest \
         ../ \
     && make install -j3
+RUN ls -l ${install_base}/cpprest/
 
 # Install benchmark
 RUN git clone https://github.com/google/benchmark.git /usr/src/benchmark

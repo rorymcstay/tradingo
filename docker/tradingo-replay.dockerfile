@@ -121,9 +121,9 @@ RUN adduser \
 ENV TESTDATA_LOCATION=/usr/local/etc/test/data
 
 ARG install_base=/usr/from-src/
-COPY --from=builder ${install_base}/cpprest/lib /usr/local/lib
+COPY --from=builder ${install_base}/cpprest/lib64 /usr/local/lib
 COPY --from=builder ${install_base}/cpprest/include /usr/local/include
-COPY --from=builder ${install_base}/benchmark/lib /usr/local/lib
+COPY --from=builder ${install_base}/benchmark/lib64 /usr/local/lib
 COPY --from=builder ${install_base}/benchmark/include /usr/local/include
 COPY --from=builder ${install_base}/tradingo/lib /usr/local/lib
 COPY --from=builder ${install_base}/tradingo/bin /usr/local/bin
