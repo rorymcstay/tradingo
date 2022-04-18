@@ -15,14 +15,7 @@ they will then evaluate before the strategies on either a callback
 timer, or on quote event.
 
 Strategies must be registered in the `src/strategies/Strategies.cpp`
-file. A config file must then be created such as
-    ```
-    factoryMethod=RegisterBreakOutStrategy
-    ... other config needed in strategy implementation ...
-    ```
-in `app/etc/config/strategy/<some_name>.cfg`. It may be run in the
-`tradingo` process by setting `STRATEGY=<some_name>` in the current
-environment.
+Strategies are selected with the 'factoryMethod' key in config.
 
 The strategy has a set of allocations which is a continuous data structure 
 indexed by price. The strategy modifies allocations along this index based 
@@ -30,16 +23,23 @@ on how the size, direction and at what level to order at. Active orders
 are amended should an allocation at a price level change. One price level 
 per order.
 
-Tradingo functionalities are packaged in two docker images. One is intended
-for running live trading activities, and the other is for running replays
-and benchmarks. For the replays and benchmarks, data is retrived from s3, for
-the trade date set in the environment.
-Replay output files are stashed into s3 after, along with the config used. If
-there is a core generated, that is also delivered to s3.
+## Configuration
+Config is provided with
 
+1) `--config` option. Specified zero or more times. Each config is applied
+    to the defaults in order. Path is to a json or cfg file.
+2) `--config-json` flag to provide json string directly on command line.
+
+## Initial replay settings
+When running a replay, json string may be provided for `--initial-position`
+and `--initial-margin`.
+
+Tradingo functionalities are packaged in two docker images. One for backtesting
+and one for trading, both use `tradingo-base` docker image for its build dependencies.
 
 # Time control
-Compiling with -DREPLAY_MODE, enables the control of time.
+Compiling with `-DREPLAY_MODE`, simulates the time the strategy has based on
+replay data provided.
 
 1) realtime mode, replay will play over the file at speed dictated in datafiles
 2) non-realtime mode, file is passed with no time
@@ -56,7 +56,8 @@ realtime=true
 
 # Building
 Running `autogen.sh` should build tradingo on ubuntu platforms.
-# Running tradingo locally
-1. compile and install tradingo.
-2. Do
-   1. 
+
+# Tests
+Run tests with `make test` in the build directory. Compile with `-DWITH_REGRESSION_TESTS`
+to enable simulated replay tests generated with `tradingo-optimizer`.
+`testTradingo` and `testTradino-lr` are the main unit test binaries.

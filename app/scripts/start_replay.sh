@@ -1,7 +1,6 @@
 #!/bin/bash
 source "$(dirname ${BASH_SOURCE[0]})/profile.env"
 
-trade_date=$1
 export LOG_LEVEL=${LOG_LEVEL:-"warning"}
 
 replay_tradingo_on() {
@@ -16,14 +15,13 @@ replay_tradingo_on() {
     mkdir -p "$TICK_STORAGE/$DATESTR"
     tick_location="$TICK_STORAGE/$DATESTR/"
 
+    # exit on first failure
+    set -e
+
     # do this and do not fail if unsuccesful.
     if [[ ! -f $tick_location/instruments_$SYMBOL.json ]]; then
         aws s3 cp "s3://$BUCKET_NAME/tickRecorder/storage/$1/instruments_$SYMBOL.json" $tick_location
     fi
-
-    # exit on first failure
-    set -e
-
     if [[ ! -f $tick_location/quotes_$SYMBOL.json ]]; then
         aws s3 cp "s3://$BUCKET_NAME/tickRecorder/storage/$1/quotes_$SYMBOL.json" $tick_location
     fi
@@ -46,12 +44,13 @@ replay_tradingo_on() {
 
     populate_common_params $common_config
     # run the replay in the RUN_ID directory to capture core files.
-    cd $STORAGE/$RUN_ID
+
     set +e
+    cd $STORAGE/$RUN_ID
     echo replayTradingo --config $config_file "${@:2}"
     replayTradingo --config $common_config --config $config_file "${@:2}"
-    ls -l ./
+    ls -l $STORAGE/$RUN_ID/
     aws s3 sync "$STORAGE/$RUN_ID" "s3://$BUCKET_NAME/replays/$RUN_ID"
 
 }
-replay_tradingo_on $trade_date "$@"
+replay_tradingo_on "$@"
