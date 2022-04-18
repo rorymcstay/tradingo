@@ -1,4 +1,4 @@
-FROM rmcstay95/tradingo-base:0ee37ab-dirty as builder
+FROM rmcstay95/tradingo-base:2da4186-dirty as builder
 
 # build tradingo
 # TODO break this up into compilation of targets one at a time
@@ -46,7 +46,7 @@ RUN install -d -m 0755 -o tradingo -g tradingo /data/benchmarks/storage
 RUN install -d -m 0755 -o tradingo -g tradingo /data/benchmarks/log
 
 # runtime image
-FROM alpine:3.14
+FROM alpine:3.12
 
 # install thirdpary libraries
 RUN apk add \

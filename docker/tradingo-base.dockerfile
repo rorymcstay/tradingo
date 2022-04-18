@@ -44,8 +44,6 @@ RUN cd casablanca \
         ../ \
     && make install -j3
 
-RUN ls /${install_base}/cpprest/lib/
-
 # Install benchmark
 RUN git clone https://github.com/google/benchmark.git /usr/src/benchmark
 RUN cd benchmark \
