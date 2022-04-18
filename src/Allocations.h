@@ -514,6 +514,7 @@ void Allocations<TOrdApi>::updateFromTask(const std::shared_ptr<Allocation>& all
         allocation_->setTargetDelta(allocation_->getSize() + allocation_->getTargetDelta());
     } if (allocation_->isCancel()) {
         allocation_->setSize(0.0);
+        allocation_->getOrder()->setLeavesQty(0.0);
         _occupiedLevels.erase(
                 std::find(_occupiedLevels.begin(), _occupiedLevels.end(), allocIndex(allocation_->getPrice()))
         );
