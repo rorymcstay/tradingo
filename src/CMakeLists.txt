@@ -25,6 +25,7 @@ add_library(trading_funcs SHARED
         Series.h # templated
         Config.h # partial templating
         SimpleMovingAverage.cpp
+        ExponentialMovingAverage.cpp
         Utils.cpp
         Allocation.cpp
         Allocations.cpp

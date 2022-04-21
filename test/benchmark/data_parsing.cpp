@@ -18,15 +18,20 @@ static void BM_read_quotes_json(benchmark::State& state) {
 
     auto config = std::make_shared<Config>();
 
-    for (auto kvp : std::initializer_list<std::pair<std::string, std::string>>({
-        DEFAULT_ARGS
-    }
-         )
-    ) config->set(kvp.first, kvp.second);
+    for (auto kvp : std::initializer_list<std::pair<std::string, std::string>>({DEFAULT_ARGS,
+        {"moving_average_crossover-callback", "false"},
+        {"moving_average_crossover-interval", "1000"},
+        {"moving_average_crossover-batch-size", "1000"},
+        {"logLevel", "info"}
+    }))
+        config->set(kvp.first, kvp.second);
+
+    config->set("storage", "/tmp/benchmarking/");
+    std::cout << config->toJson().serialize() << '\n';
 
     std::ifstream quoteFile;
     auto marketdata = std::make_shared<TestMarketData>(config, nullptr);
-    auto signal = std::make_shared<MovingAverageCrossOver>(marketdata,1000, 8000);
+    auto signal = std::make_shared<MovingAverageCrossOver>(marketdata,0.1, 0.9);
     signal->init(config);
     marketdata->setCallback([&](){ signal->update(); });
     quoteFile.open(config->get<std::string>("tickStorage")+"/quotes_XBTUSD.json");

@@ -41,7 +41,10 @@ int main(int argc, char **argv) {
             ("quote-resolution", po::value<long>(), "quote time resolution for series")
             ("storage", po::value<std::string>(), "override storage location in config.")
             ("initial-margin", po::value<std::string>(), "override the initial margin object")
-            ("initial-position", po::value<std::string>(), "override the initial position");
+            ("initial-position", po::value<std::string>(), "override the initial position")
+            ("start-time", po::value<std::string>(), "the time to start replay from")
+            ("end-time", po::value<std::string>(), "the time to finish  replay from")
+            ;
 
     po::variables_map vm;
     po::store(po::parse_command_line(argc, argv, desc), vm);

@@ -7,16 +7,16 @@
 
 MovingAverageCrossOver::MovingAverageCrossOver(
             const std::shared_ptr<MarketDataInterface>& marketData_,
-            SMA_T::size_t short_,
-            SMA_T::size_t long_)
+            SMA_T::input_type short_,
+            SMA_T::input_type long_)
 :   Signal(marketData_,
         "moving_average_crossover",
         "short_term_"+std::to_string(short_)
             +",long_term_"+std::to_string(long_)
             +",timestamp"
     )
-,   _shortTerm(short_, 1.0)
-,   _longTerm(long_, 1.0)  {
+,   _shortTerm(short_, 100)
+,   _longTerm(long_, 100)  {
 }
 
 

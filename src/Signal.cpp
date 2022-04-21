@@ -74,7 +74,7 @@ void Signal::init(const std::shared_ptr<Config> &config_) {
             /*tableName_=*/_name,
             /*symbol_=*/config_->get<std::string>("symbol"),
             /*storage_=*/storage,
-            /*batchSize_=*/100000,
+            /*batchSize_=*/config_->get<int>(_name+"-batch-size", 100000),
             /*print_=*/printer,
             /*rotate_=*/false,
             /*fileExtension_=*/"csv",

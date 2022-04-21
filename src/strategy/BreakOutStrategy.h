@@ -64,8 +64,8 @@ void BreakOutStrategy<TOrdApi, TPositionApi>::init(const std::shared_ptr<Config>
     _displaySize = config_->get<double>("displaySize", 200);
 
     auto primePercent = config_->get<double>("primePercent", 1.0);
-    auto shortTermWindow = config_->get<int>("shortTermWindow");
-    auto longTermWindow = config_->get<int>("longTermWindow");
+    auto shortTermWindow = config_->get<double>("shortTermWindow");
+    auto longTermWindow = config_->get<double>("longTermWindow");
 
     StrategyApi::addSignal(std::make_shared<MovingAverageCrossOver>(
                 StrategyApi::getMD(),

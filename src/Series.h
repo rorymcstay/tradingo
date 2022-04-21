@@ -103,6 +103,8 @@ Series<T>::Series(const std::string& dataFile_, index_t resolution_)
     std::shared_ptr<T> record = getEvent<T>(dataFile);
 
     tmpdata.push_back(record);
+    // TODO take start and end time as constructor, and use it to seek the file so that
+    // we dont have to read the whole thing
     for (;record = getEvent<T>(dataFile); record) {
         tmpdata.push_back(record);
     }
