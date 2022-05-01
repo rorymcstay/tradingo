@@ -30,7 +30,6 @@ private:
 
     ExponentialMovingAverage& calculate(input_t in){
         _present_value = in * (_alpha) + _present_value * (1.0f - _alpha);
-        LOGDEBUG(LOG_VAR(_present_value));
         return *this;
     }
 

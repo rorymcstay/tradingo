@@ -27,7 +27,7 @@ namespace po = boost::program_options;
 
 int main(int argc, char **argv) {
 
-
+    // program options
     po::options_description desc("Allowed options");
     std::vector<std::string> config_files;
     desc.add_options()
@@ -55,6 +55,7 @@ int main(int argc, char **argv) {
         return 1;
     }
 
+    // setup configuration
     auto defaults = std::make_shared<Config>(std::initializer_list<std::pair<std::string,std::string>>({DEFAULT_ARGS}));
     if (not config_files.empty()) {
         for (auto& filepath : config_files) {
@@ -91,26 +92,8 @@ int main(int argc, char **argv) {
         defaults->set("logFileLocation", vm.at("logdir").as<std::string>());
     }
 
-    auto pplxThreadCount = 1;
-    crossplat::threadpool::initialize_with_threads(pplxThreadCount);
-    auto env = TestEnv(defaults);
-    auto trades_file = defaults->get<std::string>("tickStorage") + "/trades_XBTUSD.json";
-    auto quotes_file = defaults->get<std::string>("tickStorage") + "/quotes_XBTUSD.json";
-    auto instruments_file = defaults->get<std::string>("tickStorage") + "/instruments_XBTUSD.json";
 
-    auto trade_resolution = 10000;
-    if (vm.contains("trade-resolution")) {
-        trade_resolution = vm.at("trade-resolution").as<long>();
-    }
-    auto quote_resolution = 10000;
-    if (vm.contains("quote-resolution")) {
-        quote_resolution = vm.at("quote-resolution").as<long>();
-    }
-    auto instrument_resolution = 10000;
-    if (vm.contains("instrument-resolution")) {
-        instrument_resolution = vm.at("instrument-resolution").as<long>();
-    }
-
+    // initial position and margin
     auto initial_margin = std::shared_ptr<model::Margin>();
     if (vm.contains("initial-margin")) {
         initial_margin = std::make_shared<model::Margin>();
@@ -147,10 +130,31 @@ int main(int argc, char **argv) {
         LOGINFO("Read initial position from command line "
                     << initial_position->toJson().serialize());
     }
+    // initialise test environment
+    auto pplxThreadCount = 1;
+    crossplat::threadpool::initialize_with_threads(pplxThreadCount);
+    auto env = TestEnv(defaults);
 
-    auto quotes = Series<model::Quote>(quotes_file, quote_resolution);
-    auto trades = Series<model::Trade>(trades_file, trade_resolution);
-    auto instruments = Series<model::Instrument>(instruments_file, instrument_resolution);
+    // set up replay data
+    auto trade_resolution = 10000;
+    if (vm.contains("trade-resolution")) {
+        trade_resolution = vm.at("trade-resolution").as<long>();
+    }
+    auto quote_resolution = 10000;
+    if (vm.contains("quote-resolution")) {
+        quote_resolution = vm.at("quote-resolution").as<long>();
+    }
+    auto instrument_resolution = 10000;
+    if (vm.contains("instrument-resolution")) {
+        instrument_resolution = vm.at("instrument-resolution").as<long>();
+    }
+    auto tickStorage = defaults->get<std::string>("tickStorage");
+    auto quotes = Series<model::Quote>(tickStorage+"/quotes_XBTUSD.json",
+                                       quote_resolution);
+    auto trades = Series<model::Trade>(tickStorage+"/trades_XBTUSD.json",
+                                       trade_resolution);
+    auto instruments = Series<model::Instrument>(tickStorage+"/instruments_XBTUSD.json",
+                                                 instrument_resolution);
     if (vm.contains("start-time")) {
         quotes.set_start(vm.at("start-time").as<std::string>());
         trades.set_start(vm.at("start-time").as<std::string>());
