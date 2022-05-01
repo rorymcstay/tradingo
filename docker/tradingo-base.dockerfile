@@ -57,3 +57,18 @@ RUN cd benchmark \
         -DCMAKE_INSTALL_PREFIX=${install_base}/benchmark \
         ../ \
     && make install -j3
+
+# Install aws-sdk-cpp
+RUN apk add \
+        libcurl4-openssl-dev \
+        libssl-dev \
+        uuid-dev \
+        zlib1g-dev \
+    && git --recurse-submodules clone git@github.com:aws/aws-sdk-cpp.git /usr/src/aws-sdk-cpp \
+    && cd /src/aws-sdk-cpp \
+    && mkdir build && cd build \
+    && cmake /usr/src/aws-sdk-cpp/ \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_PREFIX_PATH=${install_base}/aws/
+        -DBUILD_ONLY=s3
+    && make install -j3

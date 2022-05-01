@@ -3,19 +3,27 @@
 
 #include <cpprest/asyncrt_utils.h>
 #include <algorithm>
+#include <filesystem>
 #include <memory>
 #include <stdexcept>
 #include <string>
 #include <vector>
 #include <fstream>
+
+#include <aws/s3/S3Client.h>
+#include <aws/s3/model/GetObjectRequest.h>
+#include <aws/core/Aws.h>
+#include <aws/core/utils/memory/stl/AWSStringStream.h>
+
+
 #include <ModelBase.h>
+
 #include "Utils.h"
 
 using namespace tradingo_utils;
 
 template<typename T>
 class Series {
-
 
     std::vector<std::shared_ptr<T>> _data;
     std::vector<index_t> _index;
@@ -64,9 +72,11 @@ public:
     };
     friend iterator_type;
 
-
     Series(
         const std::string& dataFile_,
+        index_t resolution_=1);
+    Series(
+        std::ifstream dataFile_,
         index_t resolution_=1);
 
     index_t size() const;
@@ -81,6 +91,54 @@ public:
     void set_start(const std::string& start_);
     void set_end(const std::string& end_);
 
+    static Series download(
+            const std::string& type_,
+            const std::string& symbol_,
+            const std::string& trade_date_,
+            const Aws::S3::S3Client& client_,
+            const std::string& storage_,
+            index_t resolution_
+        ) {
+        std::string bucket = std::getenv("TRADINGO_BUCKET_NAME");
+        std::string file_name = trade_date_+"/"+type_+"_"+symbol_+".json";
+        std::string key = "tickRecorder/storage/"+file_name;
+        std::string object_file_path = storage_+"/"+file_name;
+        if (not std::filesystem::exists(object_file_path)) {
+            auto parent_dir = std::filesystem::path(object_file_path).parent_path();
+            if (not std::filesystem::exists(parent_dir)) {
+                std::filesystem::create_directory(parent_dir);
+            }
+            LOGINFO("Downloading " << LOG_VAR(key) << " from s3");
+            Aws::S3::Model::GetObjectRequest getObjectRequest;
+            getObjectRequest 
+                .WithBucket(bucket)
+                .WithKey(key);
+
+            auto getObjectOutcome = client_.GetObject(getObjectRequest);
+            std::ofstream object_file;
+            object_file.open(object_file_path);
+
+            if(getObjectOutcome.IsSuccess())
+            {
+                LOGINFO("Successfully retrieved "<< key << "from s3");
+                //getObjectOutcome.GetResult().GetBody()
+                object_file << getObjectOutcome.GetResult().GetBody().rdbuf() << std::endl;
+                return Series(getObjectOutcome.GetResult().GetBody(), resolution_);
+            }
+            else
+            {
+                std::stringstream error;
+                error << "Error while getting object "
+                    << LOG_VAR(key)
+                    << LOG_NVP("exception", getObjectOutcome.GetError().GetExceptionName())
+                    << LOG_NVP("message", getObjectOutcome.GetError().GetMessage());
+                throw std::runtime_error(error.str());
+            }
+        }
+        return Series(object_file_path, resolution_);
+	}
+    
+
 private:
     index_t index_of(const utility::datetime& date_) const;
     index_t make_index(const utility::datetime& date_) const;
@@ -89,19 +147,18 @@ private:
 
 
 template <typename T>
-Series<T>::Series(const std::string& dataFile_, index_t resolution_)
-:   _resolution(resolution_) {
-    std::ifstream dataFile;
-
-    dataFile.open(dataFile_);
-    std::vector<std::shared_ptr<T>> tmpdata;
+Series<T>::Series(
+    std::ifstream dataFile,
+    index_t resolution_
+) : _resolution(resolution_)
+{
     if (not dataFile.is_open()) {
         std::stringstream msg;
-        msg << "File " << LOG_VAR(dataFile_) << " does not exist.";
+        msg << "File is not open for reading";
         throw std::runtime_error(msg.str());
     }
     std::shared_ptr<T> record = getEvent<T>(dataFile);
-
+    std::vector<std::shared_ptr<T>> tmpdata;
     tmpdata.push_back(record);
     // TODO take start and end time as constructor, and use it to seek the file so that
     // we dont have to read the whole thing
@@ -124,6 +181,14 @@ Series<T>::Series(const std::string& dataFile_, index_t resolution_)
         _data[index] = item;
         _index.push_back(index);
     }
+
+}
+
+
+template <typename T>
+Series<T>::Series(const std::string& dataFile_, index_t resolution_)
+: Series(std::ifstream(dataFile_), resolution_) {
+
 }
 
 

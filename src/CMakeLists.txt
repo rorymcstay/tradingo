@@ -41,6 +41,13 @@ add_library(trading_funcs SHARED
         )
 link_directories(${CPPREST_ROOT}/lib)
 
+if(WITH_AWS_CPP_SDK)
+    list(APPEND 
+        EXTRA_LINK_LIBRARIES
+        aws-cpp-sdk-s3
+    )
+endif(WITH_AWS_CPP_SDK)
+
 # this should always be true and overrides REPLAY_MODE on non test libraries
 target_compile_definitions(trading_funcs PUBLIC __REPLAY_MODE_GUARD)
 target_link_libraries(trading_funcs
@@ -49,7 +56,9 @@ target_link_libraries(trading_funcs
         boost_system
         pthread
         dl
-        ${OPENSSL_CRYPTO_LIBRARY})
+        ${OPENSSL_CRYPTO_LIBRARY}
+        ${EXTRA_LINK_LIBRARIES}
+)
 
 add_subdirectory(strategy)
 

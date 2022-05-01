@@ -9,6 +9,7 @@
 #include "api/OrderApi.h"
 
 #include "SimpleMovingAverage.h"
+#include "Signal.h"
 #include "signal/MovingAverageCrossOver.h"
 #include "Strategy.h"
 #include "Event.h"
@@ -31,6 +32,7 @@ class BreakOutStrategy final : public Strategy<TOrdApi, TPositionApi> {
     qty_t _displaySize;
 
     price_t _buyThreshold;
+    price_t _sellThreshold;
 
     std::string _previousDirection;
 
@@ -59,6 +61,7 @@ void BreakOutStrategy<TOrdApi, TPositionApi>::init(const std::shared_ptr<Config>
     StrategyApi::init(config_);
 
     _buyThreshold = config_->get<double>("buyThreshold", 0.0);
+    _sellThreshold = config_->get<double>("sellThreshold", 0.0);
     _shortExpose = config_->get<double>("shortExpose", 0.0);
     _longExpose = config_->get<double>("longExpose", 1000.0);
     _displaySize = config_->get<double>("displaySize", 200);
@@ -76,7 +79,9 @@ void BreakOutStrategy<TOrdApi, TPositionApi>::init(const std::shared_ptr<Config>
             << LOG_VAR(longTermWindow)
             << LOG_VAR(primePercent)
             << LOG_NVP("symbol", config_->get<std::string>("symbol"))
-            << LOG_NVP("buyThreshold", _buyThreshold));
+            << LOG_NVP("buyThreshold", _buyThreshold)
+            << LOG_NVP("sellThreshold", _sellThreshold)
+            );
 }
 
 template<typename TOrdApi, typename TPositionApi>
@@ -111,50 +116,58 @@ void BreakOutStrategy<TOrdApi, TPositionApi>::onBBO(const std::shared_ptr<Event>
     auto quote = event_->getQuote();
     auto askPrice = quote->getAskPrice();
     auto bidPrice = quote->getBidPrice();
+    auto midPoint = (askPrice + bidPrice)/2;
     // TODO if signal is good if (_signal["name"]->is_good())
-    std::string side = "Not ready";
+    std::string side = "";
     qty_t qtyToTrade = 0.0;
     price_t price;
     std::shared_ptr<MarketDataInterface> md = StrategyApi::getMD();
 
     bool isReady = StrategyApi::getSignal("moving_average_crossover")->isReady();
-    auto signalValue = isReady ? StrategyApi::getSignal("moving_average_crossover")->read() : -1 ;
+    Signal::Value signalValue = StrategyApi::getSignal("moving_average_crossover")->read();
 
-    if (isReady && signalValue > _buyThreshold) {  // _shortTermAvg - _longTermAvg > _buyThreshold
-        // short term average is higher than longterm, buy
-        StrategyApi::allocations()->cancelOrders([bidPrice](const std::shared_ptr<Allocation>& alloc_) {
-            return alloc_->getSide() != "Buy" or (bidPrice - alloc_->getPrice() > 50) ;
-        });
+    if (isReady && signalValue.direction == SignalDirection::Buy) {
         qtyToTrade = getQtyToTrade("Buy");
         price = bidPrice;
         side = "Buy";
-    } else if (isReady) {
-
+    } else if (isReady && signalValue.direction == SignalDirection::Sell) {
         qtyToTrade = getQtyToTrade("Sell");
         price = askPrice;
         side = "Sell";
+    } else if (isReady && signalValue.direction == SignalDirection::Hold) {
+        StrategyApi::allocations()->cancelOrders([side, bidPrice, askPrice]
+                (const std::shared_ptr<Allocation>& alloc_) {
+                    return alloc_->getSize() != 0.0;
+        });
     } else {
         LOGDEBUG("Signal is not ready.");
     }
-    StrategyApi::allocations()->cancelOrders([side, bidPrice, askPrice]
-            (const std::shared_ptr<Allocation>& alloc_) {
-                return alloc_->getSize() != 0.0 and (alloc_->getSide() != side 
-                    or (std::abs(alloc_->getPrice() - (bidPrice+askPrice)/2) > 25));
-    });
+    if (not side.empty())
+        StrategyApi::allocations()->cancelOrders([side, bidPrice, askPrice]
+                (const std::shared_ptr<Allocation>& alloc_) {
+                    return alloc_->getSize() != 0.0 and (alloc_->getSide() != side 
+                        or (std::abs(alloc_->getPrice() - (bidPrice+askPrice)/2) > 25));
+        });
+
 
     if (almost_equal(qtyToTrade, 0.0)) {
         LOGDEBUG("No quantity to trade");
         return;
     }
     const std::shared_ptr<model::Position>& position = md->getPositions().at(StrategyApi::_symbol);
-    auto currentBalance = md->getMargin()->getWalletBalance();
-    auto currentQty = position->getCurrentQty();
-    LOGDEBUG("Signal is good, took position"
-            << LOG_VAR(qtyToTrade)
-            << LOG_VAR(price)
-            << LOG_VAR(currentQty)
-            << LOG_VAR(currentBalance));
-    StrategyApi::allocations()->addAllocation(price, qtyToTrade);
+    if (not (
+            (side == "Buy"  and signalValue.value >= (midPoint * _buyThreshold))
+         or (side == "Sell" and signalValue.value <= (midPoint * _sellThreshold))
+        )) {
+        auto currentBalance = md->getMargin()->getWalletBalance();
+        auto currentQty = position->getCurrentQty();
+        LOGDEBUG("Signal is good, took position "
+                << LOG_VAR(qtyToTrade)
+                << LOG_VAR(price)
+                << LOG_VAR(currentQty)
+                << LOG_VAR(currentBalance));
+        StrategyApi::allocations()->addAllocation(price, qtyToTrade);
+    }
 }
 
 template<typename TOrdApi, typename TPositionApi>

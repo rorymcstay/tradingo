@@ -37,6 +37,8 @@ target_link_libraries(replayTradingo
         boost_system
         pthread
         boost_program_options
+        aws-cpp-sdk-s3
+        aws-cpp-sdk-core
         )
 install(TARGETS
            replayTradingo 

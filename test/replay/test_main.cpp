@@ -4,6 +4,8 @@
 
 #include "gtest/gtest.h"
 // cpprestsdk
+#include <aws/core/Aws.h>
+#include <aws/s3/S3Client.h>
 #include <boost/program_options/errors.hpp>
 #include <cpprest/asyncrt_utils.h>
 #include <cpprest/json.h>
@@ -22,9 +24,6 @@
 
 namespace po = boost::program_options;
 
-
-
-
 int main(int argc, char **argv) {
 
     // program options
@@ -42,8 +41,7 @@ int main(int argc, char **argv) {
             ("storage", po::value<std::string>(), "override storage location in config.")
             ("initial-margin", po::value<std::string>(), "override the initial margin object")
             ("initial-position", po::value<std::string>(), "override the initial position")
-            ("start-time", po::value<std::string>(), "the time to start replay from")
-            ("end-time", po::value<std::string>(), "the time to finish  replay from")
+            ("days", po::value<int>(), "The number of days to replay for")
             ;
 
     po::variables_map vm;
@@ -149,35 +147,32 @@ int main(int argc, char **argv) {
         instrument_resolution = vm.at("instrument-resolution").as<long>();
     }
     auto tickStorage = defaults->get<std::string>("tickStorage");
-    auto quotes = Series<model::Quote>(tickStorage+"/quotes_XBTUSD.json",
-                                       quote_resolution);
-    auto trades = Series<model::Trade>(tickStorage+"/trades_XBTUSD.json",
-                                       trade_resolution);
-    auto instruments = Series<model::Instrument>(tickStorage+"/instruments_XBTUSD.json",
-                                                 instrument_resolution);
-    if (vm.contains("start-time")) {
-        quotes.set_start(vm.at("start-time").as<std::string>());
-        trades.set_start(vm.at("start-time").as<std::string>());
-        instruments.set_start(vm.at("start-time").as<std::string>());
-    }
-    if (vm.contains("end-time")) {
-        quotes.set_end(vm.at("end-time").as<std::string>());
-        trades.set_end(vm.at("end-time").as<std::string>());
-        instruments.set_end(vm.at("end-time").as<std::string>());
-    }
-    if (quotes.begin()->getTimestamp().to_interval() > quotes.end()->getTimestamp().to_interval()) {
-        std::stringstream ss;
-        ss << "Invalid start and end times: start="
-            << quotes.begin()->getTimestamp().to_string(utility::datetime::date_format::ISO_8601)
-            << " end=" <<  quotes.end()->getTimestamp().to_string(utility::datetime::date_format::ISO_8601);
-        throw std::runtime_error(ss.str());
-    }
-    if (initial_margin)
+
+    if (initial_margin) {
         env << initial_margin;
         LOGINFO("Applied initial margin from command line");
-    if (initial_position)
+    }
+    if (initial_position) {
         env << initial_position;
         LOGINFO("Applied initial position from command line");
-    env.playback(trades, quotes, instruments);
+    };
+    Aws::SDKOptions options;
+    options.loggingOptions.logLevel = Aws::Utils::Logging::LogLevel::Debug;
+    Aws::InitAPI(options);
+    Aws::S3::S3Client s3_client;
+    std::string tick_storage = std::filesystem::path(tickStorage).parent_path();
+    auto trade_date = std::filesystem::path(tickStorage).filename();
+    auto symbol = defaults->get<std::string>("symbol");
+
+    for(int n_days(0); n_days < vm.at("days").as<int>(); n_days++) {
+
+        auto quotes = Series<model::Quote>::download("quotes", symbol, trade_date, s3_client, tick_storage, quote_resolution);
+        auto instruments = Series<model::Instrument>::download("instruments", symbol, trade_date, s3_client, tick_storage, instrument_resolution);
+        auto trades = Series<model::Trade>::download("trades", symbol, trade_date, s3_client, tick_storage, trade_resolution);
+        env.playback(trades, quotes, instruments);
+        trade_date = tradingo_utils::datePlusDays(trade_date, 1);
+    }
     LOGINFO("Replay Finished");
+    Aws::ShutdownAPI(options);
+    return 0;
 }

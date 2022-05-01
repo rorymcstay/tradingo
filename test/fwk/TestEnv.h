@@ -52,7 +52,7 @@ using namespace io::swagger::client;
         {"initialLeverage", "15.0"}, \
         {"libraryLocation", LIBRARY_LOCATION"/libtest_trading_strategies.so" }, \
         {"storage", "./"},   \
-        {"tickStorage", "./"}
+        {"tickStorage", std::getenv("TICK_STORAGE") ? std::getenv("TICK_STORAGE") : "./"}
 
 #define INSERT_DEFAULT_ARGS(config_) \
     std::initializer_list<std::pair<std::string, std::string>> defaults = { DEFAULT_ARGS }; \

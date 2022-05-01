@@ -25,14 +25,24 @@ add_library(test_trading_funcs
         TempStorage.cpp
         TempStorage.h
         )
-
-target_link_libraries(test_trading_funcs
-        #${CPPREST_LIBRARY}
+set(TGT_LINK_LIBRARIES 
         pthread
         CppRestSwaggerClient
         boost_system
         dl
         ${OPENSSL_CRYPTO_LIBRARY})
+if(WITH_AWS_CPP_SDK)
+
+    list(APPEND 
+        aws-cpp-sdk-s3
+    )
+endif(WITH_AWS_CPP_SDK)
+
+target_link_libraries(test_trading_funcs
+        #${CPPREST_LIBRARY}
+        ${TGT_LINK_LIBRARIES}
+)
+
 install(TARGETS
             test_trading_funcs
         RUNTIME DESTINATION bin

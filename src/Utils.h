@@ -18,6 +18,9 @@
 #define LOG_NVP(name_, var_) name_ << "=" << var_ << " "
 
 namespace tradingo_utils {
+int nthOccurrence(const std::string& str, const std::string& findMe, int nth);
+// Adjust date string by a number of days +/-
+std::string datePlusDays(const std::string& datestr, int days);
 
 using timestamp_t = std::chrono::time_point<std::chrono::system_clock>;
 

@@ -4,3 +4,6 @@
 [submodule "thirdparty/aixlog"]
 	path = thirdparty/aixlog
 	url = https://github.com/badaix/aixlog 
+[submodule "thirdparty/aws-sdk-cpp"]
+	path = thirdparty/aws-sdk-cpp
+	url = git@github.com:aws/aws-sdk-cpp.git

@@ -6,6 +6,7 @@
 #include "fwk/TempStorage.h"
 
 #include "Config.h"
+#include "Utils.h"
 
 TEST(TestConfig, plus_equal_operator) {
     Config config1 {
@@ -34,4 +35,10 @@ TEST(Config, DISABLED_read_from_file) {
     ASSERT_EQ(config.get<std::string>("val1"), "10");
     ASSERT_EQ(config.get<std::string>("val2"), "20");
     ASSERT_EQ(config.get<int>("val2"), 20);
+}
+
+
+TEST(increment_date_str, test) {
+    ASSERT_EQ(tradingo_utils::datePlusDays("2022-01-01", 1), "2022-01-02");
+    ASSERT_EQ(tradingo_utils::datePlusDays("2022-10-31", 1), "2022-11-01");
 }

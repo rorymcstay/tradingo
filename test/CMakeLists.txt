@@ -85,8 +85,6 @@ endforeach()
 endif(${WITH_REGRESSION_TEST})
 
 
-
-
 set(TEST_LINK_LIBRARIES 
         test_trading_funcs
         ${GTEST_LIBRARY}

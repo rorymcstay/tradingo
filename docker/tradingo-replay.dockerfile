@@ -1,4 +1,4 @@
-FROM rmcstay95/tradingo-base:0ee37ab-dirty as builder
+FROM rmcstay95/tradingo-replay-base:latest as builder
 
 # build tradingo
 # TODO break this up into compilation of targets one at a time
@@ -9,6 +9,17 @@ ARG install_base=/usr/from-src/
 
 ARG CMAKE_BUILD_TYPE=RelWithDebInfo
 
+RUN mkdir build.release \
+    && cd build.release \
+    && cmake -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE \
+        -DCPPREST_ROOT=${install_base}/cpprest \
+        -DREPLAY_MODE=1 \
+        -DBOOST_ASIO_DISABLE_CONCEPTS=1 \
+        -Wno-dev \
+        -DCMAKE_INSTALL_PREFIX=${install_base}/tradingo \
+        -DCMAKE_PREFIX_PATH="${install_base}/cpprest;${install_base}/benchmark" \
+        ../ \
+    && make install -j3
 WORKDIR /usr/src/tradingo
 ADD . .
 RUN git submodule update --init
@@ -20,7 +31,7 @@ RUN mkdir build.release \
         -DBOOST_ASIO_DISABLE_CONCEPTS=1 \
         -Wno-dev \
         -DCMAKE_INSTALL_PREFIX=${install_base}/tradingo \
-        -DCMAKE_PREFIX_PATH="${install_base}/cpprest;${install_base}/benchmark" \
+        -DCMAKE_PREFIX_PATH="${install_base}/cpprest;${install_base}/benchmark;${install_base}/aws" \
         ../ \
     && make install -j3
 
@@ -123,8 +134,11 @@ COPY --from=builder ${install_base}/cpprest/lib /usr/local/lib
 COPY --from=builder ${install_base}/cpprest/include /usr/local/include
 COPY --from=builder ${install_base}/benchmark/lib /usr/local/lib
 COPY --from=builder ${install_base}/benchmark/include /usr/local/include
+COPY --from=builder ${install_base}/aws/include /usr/local/include
+COPY --from=builder ${install_base}/aws/lib /usr/local/include
 COPY --from=builder ${install_base}/tradingo/lib /usr/local/lib
 COPY --from=builder ${install_base}/tradingo/bin /usr/local/bin
 COPY --from=builder ${install_base}/tradingo/etc /usr/local/etc
+COPY --from=builder ${install_base}/tradingo/scripts /usr/local/scripts
 COPY --from=builder ${install_base}/tradingo/scripts /usr/local/scripts
 COPY --from=builder /data/ /data/

@@ -31,6 +31,11 @@ set(CPPLOGGER_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/aixlog/include/aixlog.hpp PAREN
 include_directories(${CPPLOGGER_INCLUES})
 message(STATUS "CPPLOGGER_INLCLUDES=${CPPLOGGER_INCLUDES}")
 
+### AWS CPP SDK ###
+if (WITH_AWS_CPP_SDK)
+    find_package(AWSSDK REQUIRED COMPONENTS s3)
+endif(WITH_AWS_CPP_SDK)
+
 install(TARGETS
             CppRestSwaggerClient
         RUNTIME DESTINATION bin
