@@ -14,7 +14,6 @@ RUN apk add \
       git \
       make
 
-
 # install thirdparty libs
 RUN apk add \
   gtest-dev \
@@ -26,17 +25,12 @@ ARG make_flags
 RUN echo $make_flags
 ENV GNUMAKEFLAGS=${make_flags}
 
-
-
 WORKDIR /usr/src
 
 # install cpprest
-RUN git clone https://github.com/Microsoft/cpprestsdk.git casablanca
-
-RUN cd casablanca \ 
-    && git submodule update --init
-
-RUN cd casablanca \
+RUN git clone https://github.com/Microsoft/cpprestsdk.git cpprestsdk
+RUN cd cpprestsdk \ 
+    && git submodule update --init \
     && mkdir build.release \
     && cd build.release \
     && cmake -DCMAKE_BUILD_TYPE=Release \
@@ -44,8 +38,6 @@ RUN cd casablanca \
         -DCMAKE_INSTALL_PREFIX=${install_base}/cpprest \
         ../ \
     && make install -j3
-
-RUN ls /${install_base}/cpprest/lib/
 
 # Install benchmark
 RUN git clone https://github.com/google/benchmark.git /usr/src/benchmark
@@ -60,15 +52,29 @@ RUN cd benchmark \
 
 # Install aws-sdk-cpp
 RUN apk add \
-        libcurl4-openssl-dev \
-        libssl-dev \
-        uuid-dev \
-        zlib1g-dev \
-    && git --recurse-submodules clone git@github.com:aws/aws-sdk-cpp.git /usr/src/aws-sdk-cpp \
-    && cd /src/aws-sdk-cpp \
-    && mkdir build && cd build \
-    && cmake /usr/src/aws-sdk-cpp/ \
+        curl-dev \
+        libressl-dev \
+    && git clone --recurse-submodules https://github.com/aws/aws-sdk-cpp.git /usr/src/aws-sdk-cpp \
+    && mkdir /usr/src/aws-sdk-cpp/build \
+    && cd /usr/src/aws-sdk-cpp/build \
+    && cmake \
         -DCMAKE_BUILD_TYPE=Release \
-        -DCMAKE_PREFIX_PATH=${install_base}/aws/
-        -DBUILD_ONLY=s3
+        -DCMAKE_INSTALL_PREFIX=${install_base}/aws/ \
+        -DBUILD_ONLY=s3 \
+        /usr/src/aws-sdk-cpp/ \
     && make install -j3
+
+ARG BUILD_DIR=build.release
+ARG BUILD_TYPE=Release
+RUN cd git clone https://github.com/rorymcstay/api-connectors.git \
+    && $ROOT_DIR/thirdparty/api-connectors/auto-generated/cpprest/ \
+    && rm -rf $BUILD_DIR \
+    && mkdir $BUILD_DIR \
+    && cd $BUILD_DIR \
+    && cmake \
+        -Wno-dev \
+        -DCMAKE_BUILD_TYPE=$BUILD_TYPE \
+        -DCMAKE_INSTALL_PREFIX=${install_base}/swagger \
+        -DCMAKE_PREFIX_PATH="${install_base}/cpprest;" \
+        ../ \
+    && make install -j6

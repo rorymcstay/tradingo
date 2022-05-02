@@ -1,9 +1,15 @@
 [submodule "thirdparty/api-connectors"]
-	path = thirdparty/api-connectors
-	url = https://github.com/rorymcstay/api-connectors.git
+    path = thirdparty/api-connectors
+    url = https://github.com/rorymcstay/api-connectors.git
 [submodule "thirdparty/aixlog"]
-	path = thirdparty/aixlog
-	url = https://github.com/badaix/aixlog 
+    path = thirdparty/aixlog
+    url = https://github.com/badaix/aixlog 
 [submodule "thirdparty/aws-sdk-cpp"]
-	path = thirdparty/aws-sdk-cpp
-	url = git@github.com:aws/aws-sdk-cpp.git
+    path = thirdparty/aws-sdk-cpp
+    url = git@github.com:aws/aws-sdk-cpp.git
+[submodule "thirdparty/cpprestsdk"]
+	path = thirdparty/cpprestsdk
+	url = https://github.com/Microsoft/cpprestsdk.git
+[submodule "thirdparty/benchmark"]
+	path = thirdparty/benchmark
+	url = https://github.com/google/benchmark.git

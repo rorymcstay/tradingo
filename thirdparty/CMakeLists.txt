@@ -1,23 +1,20 @@
 #### Third party ####
 
-# Installed packagesbb
+# Installed packages
 find_package(CPPRESTSDK REQUIRED)
 find_package(OpenSSL REQUIRED)
 find_package(Boost REQUIRED)
 find_package(Threads REQUIRED)
-
-#set(CPPREST_LIBRARY ${CPPREST_ROOT}/lib/libcpprest.dylib PARENT_SCOPE)
+find_package(BITMEX_SWAGGER_CLIENT REQUIRED)
+### AWS CPP SDK ###
+if (WITH_AWS_CPP_SDK)
+    find_package(AWSSDK REQUIRED COMPONENTS s3)
+endif(WITH_AWS_CPP_SDK)
 
 include_directories(${OPENSSL_INCLUDE_DIR})
 include_directories(${CPPRESTSDK_INCLUDE_DIR})
 include_directories(${BOOST_INCLUDE_DIR})
 
-### BITMEX CPPRest swagger ###
-add_subdirectory(api-connectors/auto-generated/cpprest)
-set(BITMEX_INCLUDE ${CMAKE_CURRENT_SOURCE_DIR}/api-connectors/auto-generated/cpprest PARENT_SCOPE)
-
-message(STATUS "CPPRESTSDK_INCLUDE_DIR=${CPPRESTSDK_INCLUDE_DIR}")
-message(STATUS "CPPRESTSDK_DIR=${CPPRESTSDK_DIR}")
 ### ABSL Libs ###
 if(WITH_ABSL)
     add_subdirectory(abseil-cpp)
@@ -31,13 +28,4 @@ set(CPPLOGGER_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/aixlog/include/aixlog.hpp PAREN
 include_directories(${CPPLOGGER_INCLUES})
 message(STATUS "CPPLOGGER_INLCLUDES=${CPPLOGGER_INCLUDES}")
 
-### AWS CPP SDK ###
-if (WITH_AWS_CPP_SDK)
-    find_package(AWSSDK REQUIRED COMPONENTS s3)
-endif(WITH_AWS_CPP_SDK)
 
-install(TARGETS
-            CppRestSwaggerClient
-        RUNTIME DESTINATION bin
-        LIBRARY DESTINATION lib
-        )

@@ -1,4 +1,4 @@
-FROM rmcstay95/tradingo-replay-base:latest as builder
+FROM rmcstay95/tradingo-base:63c299a-dirty as builder
 
 # build tradingo
 # TODO break this up into compilation of targets one at a time
@@ -9,23 +9,12 @@ ARG install_base=/usr/from-src/
 
 ARG CMAKE_BUILD_TYPE=RelWithDebInfo
 
-RUN mkdir build.release \
-    && cd build.release \
-    && cmake -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE \
-        -DCPPREST_ROOT=${install_base}/cpprest \
-        -DREPLAY_MODE=1 \
-        -DBOOST_ASIO_DISABLE_CONCEPTS=1 \
-        -Wno-dev \
-        -DCMAKE_INSTALL_PREFIX=${install_base}/tradingo \
-        -DCMAKE_PREFIX_PATH="${install_base}/cpprest;${install_base}/benchmark" \
-        ../ \
-    && make install -j3
 WORKDIR /usr/src/tradingo
 ADD . .
 RUN git submodule update --init
 RUN mkdir build.release \
     && cd build.release \
-    && cmake -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE \
+    && cmake -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE} \
         -DCPPREST_ROOT=${install_base}/cpprest \
         -DREPLAY_MODE=1 \
         -DBOOST_ASIO_DISABLE_CONCEPTS=1 \

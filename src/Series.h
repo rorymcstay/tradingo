@@ -123,7 +123,6 @@ public:
                 LOGINFO("Successfully retrieved "<< key << "from s3");
                 //getObjectOutcome.GetResult().GetBody()
                 object_file << getObjectOutcome.GetResult().GetBody().rdbuf() << std::endl;
-                return Series(getObjectOutcome.GetResult().GetBody(), resolution_);
             }
             else
             {

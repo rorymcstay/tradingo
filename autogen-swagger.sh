@@ -10,7 +10,7 @@ fi
 
 install_base=$ROOT_DIR/install
 (
-cd $ROOT_DIR \
+cd $ROOT_DIR/thirdparty/api-connectors/auto-generated/cpprest/ \
     && rm -rf $BUILD_DIR \
     && mkdir $BUILD_DIR \
     && cd $BUILD_DIR \
@@ -18,12 +18,8 @@ cd $ROOT_DIR \
         -Wno-dev \
         -DCMAKE_EXPORT_COMPILE_COMMANDS=1 \
         -DCMAKE_BUILD_TYPE=$BUILD_TYPE \
-        -DCMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX:-$install_base/tradingo} \
-        -DWITH_REGRESSION_TESTS=1 \
+        -DCMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX:-$install_base/swagger} \
         -DCMAKE_PREFIX_PATH="${install_base}/cpprest;" \
-                            "${install_base}/aws;" \
-                            "${install_base}/benchmark;" \
-                            "${install_base}/swagger;" \
-        "$@" \
-        ../
+        ../ \
+    && make install -j6
 )

@@ -52,7 +52,7 @@ endif(WITH_AWS_CPP_SDK)
 target_compile_definitions(trading_funcs PUBLIC __REPLAY_MODE_GUARD)
 target_link_libraries(trading_funcs
         CppRestSwaggerClient
-        ${CPPREST_LIBRARY}
+        cpprest
         boost_system
         pthread
         dl
