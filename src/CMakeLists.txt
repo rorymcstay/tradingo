@@ -50,6 +50,7 @@ endif(WITH_AWS_CPP_SDK)
 
 # this should always be true and overrides REPLAY_MODE on non test libraries
 target_compile_definitions(trading_funcs PUBLIC __REPLAY_MODE_GUARD)
+link_directories("${PACKAGE_INSTALLS}/swagger/lib")
 target_link_libraries(trading_funcs
         CppRestSwaggerClient
         cpprest
@@ -59,6 +60,7 @@ target_link_libraries(trading_funcs
         ${OPENSSL_CRYPTO_LIBRARY}
         ${EXTRA_LINK_LIBRARIES}
 )
+
 
 add_subdirectory(strategy)
 

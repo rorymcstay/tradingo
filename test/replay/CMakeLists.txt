@@ -8,7 +8,7 @@ add_executable(tradingo_replay
     replay.cpp)
 
 
-if(${REPLAY_MODE})
+if(REPLAY_MODE)
     message(STATUS "Replay mode is active")
     # REPLAY_MODE changes the following
     # TestEnv::replay(quote, trade) will
@@ -18,7 +18,7 @@ if(${REPLAY_MODE})
     # is passed in the market is equal to the amount of actual time passed. This is to mimick
     # realtime trading as close as possible.
     target_compile_definitions(replayTradingo PUBLIC REPLAY_MODE)
-endif(${REPLAY_MODE})
+endif(REPLAY_MODE)
 
 
 target_link_libraries(tradingo_replay

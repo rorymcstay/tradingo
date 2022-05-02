@@ -24,7 +24,7 @@ add_library(test_trading_funcs
         Params.cpp
         TempStorage.cpp
         TempStorage.h
-        )
+)
 set(TGT_LINK_LIBRARIES 
         pthread
         CppRestSwaggerClient

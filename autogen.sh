@@ -19,7 +19,9 @@ cd $ROOT_DIR \
         -DCMAKE_EXPORT_COMPILE_COMMANDS=1 \
         -DCMAKE_BUILD_TYPE=$BUILD_TYPE \
         -DCMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX:-$install_base/tradingo} \
-        -DWITH_REGRESSION_TESTS=1 \
+        -DWITH_REGRESSION_TEST=1 \
+        -DPACKAGE_INSTALLS="${install_base}" \
+        -DCMAKE_MODULE_PATH="${install_base}/swagger/lib/" \
         -DCMAKE_PREFIX_PATH="${install_base}/cpprest;" \
                             "${install_base}/aws;" \
                             "${install_base}/benchmark;" \
