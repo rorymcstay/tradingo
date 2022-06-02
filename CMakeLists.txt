@@ -12,6 +12,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
 
 option(REPLAY_MODE "Build tradingo test pack" OFF)
 option(WITH_AWS_CPP_SDK "Include aws s3 functions" ON)
+option(PACKAGE_INSTALLS "Path to compiled tpps" "")
 
 enable_testing()
 

@@ -27,7 +27,7 @@ add_library(test_trading_funcs
 )
 set(TGT_LINK_LIBRARIES 
         pthread
-        CppRestSwaggerClient
+        ${PACKAGE_INSTALLS}/swagger/lib/libCppRestSwaggerClient.a
         boost_system
         dl
         ${OPENSSL_CRYPTO_LIBRARY})

@@ -89,7 +89,7 @@ set(TEST_LINK_LIBRARIES
         test_trading_funcs
         ${GTEST_LIBRARY}
         ${OPENSSL_CRYPTO_LIBRARY}
-        CppRestSwaggerClient
+        ${PACKAGE_INSTALLS}/swagger/lib/libCppRestSwaggerClient.a
         boost_system
         boost_filesystem
         pthread
