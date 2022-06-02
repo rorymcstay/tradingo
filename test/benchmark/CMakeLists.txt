@@ -11,6 +11,7 @@ add_executable(
 
 target_link_libraries(benchmarkTradingo
         test_trading_funcs
+        cpprest
         ${GTEST_LIBRARY}
         benchmark::benchmark_main)
 

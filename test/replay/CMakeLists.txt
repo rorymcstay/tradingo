@@ -24,7 +24,8 @@ endif(REPLAY_MODE)
 target_link_libraries(tradingo_replay
         test_trading_funcs
         ${OPENSSL_CRYPTO_LIBRARY}
-        CppRestSwaggerClient
+        ${PACKAGE_INSTALLS}/swagger/lib/libCppRestSwaggerClient.a
+        cpprest
         pthread
         ${GTEST_LIBRARY}
         boost_program_options)
@@ -33,7 +34,8 @@ target_link_libraries(replayTradingo
         test_trading_funcs
         ${GTEST_LIBRARY}
         ${OPENSSL_CRYPTO_LIBRARY}
-        CppRestSwaggerClient
+        ${PACKAGE_INSTALLS}/swagger/lib/libCppRestSwaggerClient.a
+        cpprest
         boost_system
         pthread
         boost_program_options

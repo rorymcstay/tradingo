@@ -90,6 +90,7 @@ set(TEST_LINK_LIBRARIES
         ${GTEST_LIBRARY}
         ${OPENSSL_CRYPTO_LIBRARY}
         ${PACKAGE_INSTALLS}/swagger/lib/libCppRestSwaggerClient.a
+        cpprest
         boost_system
         boost_filesystem
         pthread

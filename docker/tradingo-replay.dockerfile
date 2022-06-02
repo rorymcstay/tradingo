@@ -20,7 +20,7 @@ RUN mkdir build.release \
         -DBOOST_ASIO_DISABLE_CONCEPTS=1 \
         -Wno-dev \
         -DCMAKE_INSTALL_PREFIX=${install_base}/tradingo \
-        -DCMAKE_PREFIX_PATH="${install_base}/cpprest;${install_base}/benchmark;${install_base}/aws" \
+        -DCMAKE_PREFIX_PATH="${install_base}/cpprest;${install_base}/benchmark;${install_base}/aws;${install_base}/swagger" \
         ../ \
     && make install -j3
 
@@ -121,6 +121,8 @@ ENV TESTDATA_LOCATION=/usr/local/etc/test/data
 ARG install_base=/usr/from-src/
 COPY --from=builder ${install_base}/cpprest/lib /usr/local/lib
 COPY --from=builder ${install_base}/cpprest/include /usr/local/include
+COPY --from=builder ${install_base}/swagger/lib /usr/local/lib
+COPY --from=builder ${install_base}/swagger/include /usr/local/include
 COPY --from=builder ${install_base}/benchmark/lib /usr/local/lib
 COPY --from=builder ${install_base}/benchmark/include /usr/local/include
 COPY --from=builder ${install_base}/aws/include /usr/local/include
@@ -128,6 +130,5 @@ COPY --from=builder ${install_base}/aws/lib /usr/local/include
 COPY --from=builder ${install_base}/tradingo/lib /usr/local/lib
 COPY --from=builder ${install_base}/tradingo/bin /usr/local/bin
 COPY --from=builder ${install_base}/tradingo/etc /usr/local/etc
-COPY --from=builder ${install_base}/tradingo/scripts /usr/local/scripts
 COPY --from=builder ${install_base}/tradingo/scripts /usr/local/scripts
 COPY --from=builder /data/ /data/

@@ -21,6 +21,7 @@ RUN apk add \
   openssl-dev \
   zlib-dev
 
+ARG BUILD_TYPE=Release
 ARG make_flags
 RUN echo $make_flags
 ENV GNUMAKEFLAGS=${make_flags}
@@ -31,24 +32,24 @@ WORKDIR /usr/src
 RUN git clone https://github.com/Microsoft/cpprestsdk.git cpprestsdk
 RUN cd cpprestsdk \ 
     && git submodule update --init \
-    && mkdir build.release \
-    && cd build.release \
-    && cmake -DCMAKE_BUILD_TYPE=Release \
+    && mkdir build \
+    && cd build \
+    && cmake -DCMAKE_BUILD_TYPE=$BUILD_TYPE \
         -DCMAKE_CXX_FLAGS="-Wno-error=format-truncation" \
         -DCMAKE_INSTALL_PREFIX=${install_base}/cpprest \
         ../ \
-    && make install -j3
+    && make install -j6
 
 # Install benchmark
 RUN git clone https://github.com/google/benchmark.git /usr/src/benchmark
 RUN cd benchmark \
-    && mkdir build.release \
-    && cd build.release \
-    && cmake -DCMAKE_BUILD_TYPE=Release \
+    && mkdir build \
+    && cd build \
+    && cmake -DCMAKE_BUILD_TYPE=$BUILD_TYPE \
         -DBENCHMARK_DOWNLOAD_DEPENDENCIES=on \
         -DCMAKE_INSTALL_PREFIX=${install_base}/benchmark \
         ../ \
-    && make install -j3
+    && make install -j6
 
 # Install aws-sdk-cpp
 RUN apk add \
@@ -58,19 +59,16 @@ RUN apk add \
     && mkdir /usr/src/aws-sdk-cpp/build \
     && cd /usr/src/aws-sdk-cpp/build \
     && cmake \
-        -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_BUILD_TYPE=$BUILD_TYPE \
         -DCMAKE_INSTALL_PREFIX=${install_base}/aws/ \
         -DBUILD_ONLY=s3 \
         /usr/src/aws-sdk-cpp/ \
-    && make install -j3
+    && make install -j6
 
-ARG BUILD_DIR=build.release
-ARG BUILD_TYPE=Release
-RUN cd git clone https://github.com/rorymcstay/api-connectors.git \
-    && $ROOT_DIR/thirdparty/api-connectors/auto-generated/cpprest/ \
-    && rm -rf $BUILD_DIR \
-    && mkdir $BUILD_DIR \
-    && cd $BUILD_DIR \
+
+RUN git clone https://github.com/rorymcstay/api-connectors.git /usr/src/api-connectors/ \
+    && mkdir /usr/src/api-connectors/auto-generated/cpprest/build \
+    && cd /usr/src/api-connectors/auto-generated/cpprest/build \
     && cmake \
         -Wno-dev \
         -DCMAKE_BUILD_TYPE=$BUILD_TYPE \

@@ -13,6 +13,7 @@ include_directories(../../src/signal ../../src/strategy)
 target_link_libraries(test_trading_strategies
     test_trading_funcs
     ${PACKAGE_INSTALLS}/swagger/lib/libCppRestSwaggerClient.a
+    cpprest
     trading_funcs
 )
 install(TARGETS
