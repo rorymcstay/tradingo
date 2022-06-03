@@ -9,6 +9,7 @@
 #include <stdexcept>
 
 #include "TestEnv.h"
+#include "model/Position.h"
 #define _TURN_OFF_PLATFORM_STRING
 
 #include <model/Margin.h>
@@ -265,6 +266,9 @@ void TestEnv::playback(const Series<model::Trade>& trades,
             if (exec) {
                 LOGINFO("Simulated execution");
                 operator<<(exec);
+                auto position_event = std::make_shared<model::Position>();
+                auto position = _context->marketData()->getPositions().at(trade->getSymbol());
+                writePosition(position);
             }
             ++trade;
             stats.trades_processed += 1;
@@ -313,6 +317,7 @@ void TestEnv::playback(const Series<model::Trade>& trades,
         // STAT interval log
         if (std::chrono::system_clock::now() - stats.last_log >
             stats.interval) {
+            writePosition(stats.position);
             LOG_STATS(stats);
             stats.last_log = std::chrono::system_clock::now();
         }
@@ -566,13 +571,15 @@ void TestEnv::updatePositionFromInstrument(
         margin->setGrossMarkValue(gross_mark_value);
         margin->setGrossComm(gross_comm);
         margin->setRealisedPnl(gross_realised_pnl);
+        
     }
-    if (old_mark_value != position->getMarkValue()) {
-        auto position_event = std::make_shared<model::Position>();
-        auto pos_json = position->toJson();
-        position_event->fromJson(pos_json);
-        _positionWriter.write(position_event);
-    }
+}
+
+void TestEnv::writePosition(const std::shared_ptr<model::Position>& position_) {
+    auto position_event = std::make_shared<model::Position>();
+    auto pos_json = position_->toJson();
+    position_event->fromJson(pos_json);
+    _positionWriter.write(position_event);
 }
 
 void TestEnv::operator<<(const std::shared_ptr<model::Margin>& margin_) {

@@ -83,6 +83,8 @@ class TestEnv {
 
     void updatePositionFromInstrument(const std::shared_ptr<model::Instrument>& instrument);
 
+    void writePosition(const std::shared_ptr<model::Position>& position_);
+
 public:
     /// strategy reference
     const std::shared_ptr<TStrategy>& strategy() const { return _context->strategy(); }

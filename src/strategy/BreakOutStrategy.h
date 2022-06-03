@@ -21,7 +21,6 @@ using namespace io::swagger::client;
 using SMA_T = SimpleMovingAverage<uint64_t, uint64_t>;
 
 
-
 template<typename TOrdApi, typename TPositionApi>
 class BreakOutStrategy final : public Strategy<TOrdApi, TPositionApi> {
 
