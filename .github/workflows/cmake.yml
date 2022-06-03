@@ -28,15 +28,11 @@ jobs:
     - name: Clone thirdparty modules
       run: git submodule init && git submodule update
 
-    - name: Configure CMake
-      # TODO use autogen scripts
-      run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=Release -DCPPREST_ROOT=/usr/local -DCMAKE_INSTALL_PREFIX=${{github.workspace}}/install
+    - name: Build Api Connectors
+      run: BUILD_TYPE=Debug ${{github.workspace}}/autogen-swagger.sh
 
-    - name: Build
-      run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
-
-    - name: Install
-      run: cmake --install ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
+    - name: Build Tradingo
+      run: BUILD_TYPE=Debug ${{github.workspace}}/autogen.sh && cd ${{github.workspace}}/build.debug && make install -j4
 
     - name: Test
       working-directory: ${{github.workspace}}/build/
