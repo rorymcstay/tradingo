@@ -14,7 +14,7 @@ git submodule update --init --recursive
 if [[ -z $SKIP_CPPREST ]]; then
     (
     cd $ROOT_DIR/thirdparty/cpprestsdk \
-        && rm -r build.release \
+        && rm -fr build.release \
         && mkdir build.release \
         && cd build.release \
         && cmake -DCMAKE_BUILD_TYPE=Release \
@@ -26,7 +26,7 @@ if [[ -z $SKIP_CPPREST ]]; then
 fi
 (
 cd $ROOT_DIR/thirdparty/benchmark \
-    && rm -r build.release \
+    && rm -fr build.release \
     && mkdir build.release \
     && cd build.release \
     && cmake -DCMAKE_BUILD_TYPE=Release \
@@ -37,7 +37,7 @@ cd $ROOT_DIR/thirdparty/benchmark \
 )
 (
 cd $ROOT_DIR/thirdparty/aws-sdk-cpp \
-    && rm -r build.release \
+    && rm -fr build.release \
     && mkdir build.release \
     && cd build.release \
     && cmake \
