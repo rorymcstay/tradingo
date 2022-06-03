@@ -51,6 +51,7 @@ public:
     std::queue<std::shared_ptr<model::Order>>& rejects() {return  _rejects; };
 
     void setMarketData(const std::shared_ptr<TestMarketData>& _marketData);
+    void flush();
 private:
 
     // validates and rejects if necessary

@@ -299,6 +299,10 @@ void TestEnv::playback(const Series<model::Trade>& trades,
             ++instrument;
             stats.instruments_processed += 1;
             stats.current_time = instrument->getTimestamp();
+            if (stats.instruments_processed % 1000 == 0) {
+                for (auto& pos : _context->marketData()->getPositions())
+                    writePosition(pos.second);
+            }
             // Something has finished.
         } else {
             std::stringstream ss;
@@ -313,14 +317,16 @@ void TestEnv::playback(const Series<model::Trade>& trades,
             }
             ss << "Has completed.";
             LOGWARN(ss.str());
+            for (auto& pos : _context->marketData()->getPositions())
+                writePosition(pos.second);
         }
         // STAT interval log
         if (std::chrono::system_clock::now() - stats.last_log >
             stats.interval) {
-            writePosition(stats.position);
             LOG_STATS(stats);
             stats.last_log = std::chrono::system_clock::now();
         }
+        _context->orderApi()->flush();
     }
 }
 

@@ -24,9 +24,11 @@ start_tradingo() {
     populate_common_params $common_config
 
     # start tradingo
-    cd $STORAGE/$RUN_ID
     set +e
-    tradingo --config $commong_conig --config $config_file "$@"
-    aws s3 sync "$STORAGE/" "s3://$BUCKET_NAME/tradingo/"
+    cd $STORAGE/$RUN_ID
+    tradingo --config $common_config --config $config_file "$@"
+    ls -l $STORAGE/$RUN_ID/
+    aws s3 sync "$STORAGE/$RUN_ID" "s3://$BUCKET_NAME/tradingo/$RUN_ID"
 }
+
 start_tradingo "$@"

@@ -1,6 +1,6 @@
 # strategy container dockerfile definiton
 
-FROM alpine:3.14 as builder
+FROM alpine:3.12 as builder
 
 RUN apk --no-cache add ca-certificates 
 
