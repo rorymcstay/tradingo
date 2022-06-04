@@ -155,8 +155,8 @@ void BreakOutStrategy<TOrdApi, TPositionApi>::onBBO(const std::shared_ptr<Event>
     }
     const std::shared_ptr<model::Position>& position = md->getPositions().at(StrategyApi::_symbol);
     if (not (
-            (side == "Buy"  and signalValue.value >= (midPoint * _buyThreshold))
-         or (side == "Sell" and signalValue.value <= (midPoint * _sellThreshold))
+            (side == "Buy"  and std::abs(signalValue.value) >= (midPoint * _buyThreshold))
+         or (side == "Sell" and std::abs(signalValue.value) >= (midPoint * _sellThreshold))
         )) {
         auto currentBalance = md->getMargin()->getWalletBalance();
         auto currentQty = position->getCurrentQty();
@@ -193,7 +193,9 @@ qty_t BreakOutStrategy<TOrdApi, TPositionApi>::getQtyToTrade(const std::string& 
     auto& position = md->getPositions().at(StrategyApi::_symbol);
     std::shared_ptr<model::Position> currentPosition = StrategyApi::getMD()->getPositions().at(StrategyApi::_symbol);
     auto currentSize = currentPosition->getCurrentQty();
-    auto target_margin = func::get_cost(instrument->getMarkPrice(), currentSize + 100.0, position->getLeverage());
+    auto target_margin = func::get_cost(instrument->getMarkPrice(),
+                                        currentSize + 100.0,
+                                        position->getLeverage());
     if (std::abs(StrategyApi::allocations()->totalAllocated()) > _displaySize) {
         return 0;
     }
@@ -202,7 +204,7 @@ qty_t BreakOutStrategy<TOrdApi, TPositionApi>::getQtyToTrade(const std::string& 
                 << LOG_VAR(currentSize)
                 << LOG_VAR(target_margin)
                 << LOG_NVP("walletBalance", md->getMargin()->getWalletBalance()));
-        return 0.0;
+        return 0;
     };
     if (side_ == "Buy") {
         // if we are buying

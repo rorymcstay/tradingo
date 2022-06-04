@@ -65,6 +65,7 @@ RUN apk add \
         /usr/src/aws-sdk-cpp/ \
     && make install -j6
 
+RUN ls -l ${install_base}/cpprest/
 # Install swagger client for bitmex
 RUN git clone https://github.com/rorymcstay/api-connectors.git /usr/src/api-connectors/ \
     && mkdir /usr/src/api-connectors/auto-generated/cpprest/build \
