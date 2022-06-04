@@ -11,19 +11,17 @@ install_base=$ROOT_DIR/install
 
 git submodule update --init --recursive
 
-if [[ -z $SKIP_CPPREST ]]; then
-    (
-    cd $ROOT_DIR/thirdparty/cpprestsdk \
-        && rm -fr build.release \
-        && mkdir build.release \
-        && cd build.release \
-        && cmake -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_CXX_FLAGS="-Wno-error=format-truncation" \
-            -DCMAKE_INSTALL_PREFIX=${install_base}/cpprest \
-            ../ \
-        && make install -j6
-    )
-fi
+(
+cd $ROOT_DIR/thirdparty/cpprestsdk \
+    && rm -fr build.release \
+    && mkdir build.release \
+    && cd build.release \
+    && cmake -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_CXX_FLAGS="-Wno-error=format-truncation" \
+        -DCMAKE_INSTALL_PREFIX=${install_base}/cpprest \
+        ../ \
+    && make install -j6
+)
 (
 cd $ROOT_DIR/thirdparty/benchmark \
     && rm -fr build.release \

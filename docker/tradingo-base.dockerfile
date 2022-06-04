@@ -65,12 +65,13 @@ RUN apk add \
         /usr/src/aws-sdk-cpp/ \
     && make install -j6
 
-
+# Install swagger client for bitmex
 RUN git clone https://github.com/rorymcstay/api-connectors.git /usr/src/api-connectors/ \
     && mkdir /usr/src/api-connectors/auto-generated/cpprest/build \
     && cd /usr/src/api-connectors/auto-generated/cpprest/build \
     && cmake \
         -Wno-dev \
+        -DPACKAGE_INSTALLS=${install_base} \
         -DCMAKE_BUILD_TYPE=$BUILD_TYPE \
         -DCMAKE_INSTALL_PREFIX=${install_base}/swagger \
         -DCMAKE_PREFIX_PATH="${install_base}/cpprest;" \
