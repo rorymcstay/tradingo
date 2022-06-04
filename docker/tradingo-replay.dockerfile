@@ -1,8 +1,4 @@
-<<<<<<< HEAD
-FROM rmcstay95/tradingo-base:63c299a-dirty as builder
-=======
-FROM rmcstay95/tradingo-base:2da4186-dirty as builder
->>>>>>> 653db3c7f44e9f981283f8663971d08e34fb1ebc
+FROM rmcstay95/tradingo-base:17592c4-dirty as builder
 
 # build tradingo
 # TODO break this up into compilation of targets one at a time
@@ -21,9 +17,11 @@ RUN mkdir build.release \
     && cmake -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE} \
         -DCPPREST_ROOT=${install_base}/cpprest \
         -DREPLAY_MODE=1 \
+        -DPACKAGE_INSTALLS=${install_base} \
         -DBOOST_ASIO_DISABLE_CONCEPTS=1 \
         -Wno-dev \
         -DCMAKE_INSTALL_PREFIX=${install_base}/tradingo \
+        -DCMAKE_MODULE_PATH="${install_base}/swagger/lib/;${install_base}/aws/lib/cmake/AWSSDK/" \
         -DCMAKE_PREFIX_PATH="${install_base}/cpprest;${install_base}/benchmark;${install_base}/aws;${install_base}/swagger" \
         ../ \
     && make install -j3

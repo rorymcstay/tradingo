@@ -14,6 +14,7 @@ include_directories(${OPENSSL_INCLUDE_DIR})
 include_directories(${CPPRESTSDK_INCLUDE_DIR})
 include_directories(${BOOST_INCLUDE_DIR})
 set(BITMEX_INCLUDE "${PACKAGE_INSTALLS}/swagger/include" PARENT_SCOPE)
+set(AWS_INCLUDE "${PACKAGE_INSTALLS}/aws/include" PARENT_SCOPE)
 link_directories("${PACKAGE_INSTALLS}/swagger/lib")
 #add_library(CppRestSwaggerClient STATIC IMPORTED)
 #set_property(TARGET CppRestSwaggerClient PROPERTY
