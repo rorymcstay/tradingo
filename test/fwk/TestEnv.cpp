@@ -46,7 +46,7 @@ TestEnv::TestEnv(const std::shared_ptr<Config>& config_)
           /*tableName_=*/"replay_positions",
           /*symbol=_*/_config->get<std::string>("symbol"),
           /*storage_=*/_config->get<std::string>("storage"),
-          /*batchSize_=*/1000,
+          /*batchSize_=*/10,
           /*print_=*/[](const std::shared_ptr<model::ModelBase>& order_) {
               return order_->toJson().serialize();
           },
