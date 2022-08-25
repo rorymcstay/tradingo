@@ -499,8 +499,8 @@ void TestEnv::operator<<(const std::shared_ptr<model::Execution>& exec_) {
     // realisedCost
     // realisedCost: The realised cost of this position calculated with regard
     // to average cost accounting. unrealisedCost: currentCost - realisedCost.
-    if (position->getUnrealisedPnl() != 0.0 and
-        tradingo_utils::almost_equal(position->getCurrentQty(), 0.0)) {
+    if (tradingo_utils::almost_equal(position->getUnrealisedPnl(), 0.0) and
+            tradingo_utils::almost_equal(position->getCurrentQty(), 0.0)) {
         position->setRealisedPnl(position->getRealisedPnl() +
                                  position->getUnrealisedPnl());
         position->setRealisedCost(position->getRealisedCost() +
@@ -529,7 +529,6 @@ void TestEnv::updatePositionFromInstrument(
     auto& position =
         _context->marketData()->getPositions().at(instrument->getSymbol());
     auto& margin = _context->marketData()->getMargin();
-    auto old_mark_value = position->getMarkValue();
     position->setMarkValue((position->getCurrentQty() >= 0.0 ? -1 : 1) *
                            func::get_cost(instrument->getMarkPrice(),
                                           position->getCurrentQty(), 1.0));
