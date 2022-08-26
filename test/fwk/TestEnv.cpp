@@ -624,6 +624,7 @@ TestEnv::operator<<(const std::shared_ptr<model::Trade>& trade_) {
 
         if (order.second->getOrdStatus() == "Canceled" ||
             order.second->getOrdStatus() == "Rejected" ||
+            order.second->getOrdStatus() == "Replaced" ||
             order.second->getOrdStatus() == "Filled" ||
             tradingo_utils::almost_equal(orderQty, 0.0)) {
             // order is completed

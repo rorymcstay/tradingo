@@ -160,6 +160,12 @@ void BreakOutStrategy<TOrdApi, TPositionApi>::onBBO(const std::shared_ptr<Event>
         )) {
         auto currentBalance = md->getMargin()->getWalletBalance();
         auto currentQty = position->getCurrentQty();
+        if (currentBalance <= func::get_additional_cost(position, qtyToTrade, price)) {
+            LOGINFO("Insufficient balance to trade "
+                        << LOG_NVP("required", func::get_additional_cost(position, qtyToTrade, price))
+                        << LOG_VAR(currentBalance) << LOG_VAR(currentQty) << LOG_VAR(qtyToTrade) << LOG_VAR(price));
+            return;
+        };
         LOGDEBUG("Signal is good, took position "
                 << LOG_VAR(qtyToTrade)
                 << LOG_VAR(price)

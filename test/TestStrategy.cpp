@@ -26,13 +26,14 @@ TEST(StrategyApi, smooke)
     strategy->allocations()->addAllocation(10, 100.0);
     strategy->allocations()->placeAllocations();
     auto order = env >> "ORDER_NEW price=10 orderQty=100 symbol=XBTUSD Side=Buy LeavesQty=100" LN;
-    strategy->allocations()->addAllocation(11,100.0);
     strategy->allocations()->addAllocation(9,-100.0);
     strategy->allocations()->addAllocation(10,-100.0);
+    strategy->allocations()->addAllocation(11,100.0);
     strategy->allocations()->placeAllocations();
     auto order2 = env >> "ORDER_NEW Price=9 OrderQty=100 CumQty=0 LeavesQty=100 OrdStatus=New Side=Sell symbol=XBTUSD" LN;
-    env >> format("ORDER_CANCEL Price=10 OrderQty=0 CumQty=0 LeavesQty=0 OrdStatus=New Side=Buy symbol=XBTUSD", order);
     auto order3 = env >> "ORDER_NEW Price=11 OrderQty=100 CumQty=0 LeavesQty=100 OrdStatus=New Side=Buy symbol=XBTUSD" LN;
+    env >> format("ORDER_CANCEL Price=10 OrderQty=0 CumQty=0 LeavesQty=0 OrdStatus=New Side=Buy symbol=XBTUSD", order);
+
     env >> "NONE" LN;
 }
 

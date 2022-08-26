@@ -22,7 +22,8 @@
 
 using namespace tradingo_utils;
 
-template<typename T>
+
+template <typename T, typename key_equal_t, typename hasher_t>
 class Series {
 
     std::vector<std::shared_ptr<T>> _data;
@@ -38,7 +39,7 @@ public:
     class iterator_type {
 
         std::vector<index_t>::const_iterator _index_iter;
-        const Series<T>* _series;
+        const Series<T, key_equal_t, hasher_t>* _series;
 
         struct proxy {
             const iterator_type _client;
@@ -51,7 +52,7 @@ public:
 
         iterator_type(
                 std::vector<index_t>::const_iterator index_,
-                const Series<T>* series_
+                const Series<T, key_equal_t, hasher_t>* series_
         )
         :   _index_iter(index_)
         ,   _series(series_) {}
@@ -145,8 +146,8 @@ private:
 };
 
 
-template <typename T>
-Series<T>::Series(
+template <typename T, typename key_equal_t, typename hasher_t>
+Series<T, key_equal_t, hasher_t>::Series(
     std::ifstream dataFile,
     index_t resolution_
 ) : _resolution(resolution_)
@@ -164,6 +165,7 @@ Series<T>::Series(
     for (;record = getEvent<T>(dataFile); record) {
         tmpdata.push_back(record);
     }
+    tradingo_utils::remove_duplicates<key_equal_t, hasher_t, true, std::vector>();
     std::sort(tmpdata.begin(), tmpdata.end(),
               [](const std::shared_ptr<T>& it1, const std::shared_ptr<T>& it2) {
                 return it1->getTimestamp().to_interval() < it2->getTimestamp().to_interval();
@@ -175,8 +177,9 @@ Series<T>::Series(
     _end_time = tmpdata.back()->getTimestamp();
     auto size = (_end_interval - _start_interval + 1)/resolution_;
     _data = std::vector<std::shared_ptr<T>>(size, nullptr);
+
     for (auto item : tmpdata) {
-        index_t index = Series<T>::make_index(item->getTimestamp());
+        index_t index = Series<T, key_equal_t, hasher_t>::make_index(item->getTimestamp());
         _data[index] = item;
         _index.push_back(index);
     }
@@ -184,21 +187,21 @@ Series<T>::Series(
 }
 
 
-template <typename T>
-Series<T>::Series(const std::string& dataFile_, index_t resolution_)
+template<typename T, typename key_equal_t, typename hasher_t>
+Series<T, key_equal_t, hasher_t>::Series(const std::string& dataFile_, index_t resolution_)
 : Series(std::ifstream(dataFile_), resolution_) {
 
 }
 
 
-template <typename T>
-std::shared_ptr<T> Series<T>::operator[](const utility::datetime& time_) const {
+template<typename T, typename key_equal_t, typename hasher_t>
+std::shared_ptr<T> Series<T, key_equal_t, hasher_t>::operator[](const utility::datetime& time_) const {
     auto index = index_of(time_);
     return _data[index];
 }
 
-template <typename T>
-index_t Series<T>::index_of(const utility::datetime& time_) const {
+template<typename T, typename key_equal_t, typename hasher_t>
+index_t Series<T, key_equal_t, hasher_t>::index_of(const utility::datetime& time_) const {
     if (time_.to_interval() < _start_interval) {
         throw std::runtime_error("time out of bounds");
     } else if (time_.to_interval() > _end_interval) {
@@ -214,59 +217,59 @@ index_t Series<T>::index_of(const utility::datetime& time_) const {
 }
 
 
-template <typename T>
-index_t Series<T>::make_index(const utility::datetime& time_) const {
+template<typename T, typename key_equal_t, typename hasher_t>
+index_t Series<T, key_equal_t, hasher_t>::make_index(const utility::datetime& time_) const {
     return (time_.to_interval() - _start_interval)/_resolution;
 }
 
-template <typename T> index_t Series<T>::size() const { return _index.size(); }
+template<typename T, typename key_equal_t, typename hasher_t> index_t Series<T, key_equal_t, hasher_t>::size() const { return _index.size(); }
 
 
-template <typename T>
-std::shared_ptr<T> Series<T>::operator[](const std::string& time_) const {
+template<typename T, typename key_equal_t, typename hasher_t>
+std::shared_ptr<T> Series<T, key_equal_t, hasher_t>::operator[](const std::string& time_) const {
     auto time = utility::datetime::from_string(time_, utility::datetime::date_format::ISO_8601);
     return operator[](time);
 }
 
-template <typename T>
-void Series<T>::set_start(const std::string& start_) {
+template<typename T, typename key_equal_t, typename hasher_t>
+void Series<T, key_equal_t, hasher_t>::set_start(const std::string& start_) {
     auto time = utility::datetime::from_string(start_, utility::datetime::date_format::ISO_8601);
     _start_time = time;
 }
 
-template <typename T>
-void Series<T>::set_end(const std::string& end_) {
+template<typename T, typename key_equal_t, typename hasher_t>
+void Series<T, key_equal_t, hasher_t>::set_end(const std::string& end_) {
     auto time = utility::datetime::from_string(end_, utility::datetime::date_format::ISO_8601);
     _end_time = time;
 }
 
 
-template <typename T>
-typename Series<T>::iterator_type Series<T>::begin() const {
+template<typename T, typename key_equal_t, typename hasher_t>
+typename Series<T, key_equal_t, hasher_t>::iterator_type Series<T, key_equal_t, hasher_t>::begin() const {
     auto index = index_of(_start_time);
     auto it = _index.begin();
     while (*it < index) {
         it++;
     }
-    typename Series<T>::iterator_type begin_ (it, this);
+    typename Series<T, key_equal_t, hasher_t>::iterator_type begin_ (it, this);
     return begin_; 
 }
 
 
-template <typename T>
-typename Series<T>::iterator_type Series<T>::end() const {
+template<typename T, typename key_equal_t, typename hasher_t>
+typename Series<T, key_equal_t, hasher_t>::iterator_type Series<T, key_equal_t, hasher_t>::end() const {
     auto index = index_of(_end_time);
     auto it = _index.end() - 1;
     while (*it > index) {
         it--;
     }
 
-    typename Series<T>::iterator_type end_ (it, this);
+    typename Series<T, key_equal_t, hasher_t>::iterator_type end_ (it, this);
     return end_; 
 }
 
 
-template<typename T>
+template <typename T, typename key_equal_t, typename hasher_t>
 std::shared_ptr<T> getEvent(std::ifstream &fileHandle_) {
     std::string str;
     auto quote = std::make_shared<T>();

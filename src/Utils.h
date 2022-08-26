@@ -4,6 +4,7 @@
 #include <ctime>
 #include <iomanip>
 #include <chrono>
+#include <unordered_set>
 
 #include "aixlog.hpp"
 #include <ModelBase.h>
@@ -60,5 +61,25 @@ bool less_equal(T num1, T num2)
 using index_t = long;
 
 long time_diff(utility::datetime time1_, utility::datetime time2_, const std::string& interval_="milliseconds");
+
+template<typename key_equal_t, typename hasher_t, bool order_conservative, typename container_t>
+void remove_duplicates(container_t& container)
+{
+    using value_type = typename container_t::value_type;
+
+    if constexpr(order_conservative)
+    {
+        std::unordered_set<value_type, hasher_t, key_equal_t> s;
+        const auto predicate = [&s](const value_type& value){return !s.insert(value).second;};
+        container.erase(std::remove_if(container.begin(), container.end(), predicate),
+                                container.end());
+    }
+    else
+    {
+        const std::unordered_set<value_type, hasher_t, key_equal_t> s(container.begin(),
+                                                                        container.end());
+        container.assign(s.begin(), s.end());
+    }
+} 
 
 }

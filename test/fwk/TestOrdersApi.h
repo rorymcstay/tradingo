@@ -56,7 +56,6 @@ private:
 
     // validates and rejects if necessary
     bool validateOrder(const std::shared_ptr<model::Order>& order_);
-    std::shared_ptr<model::Order> checkOrderExists(const std::shared_ptr<model::Order>& order);
     bool checkValidAmend(std::shared_ptr<model::Order> amendRequest,
                          std::shared_ptr<model::Order> originalOrder);
 
