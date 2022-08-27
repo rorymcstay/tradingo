@@ -167,7 +167,7 @@ TestOrdersApi::order_amend(boost::optional<utility::string_t> orderID,
     *_marketData << order;
  
     // pattern all api calls to do this last
-    _orderAmends.push(origOrder);
+    //_orderAmends.push(origOrder);
     _orderAmends.push(order);
     _allEvents.push(order);
     _allEvents.push(origOrder);
@@ -434,7 +434,6 @@ void TestOrdersApi::operator >> (const std::string &outEvent_) {
     } else {
         failMessage << R"(Must specify event type - One of "ORDER_NEW", "ORDER_AMEND", "ORDER_CANCEL")";
         std::runtime_error(failMessage.str());
-
     }
 }
 

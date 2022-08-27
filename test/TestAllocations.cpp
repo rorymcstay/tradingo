@@ -23,6 +23,7 @@ TEST(Allocations, initialisation) {
     ASSERT_EQ(allocs->allocatedAtLevel(10.5), 0);
     ASSERT_EQ(allocs->get(10.5)->getTargetDelta(), 100);
     allocs->get(10.5)->getOrder()->setLeavesQty(100);
+    allocs->get(10.5)->getOrder()->setSide("Buy");
     allocs->get(10.5)->rest();
     ASSERT_EQ(allocs->get(10.5)->getSize(), 100);
     ASSERT_EQ(allocs->get(10.5)->getTargetDelta(), 0);
@@ -31,7 +32,8 @@ TEST(Allocations, initialisation) {
     allocs->addAllocation(12, 100);
     allocs->addAllocation(12, -10);
     allocs->addAllocation(12, 20);
-    allocs->get(10.5)->getOrder()->setLeavesQty(110);
+    allocs->get(12)->getOrder()->setLeavesQty(110);
+    allocs->get(12)->getOrder()->setSide("Buy");
     allocs->get(12)->rest();
     auto res = allocs->allocatedAtLevel(12);
     ASSERT_EQ(res, 110);

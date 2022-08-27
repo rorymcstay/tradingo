@@ -34,6 +34,8 @@ class BreakOutStrategy final : public Strategy<TOrdApi, TPositionApi> {
     price_t _sellThreshold;
 
     std::string _previousDirection;
+    
+    double _priceAggressor = 0.01;
 
 public:
     ~BreakOutStrategy();
@@ -64,6 +66,7 @@ void BreakOutStrategy<TOrdApi, TPositionApi>::init(const std::shared_ptr<Config>
     _shortExpose = config_->get<double>("shortExpose", 0.0);
     _longExpose = config_->get<double>("longExpose", 1000.0);
     _displaySize = config_->get<double>("displaySize", 200);
+    _priceAggressor = config_->get<double>("priceAggressor", 0.0);
 
     auto primePercent = config_->get<double>("primePercent", 1.0);
     auto shortTermWindow = config_->get<double>("shortTermWindow");
@@ -127,11 +130,11 @@ void BreakOutStrategy<TOrdApi, TPositionApi>::onBBO(const std::shared_ptr<Event>
 
     if (isReady && signalValue.direction == SignalDirection::Buy) {
         qtyToTrade = getQtyToTrade("Buy");
-        price = bidPrice;
+        price = bidPrice * (1-_priceAggressor);
         side = "Buy";
     } else if (isReady && signalValue.direction == SignalDirection::Sell) {
         qtyToTrade = getQtyToTrade("Sell");
-        price = askPrice;
+        price = askPrice * (1+_priceAggressor);
         side = "Sell";
     } else if (isReady && signalValue.direction == SignalDirection::Hold) {
         StrategyApi::allocations()->cancelOrders([side, bidPrice, askPrice]
@@ -188,7 +191,8 @@ BreakOutStrategy<TOrdApi, TPositionApi>::BreakOutStrategy(std::shared_ptr<Market
 :   StrategyApi(mdPtr_, od_, posApi_, instSvc_)
 ,   _longExpose()
 ,   _shortExpose()
-,   _previousDirection(""){
+,   _previousDirection("")
+,   _priceAggressor(0.0) {
 
 }
 

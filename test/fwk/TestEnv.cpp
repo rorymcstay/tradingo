@@ -1,5 +1,4 @@
 #include <aixlog.hpp>
-#include <cpprest/asyncrt_utils.h>
 #include <gtest/gtest.h>
 #include <iomanip>
 #include <chrono>
@@ -10,9 +9,9 @@
 #include <stdexcept>
 
 #include "TestEnv.h"
-#include "model/Position.h"
 #define _TURN_OFF_PLATFORM_STRING
 
+#include <model/Position.h>
 #include <model/Margin.h>
 #include <model/Execution.h>
 #include <model/Instrument.h>

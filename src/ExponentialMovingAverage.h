@@ -28,7 +28,7 @@ private:
     input_t _present_value;
     long _count;
 
-    ExponentialMovingAverage& calculate(input_t in){
+    ExponentialMovingAverage& calculate(input_t in) {
         _present_value = in * (_alpha) + _present_value * (1.0f - _alpha);
         return *this;
     }
