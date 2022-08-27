@@ -23,7 +23,6 @@
 #include <cstdlib>
 
 #include "Event.h"
-#include "ObjectPool.h"
 #include "Config.h"
 #include "HeartBeat.h"
 #include "Allocation.h"
@@ -47,13 +46,12 @@ public:
 };
 
 
-template<typename T, typename ObjPool>
-std::vector<std::shared_ptr<T>>  getData(web::json::array& data_, ObjPool& pool_) {
+template<typename T>
+std::vector<std::shared_ptr<T>>  getData(web::json::array& data_) {
     std::vector<std::shared_ptr<T>> out_data_;
     out_data_.reserve(data_.size());
     for (auto &dataPiece : data_) {
         // uncomment to use allocator pool
-        //std::shared_ptr<T> quote = pool_.get();
         auto quote = std::make_shared<T>();
         quote->fromJson(dataPiece);
         out_data_.push_back(quote);
@@ -61,95 +59,6 @@ std::vector<std::shared_ptr<T>>  getData(web::json::array& data_, ObjPool& pool_
     return out_data_;
 }
 
-struct InstrumentReleaser {
-    void operator () (model::Instrument* instrument_) {
-
-    }
-};
-
-struct TradeReleaser {
-
-   void operator () (model::Trade* model_) {
-        model_->unsetForeignNotional();
-        model_->unsetGrossValue();
-        model_->unsetHomeNotional();
-        model_->unsetPrice();
-        model_->unsetSide();
-        model_->unsetSize();
-        model_->unsetTickDirection();
-        model_->unsetTrdMatchID();
-    }
-};
-struct QuoteReleaser {
-
-    void operator () (model::Quote* model_) {
-        model_->unsetAskPrice();
-        model_->unsetAskSize();
-        model_->unsetBidPrice();
-        model_->unsetBidSize();
-    }
-};
-
-struct PositionReleaser {
-    void operator () (model::Position* model_) {
-        // must be a better way
-        model_->unsetAvgCostPrice();
-        model_->unsetAvgEntryPrice();
-        model_->unsetBankruptPrice();
-        model_->unsetBreakEvenPrice();
-        model_->unsetCommission();
-        model_->unsetCrossMargin();
-        model_->unsetCurrentComm();
-        model_->unsetCurrentCost();
-        model_->unsetCurrentTimestamp();
-        model_->unsetDeleveragePercentile();
-        model_->unsetExecBuyCost();
-        model_->unsetExecBuyQty();
-        model_->unsetExecSellCost();
-        model_->unsetExecSellQty();
-        model_->unsetForeignNotional();
-        model_->unsetGrossExecCost();
-        model_->unsetIsOpen();
-        model_->unsetUnrealisedTax();
-        model_->unsetVarMargin();
-    }
-};
-
-struct MarginReleaser {
-    void operator() (model::Margin* margin_) {
-        margin_->unsetAction();
-        margin_->unsetAmount();
-        margin_->unsetAvailableMargin();
-        margin_->unsetCommission();
-        margin_->unsetConfirmedDebit();
-        margin_->unsetExcessMargin();
-        margin_->unsetExcessMarginPcnt();
-        margin_->unsetGrossComm();
-        margin_->unsetGrossExecCost();
-        // ...
-    }
-};
-
-struct ExecutionReleaser {
-    void operator() (model::Execution* exec_) {
-        exec_->unsetWorkingIndicator();
-        exec_->unsetForeignNotional();
-        exec_->unsetCommission();
-        exec_->unsetAccount();
-        exec_->unsetAvgPx();
-        exec_->unsetClOrdID();
-        exec_->unsetClOrdLinkID();
-        exec_->unsetContingencyType();
-        exec_->unsetCumQty();
-        exec_->unsetCurrency();
-    }
-};
-
-struct OrderReleaser {
-    void operator() (model::Order* order_) {
-        //
-    }
-};
 
 namespace ws = web::websockets;
 using namespace io::swagger::client;
@@ -191,15 +100,6 @@ protected:
     std::vector<std::string> _positionKey;
     std::vector<std::string> _orderKey;
     std::string _symbol;
-
-    /// TODO Fix or remove object pools.
-    cache::ObjectPool<model::Trade, 1, TradeReleaser> _tradePool;
-    cache::ObjectPool<model::Quote, 1, QuoteReleaser> _quotePool;
-    cache::ObjectPool<model::Position, 1, PositionReleaser> _positionPool;
-    cache::ObjectPool<model::Execution, 1, ExecutionReleaser> _execPool;
-    cache::ObjectPool<model::Order, 1, OrderReleaser> _orderPool;
-    cache::ObjectPool<model::Margin, 1, MarginReleaser> _marginPool;
-    cache::ObjectPool<model::Instrument, 1, InstrumentReleaser> _instrumentPool;
 
     std::queue<std::shared_ptr<model::Execution>> _executions;
     std::unordered_map<std::string, std::shared_ptr<model::Position>> _positions;

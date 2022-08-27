@@ -473,8 +473,9 @@ void Allocations<TOrdApi>::updateFromTask(const std::shared_ptr<Allocation>& all
                         << LOG_NVP("leavesQty",order_->getLeavesQty())
                         << LOG_NVP("side", order_->getSide())
                         << LOG_NVP("cumQty", order_->getCumQty()));
-    if (allocation_->isChangingSide() and order_->getOrdStatus() == "Cancelled") {
+    if (allocation_->isChangingSide() and order_->getOrdStatus() == "Canceled") {
         allocation_->setTargetDelta(allocation_->getSize() + allocation_->getTargetDelta());
+        allocation_->setSize(0.0);
     }
     if (allocation_->isCancel()) {
         allocation_->rest();

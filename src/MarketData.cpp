@@ -76,25 +76,25 @@ void MarketData::init() {
                     web::json::array &data = msgJson.at("data").as_array();
 
                     if (table == "quote") {
-                        auto quotes = getData<model::Quote, decltype(_quotePool)>(data, _quotePool);
+                        auto quotes = getData<model::Quote>(data);
                         handleQuotes(quotes, action);
                     } else if (table == "trade") {
-                        auto trades = getData<model::Trade, decltype(_tradePool)>(data, _tradePool);
+                        auto trades = getData<model::Trade>(data);
                         handleTrades(trades, action);
                     } else if (table == "execution") {
-                        auto exec = getData<model::Execution, decltype(_execPool)>(data, _execPool);
+                        auto exec = getData<model::Execution>(data);
                         handleExecutions(exec, action);
                     } else if (table == "position") {
-                        auto positions = getData<model::Position, decltype(_positionPool)>(data, _positionPool);
+                        auto positions = getData<model::Position>(data);
                         handlePositions(positions, action);
                     } else if (table == "order") {
-                        auto orders = getData<model::Order, decltype(_orderPool)>(data, _orderPool);
+                        auto orders = getData<model::Order>(data);
                         handleOrders(orders, action);
                     } else if (table == "margin") {
-                        auto margins = getData<model::Margin, decltype(_marginPool)>(data, _marginPool);
+                        auto margins = getData<model::Margin>(data);
                         handleMargin(margins, action);
                     } else if (table == "instrument") {
-                        auto instruments = getData<model::Instrument, decltype(_instrumentPool)>(data, _instrumentPool);
+                        auto instruments = getData<model::Instrument>(data);
                         handleInstruments(instruments, action);
                     }
             } else if (msgJson.has_field("info")) {

@@ -55,7 +55,7 @@ get_order_for_amend(
 void TestOrdersApi::flush() {
     while (not _newOrders.empty()) _newOrders.pop();
     while (not _orderAmends.empty()) _orderAmends.pop();
-    while (not _orderCancels.empty()) _orderAmends.pop();
+    while (not _orderCancels.empty()) _orderCancels.pop();
 }
 
 
@@ -152,7 +152,6 @@ TestOrdersApi::order_amend(boost::optional<utility::string_t> orderID,
 
     // Do the replace
     origOrder->setOrdStatus("Replaced");
-    wrapUpOrder(origOrder);
 
     if (tradingo_utils::almost_equal(order->getLeavesQty(), 0.0)) {
         // skip inserting filled order
@@ -173,6 +172,7 @@ TestOrdersApi::order_amend(boost::optional<utility::string_t> orderID,
     _orderAmends.push(order);
     _allEvents.push(order);
     _allEvents.push(origOrder);
+    wrapUpOrder(origOrder);
     return pplx::task_from_result(order);
 }
 
@@ -496,13 +496,13 @@ void TestOrdersApi::operator << (const std::shared_ptr<model::Execution>& exec_)
     order->setCumQty(exec_->getCumQty());
     order->setLeavesQty(exec_->getLeavesQty());
     order->setTimestamp(exec_->getTimestamp());
-    if (order->getOrdStatus() == "Filled") {
-        wrapUpOrder(order);
-    }
     auto event_order = std::make_shared<model::Order>();
     auto event_data = order->toJson();
     event_order->fromJson(event_data);
     _allEvents.push(event_order);
+    if (order->getOrdStatus() == "Filled") {
+        wrapUpOrder(order);
+    }
 }
 
 
