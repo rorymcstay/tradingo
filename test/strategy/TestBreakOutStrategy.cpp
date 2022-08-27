@@ -12,8 +12,8 @@ TEST(BreakOutStrategy, smoke_test)
         {"clOrdPrefix", "MCST"},
         {"factoryMethod", "RegisterBreakOutStrategy"},
         {"referencePrice", "40000"},
-        {"shortTermWindow", "1"},
-        {"longTermWindow", "2"},
+        {"shortTermWindow", "0.000000"},
+        {"longTermWindow", "0.0000"},
         {"moving_average_crossover-interval", "10"},
         {"callback-signals", "true"},
     });

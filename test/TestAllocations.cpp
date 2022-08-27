@@ -2,6 +2,7 @@
 // Created by Rory McStay on 09/07/2021.
 //
 #include <gtest/gtest.h>
+#include <memory>
 #include "Allocations.h"
 #include "fwk/TestOrdersApi.h"
 
@@ -37,7 +38,10 @@ TEST(Allocations, initialisation) {
 
 
 TEST(Allocations, test_placing_new) {
+    auto mdi = std::make_shared<TestMarketData>();
+    mdi->init();
     auto oapi = std::make_shared<TestOrdersApi>(nullptr);
+    oapi->setMarketData(mdi);
     auto allocs =  std::make_shared<Allocations<TestOrdersApi>>(
         oapi, "XBTUSD", "MCST", 0,
         10, 0.5, 100);

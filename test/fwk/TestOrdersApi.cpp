@@ -15,6 +15,7 @@
 #include <Object.h>
 #include <Allocation.h>
 #include <model/Margin.h>
+#include <model/Order.h>
 
 #include "Utils.h"
 #include "Functional.h"
@@ -54,7 +55,15 @@ get_order_for_amend(
 void TestOrdersApi::flush() {
     while (not _newOrders.empty()) _newOrders.pop();
     while (not _orderAmends.empty()) _orderAmends.pop();
-    while (not _newOrders.empty()) _newOrders.pop();
+    while (not _orderCancels.empty()) _orderAmends.pop();
+}
+
+
+void TestOrdersApi::wrapUpOrder(
+        const std::shared_ptr<model::Order>& order_
+    ) {
+    _orders.erase(order_->getClOrdID());
+    _completedOrders.emplace(order_->getClOrdID(), order_);   
 }
 
 
@@ -90,7 +99,6 @@ TestOrdersApi::order_amend(boost::optional<utility::string_t> orderID,
         _allEvents.push(order);
         throw api::ApiException(404, str.str(), content);
     }
-
 
     auto origOrder = _orders.at(origClOrdID.value());
     // copy from the original
@@ -144,12 +152,13 @@ TestOrdersApi::order_amend(boost::optional<utility::string_t> orderID,
 
     // Do the replace
     origOrder->setOrdStatus("Replaced");
-    //_orders.erase(origClOrdID.value());
+    wrapUpOrder(origOrder);
+
     if (tradingo_utils::almost_equal(order->getLeavesQty(), 0.0)) {
         // skip inserting filled order
         order->setOrdStatus("Filled");
-    }
-    else {
+        _completedOrders.emplace(order->getClOrdID(), order);
+    } else {
         // insert the replaced order
         _orders.emplace(order->getClOrdID(), order);
     }
@@ -163,6 +172,7 @@ TestOrdersApi::order_amend(boost::optional<utility::string_t> orderID,
     _orderAmends.push(origOrder);
     _orderAmends.push(order);
     _allEvents.push(order);
+    _allEvents.push(origOrder);
     return pplx::task_from_result(order);
 }
 
@@ -189,14 +199,13 @@ TestOrdersApi::order_cancel(boost::optional<utility::string_t> orderID,
     auto event_json = origOrder->toJson();
     event_order->fromJson(event_json);
     event_order->setTimestamp(_time);
-    //origOrder->setOrderQty(0.0);
     set_order_timestamp(origOrder);
     ordersRet.push_back(origOrder);
 
     _orderCancels.push(event_order);
     _allEvents.push(event_order);
     *_marketData << origOrder;
-    //_orders.erase(clOrdID.value());
+    wrapUpOrder(origOrder);
     return pplx::task_from_result(ordersRet);
 }
 
@@ -487,9 +496,13 @@ void TestOrdersApi::operator << (const std::shared_ptr<model::Execution>& exec_)
     order->setCumQty(exec_->getCumQty());
     order->setLeavesQty(exec_->getLeavesQty());
     order->setTimestamp(exec_->getTimestamp());
-    if (tradingo_utils::almost_equal(order->getLeavesQty(), 0.0)) {
-        //_orders.erase(exec_->getClOrdID());
+    if (order->getOrdStatus() == "Filled") {
+        wrapUpOrder(order);
     }
+    auto event_order = std::make_shared<model::Order>();
+    auto event_data = order->toJson();
+    event_order->fromJson(event_data);
+    _allEvents.push(event_order);
 }
 
 

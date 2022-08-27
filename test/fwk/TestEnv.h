@@ -127,12 +127,14 @@ class TestEnv {
     TestOrdersApi::Writer _orderWriter;
     TestOrdersApi::Writer _executionWriter;
     TestOrdersApi::Writer _positionWriter;
+    TestOrdersApi::Writer _marginWriter;
 
     void liquidatePositions(const std::string&);
 
     void updatePositionFromInstrument(const std::shared_ptr<model::Instrument>& instrument);
 
     void writePosition(const std::shared_ptr<model::Position>& position_);
+    void writeMargin(const std::shared_ptr<model::Margin>& margin_);
 
 public:
     using InstrumentSeries = Series<model::Instrument, instrument_equal, instrument_hasher>;

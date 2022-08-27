@@ -18,6 +18,8 @@
 namespace func {
 using namespace io::swagger::client;
 
+static const double SATOSHI = 10e7;
+
 
 
 

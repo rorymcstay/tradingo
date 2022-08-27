@@ -165,6 +165,7 @@ Series<T, key_equal_t, hasher_t>::Series(
     for (;record = getEvent<T>(dataFile); record) {
         tmpdata.push_back(record);
     }
+    // sort on time and remove duplicates
     tradingo_utils::remove_duplicates<key_equal_t, hasher_t, true,
                                       std::vector<std::shared_ptr<T>>>(tmpdata);
     std::sort(tmpdata.begin(), tmpdata.end(),
