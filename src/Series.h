@@ -165,7 +165,8 @@ Series<T, key_equal_t, hasher_t>::Series(
     for (;record = getEvent<T>(dataFile); record) {
         tmpdata.push_back(record);
     }
-    tradingo_utils::remove_duplicates<key_equal_t, hasher_t, true, std::vector>();
+    tradingo_utils::remove_duplicates<key_equal_t, hasher_t, true,
+                                      std::vector<std::shared_ptr<T>>>(tmpdata);
     std::sort(tmpdata.begin(), tmpdata.end(),
               [](const std::shared_ptr<T>& it1, const std::shared_ptr<T>& it2) {
                 return it1->getTimestamp().to_interval() < it2->getTimestamp().to_interval();
@@ -269,7 +270,7 @@ typename Series<T, key_equal_t, hasher_t>::iterator_type Series<T, key_equal_t, 
 }
 
 
-template <typename T, typename key_equal_t, typename hasher_t>
+template <typename T>
 std::shared_ptr<T> getEvent(std::ifstream &fileHandle_) {
     std::string str;
     auto quote = std::make_shared<T>();

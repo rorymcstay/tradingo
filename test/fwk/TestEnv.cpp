@@ -221,9 +221,9 @@ struct PlaybackStats {
                                   utility::datetime::date_format::ISO_8601))   \
         << LOG_NVP("Positions", positions_sstr.str()));
 
-void TestEnv::playback(const Series<model::Trade>& trades,
-                       const Series<model::Quote>& quotes,
-                       const Series<model::Instrument>& instruments) {
+void TestEnv::playback(const TradeSeries& trades,
+                       const QuoteSeries& quotes,
+                       const InstrumentSeries& instruments) {
 
     auto quote = quotes.begin();
     auto trade = trades.begin();

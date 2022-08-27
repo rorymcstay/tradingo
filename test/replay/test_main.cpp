@@ -166,9 +166,9 @@ int main(int argc, char **argv) {
 
     for(int n_days(0); n_days < vm.at("days").as<int>(); n_days++) {
 
-        auto quotes = Series<model::Quote>::download("quotes", symbol, trade_date, s3_client, tick_storage, quote_resolution);
-        auto instruments = Series<model::Instrument>::download("instruments", symbol, trade_date, s3_client, tick_storage, instrument_resolution);
-        auto trades = Series<model::Trade>::download("trades", symbol, trade_date, s3_client, tick_storage, trade_resolution);
+        auto quotes = TestEnv::QuoteSeries::download("quotes", symbol, trade_date, s3_client, tick_storage, quote_resolution);
+        auto instruments = TestEnv::InstrumentSeries::download("instruments", symbol, trade_date, s3_client, tick_storage, instrument_resolution);
+        auto trades = TestEnv::TradeSeries::download("trades", symbol, trade_date, s3_client, tick_storage, trade_resolution);
         env.playback(trades, quotes, instruments);
         trade_date = tradingo_utils::datePlusDays(trade_date, 1);
     }

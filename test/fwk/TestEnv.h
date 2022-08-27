@@ -68,28 +68,27 @@ using namespace io::swagger::client;
     env << "QUOTE Timestamp=2022-02-01 21:36:08.046000+00:00 Symbol=XBTUSD BidSize=100.0 BidPrice=38745.0 AskPrice=38745.5 AskSize=100.0";
 
 
-// TODO Implement trade instrument and quote hashers
-/// "Predicate" indicating if two values are considered duplicates or not
+/// used to dedupe series
 struct trade_equal {
     bool operator()(const std::shared_ptr<model::Trade>& a,
             const std::shared_ptr<model::Trade>& b) const {
         // Remove identical trd match ids
         return (a->getTrdMatchID() == b->getTrdMatchID());
+    }
 };
 
-/// Hashes a vec3 by adding absolute values of its components.
 struct trade_hasher {
     std::size_t operator()(const std::shared_ptr<model::Trade>& v) const {
         return std::hash<std::string>{}(v->getTrdMatchID());
     }
 };
-// TODO Implement trade instrument and quote hashers
-/// "Predicate" indicating if two values are considered duplicates or not
+
 struct instrument_equal {
     bool operator()(const std::shared_ptr<model::Instrument>& a,
             const std::shared_ptr<model::Instrument>& b) const {
         // Remove identical trd match ids
         return (a->getTimestamp() == b->getTimestamp());
+    }
 };
 
 struct instrument_hasher {
@@ -97,6 +96,7 @@ struct instrument_hasher {
         return v->getTimestamp().to_interval();
     }
 };
+
 struct quotes_equal {
     bool operator()(const std::shared_ptr<model::Quote>& a,
             const std::shared_ptr<model::Quote>& b) const {
@@ -119,9 +119,7 @@ class TestEnv {
     using TStrategy = Strategy<OrderApi, PositionApi>;
     using TContext = std::shared_ptr<Context<TestMarketData, OrderApi, TestPositionApi>>;
 
-    using InstrumentSeries = Series<model::Trade, trade_equal, trade_hasher>;
-    using QuoteSeries = Series<model::Quote, quotes_equal, quotes_hasher>;
-    using TradeSeries = Series<model::Instrument, instrument_equal, instrument_hasher>;
+
     std::shared_ptr<Config> _config;
     std::shared_ptr<Context<TestMarketData, OrderApi, PositionApi>> _context;
     long _events;
@@ -137,6 +135,9 @@ class TestEnv {
     void writePosition(const std::shared_ptr<model::Position>& position_);
 
 public:
+    using InstrumentSeries = Series<model::Instrument, instrument_equal, instrument_hasher>;
+    using QuoteSeries = Series<model::Quote, quotes_equal, quotes_hasher>;
+    using TradeSeries = Series<model::Trade, trade_equal, trade_hasher>;
     /// strategy reference
     const std::shared_ptr<TStrategy>& strategy() const { return _context->strategy(); }
     /// context reference

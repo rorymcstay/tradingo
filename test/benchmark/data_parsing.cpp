@@ -46,7 +46,7 @@ static void BM_read_quotes_json(benchmark::State& state) {
     signal->init(defaults);
     marketdata->setCallback([&](){ signal->update(); });
     auto quote_file = defaults->get<std::string>("tickStorage")+"/quotes_XBTUSD.json";
-    auto series = Series<model::Quote>(
+    auto series = TestEnv::QuoteSeries(
             quote_file,
             /*resolution_=*/10000);
     for (auto _ : state) {

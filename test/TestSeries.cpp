@@ -6,6 +6,8 @@
 #include "Utils.h"
 #include <model/Quote.h>
 
+#include "fwk/TestEnv.h"
+
 
 using namespace io::swagger::client;
 using namespace utility;
@@ -19,7 +21,7 @@ TEST(TestSeries, initialisation) {
 
     auto quote_file = TESTDATA_LOCATION"/quotes_XBTUSD.json";
     //auto quote_file = "/home/rory/.tradingo/data/tickRecorder/2021-10-05/quotes_XBTUSD.json";
-    auto series = Series<model::Quote>(quote_file, 100);
+    auto series = TestEnv::QuoteSeries(quote_file, 100);
     ASSERT_EQ(series.size(), 1000);
 
     auto time_index = time_stamp("2021-10-05T00:00:19.678Z");
@@ -49,7 +51,7 @@ TEST(TestSeries, start_and_end_time) {
 
     auto quote_file = TESTDATA_LOCATION"/quotes_XBTUSD.json";
     //auto quote_file = "/home/rory/.tradingo/data/tickRecorder/2021-10-05/quotes_XBTUSD.json";
-    auto series = Series<model::Quote>(quote_file);
+    auto series = TestEnv::QuoteSeries(quote_file);
 
     ASSERT_EQ(series.size(), 1000);
     ASSERT_EQ(series.begin()->getTimestamp().to_string(utility::datetime::date_format::ISO_8601),
