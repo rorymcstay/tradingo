@@ -1,4 +1,5 @@
 #include <aixlog.hpp>
+#include <cpprest/asyncrt_utils.h>
 #include <gtest/gtest.h>
 #include <iomanip>
 #include <chrono>
@@ -395,7 +396,6 @@ void TestEnv::operator<<(const std::shared_ptr<model::Execution>& exec_) {
         _context->marketData()->getPositions().at(exec_->getSymbol());
     auto& instrument =
         _context->marketData()->getInstruments().at(exec_->getSymbol());
-    auto& margin = _context->marketData()->getMargin();
 
     /*
         account: Your unique account ID.
@@ -529,10 +529,6 @@ void TestEnv::operator<<(const std::shared_ptr<model::Execution>& exec_) {
             (instrument->getMaintMargin() *
              (((exec_->getSide() == "Buy") ? -1 : 1) * exec_->getExecCost()) /
              position->getLeverage());
-        margin->setWalletBalance(margin->getAmount() +
-                                 margin->getRealisedPnl() + exec_cost);
-        margin->setMarginBalance(margin->getWalletBalance() +
-                                 margin->getUnrealisedPnl());
     }
 
     // realisedCost
@@ -554,6 +550,7 @@ void TestEnv::operator<<(const std::shared_ptr<model::Execution>& exec_) {
         position->unsetBreakEvenPrice();
         position->unsetLiquidationPrice();
     }
+    updateMargin(instrument->getTimestamp());
 
     if (_context->orderApi()->orders().find(exec_->getClOrdID()) 
             != _context->orderApi()->orders().end()) {
@@ -574,7 +571,7 @@ void TestEnv::updatePositionFromInstrument(
     const std::shared_ptr<model::Instrument>& instrument) {
     auto& position =
         _context->marketData()->getPositions().at(instrument->getSymbol());
-    auto& margin = _context->marketData()->getMargin();
+
     position->setMarkValue(
             func::get_cost(instrument->getMarkPrice(), -position->getCurrentQty(),1)
     );
@@ -606,29 +603,53 @@ void TestEnv::updatePositionFromInstrument(
         position->setBreakEvenPrice(0.0);
     }
     // margin
-    { // gross exec cost
-        price_t gross_exec_cost = 0.0;
-        price_t gross_unrealised_pnl = 0.0;
-        price_t gross_mark_value = 0.0;
-        price_t gross_comm = 0.0;
-        price_t gross_realised_pnl = 0.0;
-        price_t gross_maint_margin = 0.0;
-        for (auto& pos : _context->marketData()->getPositions()) {
-            gross_exec_cost += pos.second->getGrossExecCost();
-            gross_unrealised_pnl += pos.second->getUnrealisedPnl();
-            gross_mark_value += std::abs(pos.second->getMarkValue());
-            gross_comm += pos.second->getCurrentComm();
-            gross_realised_pnl += pos.second->getRealisedPnl();
-            gross_maint_margin += pos.second->getMaintMargin();
-        }
-        margin->setGrossExecCost(gross_exec_cost);
-        margin->setUnrealisedPnl(gross_unrealised_pnl);
-        margin->setGrossMarkValue(gross_mark_value);
-        margin->setGrossComm(gross_comm);
-        margin->setRealisedPnl(gross_realised_pnl);
-        
-        writeMargin(margin);
+    updateMargin(instrument->getTimestamp());
+}
+
+void TestEnv::updateMargin(const utility::datetime& time_) {
+    auto& margin = _context->marketData()->getMargin();
+    price_t gross_exec_cost = 0.0;
+    price_t gross_unrealised_pnl = 0.0;
+    price_t gross_mark_value = 0.0;
+    price_t gross_comm = 0.0;
+    price_t gross_realised_pnl = 0.0;
+    price_t gross_maint_margin = 0.0;
+    utility::datetime time;
+    for (auto& pos : _context->marketData()->getPositions()) {
+        gross_exec_cost += pos.second->getGrossExecCost();
+        gross_unrealised_pnl += pos.second->getUnrealisedPnl();
+        gross_mark_value += std::abs(pos.second->getMarkValue());
+        gross_comm += pos.second->getCurrentComm();
+        gross_realised_pnl += pos.second->getRealisedPnl();
+        gross_maint_margin += pos.second->getMaintMargin();
     }
+    margin->setGrossExecCost(gross_exec_cost);
+    margin->setUnrealisedPnl(gross_unrealised_pnl);
+    margin->setGrossMarkValue(gross_mark_value);
+    margin->setGrossComm(gross_comm);
+    margin->setRealisedPnl(gross_realised_pnl);
+    margin->setTimestamp(time_); 
+    margin->setMaintMargin(gross_maint_margin);
+    margin->setWalletBalance(margin->getAmount() +
+                             margin->getRealisedPnl());
+    margin->setMarginBalance(margin->getWalletBalance() +
+                             margin->getUnrealisedPnl());
+    if (margin->getMarginBalance() != 0.0) {
+        margin->setMarginUsedPcnt(
+                margin->getMaintMargin()/margin->getMarginBalance()
+        );
+    } else {
+        margin->setMarginUsedPcnt(0.0);
+    }
+
+    margin->setAvailableMargin(
+            margin->getMarginBalance() - margin->getMaintMargin()
+    );
+
+    writeMargin(margin);
+
+    //*(_context->marketData()) << margin;
+
 }
 
 void TestEnv::writePosition(const std::shared_ptr<model::Position>& position_) {

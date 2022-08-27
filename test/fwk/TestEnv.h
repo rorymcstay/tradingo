@@ -135,6 +135,7 @@ class TestEnv {
 
     void writePosition(const std::shared_ptr<model::Position>& position_);
     void writeMargin(const std::shared_ptr<model::Margin>& margin_);
+    void updateMargin(const utility::datetime& time_);
 
 public:
     using InstrumentSeries = Series<model::Instrument, instrument_equal, instrument_hasher>;
