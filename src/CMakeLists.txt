@@ -61,6 +61,7 @@ target_link_libraries(trading_funcs
         ${OPENSSL_CRYPTO_LIBRARY}
         ${EXTRA_LINK_LIBRARIES}
 )
+message("CMAKE_PREFIX_PATH = ${CMAKE_PREFIX_PATH}") 
 
 
 add_subdirectory(strategy)
