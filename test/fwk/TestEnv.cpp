@@ -600,7 +600,7 @@ void TestEnv::updatePositionFromInstrument(
     // TODO Ensure this is correct
     if (not tradingo_utils::almost_equal(position->getCurrentQty(), 0.0)) {
         position->setBreakEvenPrice(
-                position->getCurrentQty()/position->getCurrentCost()*func::SATOSHI
+                std::abs(position->getCurrentQty()/position->getCurrentCost()*func::SATOSHI)
         );
     } else {
         position->setBreakEvenPrice(0.0);

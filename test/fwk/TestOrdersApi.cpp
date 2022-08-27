@@ -63,7 +63,6 @@ void TestOrdersApi::wrapUpOrder(
         const std::shared_ptr<model::Order>& order_
     ) {
     _orders.erase(order_->getClOrdID());
-    _completedOrders.emplace(order_->getClOrdID(), order_);   
 }
 
 
