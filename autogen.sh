@@ -27,5 +27,6 @@ cd $ROOT_DIR \
                             "${install_base}/benchmark;" \
                             "${install_base}/swagger;" \
         "$@" \
-        ../
+        ../ \
+    && make install -j6
 )

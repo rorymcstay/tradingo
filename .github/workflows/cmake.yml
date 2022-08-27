@@ -29,16 +29,13 @@ jobs:
       run: git submodule init && git submodule update
 
     - name: Build AWS SDK
-      run: SKIP_CPPREST=1 ./autogen-deps.sh 
-
-    - name: Build Api Connectors
-      run: BUILD_TYPE=Debug ${{github.workspace}}/autogen-swagger.sh
+      run: BUILD_TYPE=Release ${{github.workspace}}/autogen-deps.sh 
 
     - name: Build Api Connectors
       run: BUILD_TYPE=Debug ${{github.workspace}}/autogen-swagger.sh
 
     - name: Build Tradingo
-      run: BUILD_TYPE=Debug ${{github.workspace}}/autogen.sh && cd ${{github.workspace}}/build.debug && make install -j4
+      run: BUILD_TYPE=Debug ${{github.workspace}}/autogen.sh
 
     - name: Test
       working-directory: ${{github.workspace}}/build/
