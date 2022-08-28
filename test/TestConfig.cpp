@@ -7,7 +7,7 @@
 
 #include "Config.h"
 #include "Utils.h"
-#include "OrderBook.h"
+#include "OrderBookUtils.h"
 
 TEST(TestConfig, plus_equal_operator) {
     Config config1 {

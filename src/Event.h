@@ -4,7 +4,9 @@
 #ifndef TRADING_BOT_EVENT_H
 #define TRADING_BOT_EVENT_H
 
+#include <cpprest/asyncrt_utils.h>
 #include <thread>
+#include <model/OrderBookL2.h>
 #include <model/Trade.h>
 #include <model/Instrument.h>
 #include <model/Execution.h>
@@ -21,7 +23,7 @@
 
 using namespace io::swagger::client;
 
-enum class EventType {TradeUpdate, BBO, Instrument, Exec};
+enum class EventType {TradeUpdate, BBO, Instrument, Exec, OrderBookUpdate};
 enum class ActionType {Update, Delete, Insert, Partial};
 
 class Event
@@ -33,9 +35,10 @@ private:
     std::shared_ptr<io::swagger::client::model::Trade> _trade;
     std::shared_ptr<io::swagger::client::model::Quote> _quote;
     std::shared_ptr<io::swagger::client::model::Execution> _exec;
+    std::shared_ptr<io::swagger::client::model::OrderBookL2> _orderbook;
     EventType _eventType;
     ActionType _actionType;
-    std::chrono::system_clock::time_point _timeStamp;
+    utility::datetime _timeStamp;
 
 public:
     Event(std::shared_ptr<model::Instrument> instr_,
@@ -45,7 +48,10 @@ public:
             ,   _trade(nullptr)
             ,   _quote(nullptr)
             ,   _exec(nullptr)
-            ,   _eventType(EventType::Instrument) {}
+            ,   _orderbook(nullptr)
+            ,   _timeStamp(instr_->getTimestamp())
+            ,   _eventType(EventType::Instrument) {
+    }
 
     Event(std::shared_ptr<model::Trade> trade_)
             :   _instrument(nullptr)
@@ -53,6 +59,8 @@ public:
             ,   _trade(std::move(trade_))
             ,   _quote(nullptr)
             ,   _exec(nullptr)
+            ,   _orderbook(nullptr)
+            ,   _timeStamp(trade_->getTimestamp())
             ,   _eventType(EventType::TradeUpdate) {}
 
     Event(std::shared_ptr<model::Quote> quote_)
@@ -61,6 +69,8 @@ public:
             ,   _trade(nullptr)
             ,   _quote(std::move(quote_))
             ,   _exec(nullptr)
+            ,   _orderbook(nullptr)
+            ,   _timeStamp(quote_->getTimestamp())
             ,   _eventType(EventType::BBO) {}
 
     Event(std::shared_ptr<model::Execution> exec_)
@@ -68,8 +78,20 @@ public:
             ,   _instrumentDelta(nullptr)
             ,   _trade(nullptr)
             ,   _quote(nullptr)
+            ,   _orderbook(nullptr)
             ,   _exec(std::move(exec_))
+            ,   _timeStamp(exec_->getTimestamp())
             ,   _eventType(EventType::Exec) {}
+
+    Event(std::shared_ptr<model::OrderBookL2> ob_)
+            :   _instrument(nullptr)
+            ,   _instrumentDelta(nullptr)
+            ,   _trade(nullptr)
+            ,   _quote(nullptr)
+            ,   _exec(nullptr)
+            ,   _orderbook(std::move(ob_))
+            ,   _timeStamp(utility::datetime::utc_now())
+            ,   _eventType(EventType::OrderBookUpdate) {}
 
     void setEventType(EventType eventType_) { _eventType = eventType_; }
     void setAction(const std::string& action_);
@@ -78,8 +100,9 @@ public:
     const std::shared_ptr<model::Trade>& getTrade() const { return _trade; }
     const std::shared_ptr<model::Quote>& getQuote() const { return _quote; }
     const std::shared_ptr<model::Execution>& getExec() const { return _exec; }
+    const std::shared_ptr<model::OrderBookL2>& getBookUpdate() const { return _orderbook; }
     EventType eventType() const { return _eventType; }
-    std::chrono::system_clock::time_point timeStamp() { return _timeStamp; }
+    utility::datetime timeStamp() { return _timeStamp; }
 
 };
 

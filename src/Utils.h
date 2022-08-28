@@ -24,6 +24,8 @@ int nthOccurrence(const std::string& str, const std::string& findMe, int nth);
 std::string datePlusDays(const std::string& datestr, int days);
 
 using timestamp_t = std::chrono::time_point<std::chrono::system_clock>;
+using price_t = double;
+using qty_t = double;
 
 std::string formatTime(timestamp_t time_);
 template <typename T> int sgn(T val) {

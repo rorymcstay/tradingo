@@ -7,14 +7,15 @@
 #include "Config.h"
 #include <model/Position.h>
 #include <model/Order.h>
+#include <model/OrderBookL2.h>
 
 #include <auth_helpers.h>
 
 #include <utility>
 #include "Functional.h"
 #include "InstrumentService.h"
-#include "model/OrderBookL2.h"
-#include "OrderBook.h"
+
+#include "OrderBookUtils.h"
 
 
 std::string MarketData::getConnectionUri() {
@@ -326,6 +327,7 @@ void MarketDataInterface::handleInstruments(
         } else if (action_ == "delete") {
             _instruments.erase(symbol);
         }
+        update(instruments_);
     }
 }
 
@@ -335,51 +337,72 @@ void MarketDataInterface::handleOrderBookL2(
 
     if (action_ == "insert" || action_ == "partial") {
         for (auto& update : updates_) {
-            auto symbol_idx = tradingo_utils::orderbook_l2::symbolIdx(
+            _symbolIdx = tradingo_utils::orderbook_l2::symbolIdx(
                     update->getPrice(),
                     update->getId(),
                     _tickSize);
-            LOGINFO(LOG_VAR(symbol_idx));
+            break;
         }
-
+    }
+    if (action_ == "delete") {
+        for (auto& update : updates_) {
+            auto price = tradingo_utils::orderbook_l2::price(
+                        _symbolIdx, update->getId(), _tickSize);
+            _orderBook.removeLevel(price);
+            update->setSize(0.0);
+        }
+        return;
+    }
+    for (auto& update : updates_) {
+        auto price = tradingo_utils::orderbook_l2::price(
+                    _symbolIdx, update->getId(), _tickSize);
+        _orderBook.updateLevel(price, update);
     }
 
 }
 
-void MarketDataInterface::removeOrders(const std::vector<std::shared_ptr<model::Order>> &orders_) {
+void
+MarketDataInterface::removeOrders(const std::vector<std::shared_ptr<model::Order>> &orders_) {
     for (auto& ord : orders_)
         _orders.erase(getOrderKey(ord));
 }
 
-void MarketDataInterface::insertOrders(const std::vector<std::shared_ptr<model::Order>> &orders_) {
+void
+MarketDataInterface::insertOrders(const std::vector<std::shared_ptr<model::Order>> &orders_) {
     for (auto& ord : orders_) {
         _orders.insert(std::pair(getOrderKey(ord), ord));
     }
 }
 
-void MarketDataInterface::updateOrders(const std::vector<std::shared_ptr<model::Order>> &orders_) {
+void
+MarketDataInterface::updateOrders(const std::vector<std::shared_ptr<model::Order>> &orders_) {
     for (auto& ord : orders_) {
         auto update_json = ord->toJson();
         _orders.at(getOrderKey(ord))->fromJson(update_json);
     }
 }
 
-const std::unordered_map<std::string, MarketDataInterface::OrderPtr> &MarketDataInterface::getOrders() const {
+const std::unordered_map<std::string, MarketDataInterface::OrderPtr>&
+MarketDataInterface::getOrders() const {
     return _orders;
 }
 
-const std::queue<MarketDataInterface::ExecPtr> &MarketDataInterface::getExecutions() const {
+const std::queue<MarketDataInterface::ExecPtr>&
+MarketDataInterface::getExecutions() const {
     return _executions;
 }
 
-const std::unordered_map<std::string, MarketDataInterface::PositionPtr> &MarketDataInterface::getPositions() const {
+const std::unordered_map<std::string, MarketDataInterface::PositionPtr>&
+MarketDataInterface::getPositions() const {
     return _positions;
 }
-const MarketDataInterface::MarginPtr &MarketDataInterface::getMargin() const {
+const MarketDataInterface::MarginPtr
+&MarketDataInterface::getMargin() const {
     return _margin;
 }
 
-void MarketDataInterface::updateSignals(const std::shared_ptr<Event>& event_) {
+void
+MarketDataInterface::updateSignals(const std::shared_ptr<Event>& event_) {
     /*
     for (auto& signal : _timed_signals) {
         signal.second->update(event_);
@@ -390,15 +413,18 @@ void MarketDataInterface::initSignals(const std::string& config) {
     auto conf = std::make_shared<Config>(config);
 }
 
-const std::shared_ptr<model::Quote> MarketDataInterface::quote() const {
+const std::shared_ptr<model::Quote>
+MarketDataInterface::quote() const {
     return _quote;
 }
 
-const std::shared_ptr<model::Instrument>& MarketDataInterface::instrument() const {
+const std::shared_ptr<model::Instrument>&
+MarketDataInterface::instrument() const {
     return _instruments.at(_symbol);
 }
 
-const std::unordered_map<std::string, std::shared_ptr<model::Instrument>>& MarketDataInterface::getInstruments() const {
+const std::unordered_map<std::string, std::shared_ptr<model::Instrument>>&
+MarketDataInterface::getInstruments() const {
     return _instruments;
 }
 
@@ -408,8 +434,10 @@ MarketDataInterface::MarketDataInterface(const std::shared_ptr<Config>& config_,
 :   _instSvc(std::move(instSvc_))
 ,   _config(config_)
 ,   _symbol(config_->get<std::string>("symbol"))
-,   _tickSize(0.5)
-,   _callback([]() {}) {
+,   _tickSize(0.01)
+,   _callback([]() {})
+,   _orderBook(_symbol, 30000.0, _tickSize, 100.0)
+{
 
 }
 
@@ -420,6 +448,8 @@ void MarketDataInterface::setCallback(const std::function<void()> &callback) {
 MarketDataInterface::MarketDataInterface()
 :   _instSvc(nullptr)
 ,   _symbol("XBTUSD")
+,   _tickSize(0.01)
+,   _orderBook(_symbol, 30000.0, _tickSize, 100.0)
 ,   _callback([]() {}) {
 
 }

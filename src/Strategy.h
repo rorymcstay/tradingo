@@ -138,6 +138,8 @@ void Strategy<TOrdApi, TPositionApi>::evaluate() {
         auto exec = event->getExec();
         _allocations->update(exec);
         onExecution(event);
+    } else if (event->eventType() == EventType::Instrument) {
+    } else if (event->eventType() ==  EventType::OrderBookUpdate) {
     } else {
         throw std::runtime_error("unhandled event type");
     }

@@ -22,6 +22,7 @@ add_library(trading_funcs SHARED
         OrderInterface.cpp
         ObjectPool.h
         ObjectPool.hpp
+        OrderBookUtils.cpp
         Strategy.h # templated
         Context.h # templated
         Series.h # templated

@@ -29,6 +29,7 @@
 #include "Allocation.h"
 #include "api/InstrumentApi.h"
 #include "InstrumentService.h"
+#include "OrderBookUtils.h"
 //#include "Signal.h"
 
 
@@ -59,10 +60,6 @@ std::vector<std::shared_ptr<T>>  getData(web::json::array& data_) {
     }
     return out_data_;
 }
-
-
-namespace ws = web::websockets;
-using namespace io::swagger::client;
 
 
 class MarketDataInterface {
@@ -113,7 +110,7 @@ protected:
     std::queue<std::shared_ptr<model::Execution>> _executions;
     std::unordered_map<std::string, std::shared_ptr<model::Position>> _positions;
     std::unordered_map<std::string, std::shared_ptr<model::Order>> _orders;
-    std::unordered_map<long, std::shared_ptr<model::OrderBookL2>> _orderBook;
+    tradingo_utils::orderbook_l2::OrderBook _orderBook;
     std::shared_ptr<model::Quote> _quote;
     std::shared_ptr<model::Margin> _margin;
     std::unordered_map<std::string, std::shared_ptr<model::Instrument>> _instruments;
