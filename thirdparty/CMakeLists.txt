@@ -10,6 +10,7 @@ find_package(OpenSSL REQUIRED)
 find_package(Boost REQUIRED)
 find_package(Threads REQUIRED)
 find_package(AWSSDK REQUIRED COMPONENTS s3)
+find_package(benchmark REQUIRED)
 
 
 include(bitmex-swagger-client REQUIRED)
