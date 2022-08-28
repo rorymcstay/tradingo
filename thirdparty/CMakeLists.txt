@@ -21,6 +21,7 @@ include_directories(${BOOST_INCLUDE_DIR})
 set(BITMEX_INCLUDE "${PACKAGE_INSTALLS}/swagger/include" PARENT_SCOPE)
 set(AWS_INCLUDE "${PACKAGE_INSTALLS}/aws/include" PARENT_SCOPE)
 link_directories("${PACKAGE_INSTALLS}/swagger/lib")
+link_directories("${PACKAGE_INSTALLS}/aws/lib")
 #add_library(CppRestSwaggerClient STATIC IMPORTED)
 #set_property(TARGET CppRestSwaggerClient PROPERTY
 #    IMPORTED_LOCATION ${PACKAGE_INSTALLS}/swagger/lib/libCppRestSwaggerClient.a
