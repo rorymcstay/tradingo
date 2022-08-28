@@ -30,13 +30,8 @@ set(TGT_LINK_LIBRARIES
         ${PACKAGE_INSTALLS}/swagger/lib/libCppRestSwaggerClient.a
         boost_system
         dl
-        ${OPENSSL_CRYPTO_LIBRARY})
-if(WITH_AWS_CPP_SDK)
-
-    list(APPEND 
         aws-cpp-sdk-s3
-    )
-endif(WITH_AWS_CPP_SDK)
+        ${OPENSSL_CRYPTO_LIBRARY})
 
 target_link_libraries(test_trading_funcs
         #${CPPREST_LIBRARY}
