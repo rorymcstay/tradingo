@@ -1,3 +1,4 @@
+list(APPEND CMAKE_PREFIX_PATH "${PACKAGE_INSTALLS}/benchmark")
 find_library(benchmark REQUIRED)
 
 add_executable(
@@ -13,7 +14,7 @@ target_link_libraries(benchmarkTradingo
         test_trading_funcs
         cpprest
         ${GTEST_LIBRARY}
-        benchmark_main)
+        bench::benchmark_main)
 
 install(TARGETS
             benchmarkTradingo
