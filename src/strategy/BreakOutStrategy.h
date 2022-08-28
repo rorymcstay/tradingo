@@ -151,7 +151,6 @@ void BreakOutStrategy<TOrdApi, TPositionApi>::onBBO(const std::shared_ptr<Event>
                         or (std::abs(alloc_->getPrice() - (bidPrice+askPrice)/2) > 25));
         });
 
-
     if (almost_equal(qtyToTrade, 0.0)) {
         LOGDEBUG("No quantity to trade");
         return;

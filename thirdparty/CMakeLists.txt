@@ -1,4 +1,8 @@
 #### Third party ####
+list(APPEND CMAKE_PREFIX_PATH "${PACKAGE_INSTALLS}/aws")
+list(APPEND CMAKE_PREFIX_PATH "${PACKAGE_INSTALLS}/benchmark")
+list(APPEND CMAKE_PREFIX_PATH "${PACKAGE_INSTALLS}/cpprest")
+list(APPEND CMAKE_PREFIX_PATH "${PACKAGE_INSTALLS}/swagger")
 
 # Installed packages
 find_package(CPPRESTSDK REQUIRED)
@@ -20,11 +24,6 @@ link_directories("${PACKAGE_INSTALLS}/swagger/lib")
 #set_property(TARGET CppRestSwaggerClient PROPERTY
 #    IMPORTED_LOCATION ${PACKAGE_INSTALLS}/swagger/lib/libCppRestSwaggerClient.a
 #)
-list(APPEND CMAKE_PREFIX_PATH "${PACKAGE_INSTALLS}/aws")
-list(APPEND CMAKE_PREFIX_PATH "${PACKAGE_INSTALLS}/benchmark")
-list(APPEND CMAKE_PREFIX_PATH "${PACKAGE_INSTALLS}/cpprest")
-list(APPEND CMAKE_PREFIX_PATH "${PACKAGE_INSTALLS}/swagger")
-
 
 ### CPPLogger ###
 message(STATUS "Setting up aixlog headerfile")
