@@ -5,5 +5,6 @@
     "logFileLocation": "${STORAGE}/log/",
     "storage": "${STORAGE}",
     "symbol": "${SYMBOL}",
-    "libraryLocation": "${INSTALL_LOCATION}/lib/libtest_trading_strategies.so"
+    "libraryLocation": "${INSTALL_LOCATION}/lib/libtest_trading_strategies.so",
+    "additional-topics": ["orderbookL2"]
 }

@@ -13,6 +13,8 @@
 #include <utility>
 #include "Functional.h"
 #include "InstrumentService.h"
+#include "model/OrderBookL2.h"
+#include "OrderBook.h"
 
 
 std::string MarketData::getConnectionUri() {
@@ -51,7 +53,7 @@ MarketData::MarketData(const std::shared_ptr<Config>& config_, std::shared_ptr<I
 ,   _heartBeat(nullptr)
 ,   _cycle(0)
 {
-    // Config TODO bool helpers + templating get
+    ;
 }
 
 /// initialise heartbeat, callback method
@@ -96,6 +98,12 @@ void MarketData::init() {
                     } else if (table == "instrument") {
                         auto instruments = getData<model::Instrument>(data);
                         handleInstruments(instruments, action);
+                    } else if (
+                            table == "orderBookL2_25"
+                            || table == "orderBookL2"
+                            || table == "orderBookL10") {
+                        auto updates = getData<model::OrderBookL2>(data);
+                        handleOrderBookL2(updates, action);
                     }
             } else if (msgJson.has_field("info")) {
                     LOGINFO("Connection response: " << msgJson.serialize());
@@ -156,7 +164,6 @@ void MarketData::init() {
 /// if 'cancelAllAfter' is true, register it with server.
 void MarketData::subscribe() {
 
-    std::string subScribePayload = R"({"op": "subscribe", "args": ["execution:)"+_symbol+ R"(","position:)"+_symbol+ R"("]})";
     std::vector<std::string> topics = {
             "position",
             "order",
@@ -166,9 +173,14 @@ void MarketData::subscribe() {
     std::vector<std::string> noAuthTopics = {
             "quote:"+_symbol,
             "trade:"+_symbol,
-            "instrument:"+_symbol
+            "instrument:"+_symbol,
 
     };
+    std::vector<std::string> default_additional{};
+    std::vector<std::string> additionalTopics = _config->get("additional-topics", default_additional);
+    for (auto& topic : additionalTopics) {
+        noAuthTopics.push_back(topic+":"+_symbol);
+    }
     auto payload = web::json::value::parse(R"({"op": "subscribe", "args": []})");
     int num = 0;
     for (auto& topic : noAuthTopics) {
@@ -317,6 +329,23 @@ void MarketDataInterface::handleInstruments(
     }
 }
 
+void MarketDataInterface::handleOrderBookL2(
+        const std::vector<std::shared_ptr<model::OrderBookL2>>& updates_,
+        const std::string& action_) {
+
+    if (action_ == "insert" || action_ == "partial") {
+        for (auto& update : updates_) {
+            auto symbol_idx = tradingo_utils::orderbook_l2::symbolIdx(
+                    update->getPrice(),
+                    update->getId(),
+                    _tickSize);
+            LOGINFO(LOG_VAR(symbol_idx));
+        }
+
+    }
+
+}
+
 void MarketDataInterface::removeOrders(const std::vector<std::shared_ptr<model::Order>> &orders_) {
     for (auto& ord : orders_)
         _orders.erase(getOrderKey(ord));
@@ -377,9 +406,10 @@ const std::unordered_map<std::string, std::shared_ptr<model::Instrument>>& Marke
 MarketDataInterface::MarketDataInterface(const std::shared_ptr<Config>& config_,
                                          std::shared_ptr<InstrumentService>  instSvc_)
 :   _instSvc(std::move(instSvc_))
+,   _config(config_)
 ,   _symbol(config_->get<std::string>("symbol"))
+,   _tickSize(0.5)
 ,   _callback([]() {}) {
-
 
 }
 

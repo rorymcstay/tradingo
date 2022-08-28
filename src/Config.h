@@ -187,6 +187,15 @@ double get_val(const web::json::object& json_, const std::string& key_) {
     return json_.at(key_).as_double();
 }
 
+template<>
+inline
+std::vector<std::string> get_val(const web::json::object& json_, const std::string& key_) {
+    std::vector<std::string> out_vec;
+    for (auto& val : json_.at(key_).as_array())
+        out_vec.push_back(val.as_string());
+    return out_vec;
+}
+
 
 template<>
 inline
@@ -210,12 +219,27 @@ T Config::get(const std::string &name_) {
     }
 }
 
+template<>
+inline
+std::vector<std::string> Config::get(const std::string &name_) {
+    try {
+        return get_val<std::vector<std::string>>(_data, name_);
+    } catch (const web::json::json_exception& ex_) {
+        std::stringstream message;
+        message << "Invalid configuration value "
+            << LOG_NVP("name", name_)
+            << LOG_NVP("what", ex_.what());
+        LOGINFO(message.str());
+        throw std::runtime_error( message.str() );
+    }
+}
+
 
 template<typename T>
 inline
 T Config::get(const std::string &name_, T default_) {
     if (_data.find(name_) == _data.end()) {
-        LOGWARN("Defaulting " << name_ << " to " << default_);
+        LOGWARN("Defaulting " << name_);
         return std::move(default_);
     }
     else {

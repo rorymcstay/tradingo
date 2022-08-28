@@ -13,6 +13,7 @@
 #include <model/Order.h>
 #include <model/Execution.h>
 #include <model/Margin.h>
+#include <model/OrderBookL2.h>
 #include <mutex>
 #include <cpprest/json.h>
 #include <cpprest/ws_client.h>
@@ -88,6 +89,7 @@ private:
     std::priority_queue<std::shared_ptr<Event>, std::vector<std::shared_ptr<Event>>, QueueArrange> _eventBuffer;
     //std::unordered_map<std::string, std::shared_ptr<Signal>> _timed_signals;
 
+
 private:
     /// update the signals for event
     void updateSignals(const std::shared_ptr<Event>& event_);
@@ -100,10 +102,18 @@ protected:
     std::vector<std::string> _positionKey;
     std::vector<std::string> _orderKey;
     std::string _symbol;
+    std::shared_ptr<Config> _config;
+
+    /// this is the position the symbol appears in Bitmex instruments view.
+    // we infer this from the orderbook l2 stream, alternatively it may be
+    // determined by requesting all instruments on start up.
+    long _symbolIdx;
+    double _tickSize;
 
     std::queue<std::shared_ptr<model::Execution>> _executions;
     std::unordered_map<std::string, std::shared_ptr<model::Position>> _positions;
     std::unordered_map<std::string, std::shared_ptr<model::Order>> _orders;
+    std::unordered_map<long, std::shared_ptr<model::OrderBookL2>> _orderBook;
     std::shared_ptr<model::Quote> _quote;
     std::shared_ptr<model::Margin> _margin;
     std::unordered_map<std::string, std::shared_ptr<model::Instrument>> _instruments;
@@ -123,6 +133,8 @@ protected:
     void handleMargin(std::vector<std::shared_ptr<model::Margin>> margin_, const std::string& action_);
     /// handle instruments
     void handleInstruments(const std::vector<std::shared_ptr<model::Instrument>>& instruments_, const std::string& action_);
+    /// handle orderbook updates
+    void handleOrderBookL2(const std::vector<std::shared_ptr<model::OrderBookL2>>& updates_, const std::string& action_);
     /// evaluate callback linked to self. i.e signals
     void callback() {
         _callback();

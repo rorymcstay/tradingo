@@ -16,6 +16,10 @@
 #include "Allocation.h"
 
 
+class PriceLevelContainer {
+
+};
+
 
 template<typename TOrdApi>
 class Allocations {
