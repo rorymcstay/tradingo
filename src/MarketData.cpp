@@ -74,6 +74,7 @@ void MarketData::init() {
                 }
                 web::json::value msgJson = web::json::value::parse(stringVal);
                 if (msgJson.has_field("table")) {
+
                     const std::string &table = msgJson.at("table").as_string();
                     const std::string &action = msgJson.at("action").as_string();
                     web::json::array &data = msgJson.at("data").as_array();
@@ -106,7 +107,7 @@ void MarketData::init() {
                         auto updates = getData<model::OrderBookL2>(data);
                         handleOrderBookL2(updates, action);
                     }
-            } else if (msgJson.has_field("info")) {
+                } else if (msgJson.has_field("info")) {
                     LOGINFO("Connection response: " << msgJson.serialize());
                     _initialised = true;
                     return;

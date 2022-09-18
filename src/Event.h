@@ -49,7 +49,7 @@ public:
             ,   _quote(nullptr)
             ,   _exec(nullptr)
             ,   _orderbook(nullptr)
-            ,   _timeStamp(instr_->getTimestamp())
+            ,   _timeStamp(_instrumentDelta->getTimestamp())
             ,   _eventType(EventType::Instrument) {
     }
 
@@ -60,7 +60,7 @@ public:
             ,   _quote(nullptr)
             ,   _exec(nullptr)
             ,   _orderbook(nullptr)
-            ,   _timeStamp(trade_->getTimestamp())
+            ,   _timeStamp(_trade->getTimestamp())
             ,   _eventType(EventType::TradeUpdate) {}
 
     Event(std::shared_ptr<model::Quote> quote_)
@@ -70,7 +70,7 @@ public:
             ,   _quote(std::move(quote_))
             ,   _exec(nullptr)
             ,   _orderbook(nullptr)
-            ,   _timeStamp(quote_->getTimestamp())
+            ,   _timeStamp(_quote->getTimestamp())
             ,   _eventType(EventType::BBO) {}
 
     Event(std::shared_ptr<model::Execution> exec_)
@@ -80,7 +80,7 @@ public:
             ,   _quote(nullptr)
             ,   _orderbook(nullptr)
             ,   _exec(std::move(exec_))
-            ,   _timeStamp(exec_->getTimestamp())
+            ,   _timeStamp(_exec->getTimestamp())
             ,   _eventType(EventType::Exec) {}
 
     Event(std::shared_ptr<model::OrderBookL2> ob_)
@@ -90,7 +90,7 @@ public:
             ,   _quote(nullptr)
             ,   _exec(nullptr)
             ,   _orderbook(std::move(ob_))
-            ,   _timeStamp(utility::datetime::utc_now())
+            ,   _timeStamp(ob_->getTimestamp())
             ,   _eventType(EventType::OrderBookUpdate) {}
 
     void setEventType(EventType eventType_) { _eventType = eventType_; }
