@@ -16,7 +16,7 @@ message(STATUS "AWSSDK_LIBRARIES=${AWSSDK_LIBRARIES}")
 
 
 
-include(bitmex-swagger-client REQUIRED)
+#include(bitmex-swagger-client REQUIRED)
 
 include_directories(${OPENSSL_INCLUDE_DIR})
 include_directories(${CPPRESTSDK_INCLUDE_DIR})

@@ -15,9 +15,29 @@ option(WITH_AWS_CPP_SDK "Include aws s3 functions" ON)
 option(PACKAGE_INSTALLS "Path to compiled tpps" "")
 
 enable_testing()
-
 #find_library(CPPREST_LIBRARY cpprest)
 find_package(CPPRESTSDK REQUIRED)
+
+list(APPEND CMAKE_PREFIX_PATH 
+    "${PACKAGE_INSTALLS}/aws/lib/cmake"
+    "${PACKAGE_INSTALLS}/aws/lib/aws-crt-cpp/cmake"
+    "${PACKAGE_INSTALLS}/aws/lib/aws-c-http/cmake"
+    "${PACKAGE_INSTALLS}/aws/lib/aws-c-io/cmake"
+    "${PACKAGE_INSTALLS}/aws/lib/s2n/cmake"
+    "${PACKAGE_INSTALLS}/aws/lib/aws-c-common/cmake"
+    "${PACKAGE_INSTALLS}/aws/lib/aws-c-cal/cmake"
+    "${PACKAGE_INSTALLS}/aws/lib/aws-c-compression/cmake"
+    "${PACKAGE_INSTALLS}/aws/lib/aws-c-mqtt/cmake"
+    "${PACKAGE_INSTALLS}/aws/lib/aws-c-auth/cmake"
+    "${PACKAGE_INSTALLS}/aws/lib/aws-c-sdkutils/cmake"
+    "${PACKAGE_INSTALLS}/aws/lib/aws-c-event-stream/cmake"
+    "${PACKAGE_INSTALLS}/aws/lib/aws-checksums/cmake"
+    "${PACKAGE_INSTALLS}/aws/lib/aws-c-s3/cmake"
+    "${PACKAGE_INSTALLS}/swagger/lib"
+    )
+list(APPEND CMAKE_PREFIX_PATH 
+)
+
 find_package(AWSSDK REQUIRED COMPONENTS s3)
 
 add_definitions(-DBOOST_ASIO_DISABLE_CONCEPTS=1)
