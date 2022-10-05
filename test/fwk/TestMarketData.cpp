@@ -185,8 +185,7 @@ void TestMarketData::operator<<(const std::shared_ptr<model::Order> &order_) {
     std::string action = "update";
     if (order_->getOrdStatus() == "Canceled") {
         action = "delete";
-    } else if (order_->getOrdStatus() == "Filled" ||
-            tradingo_utils::almost_equal(order_->getLeavesQty(), 0.0)) {
+    } else if (order_->getOrdStatus() == "Filled") {
         action = "delete";
     } else if (order_->getOrdStatus() == "Rejected") {
         action = "delete";

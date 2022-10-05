@@ -35,6 +35,7 @@ private:
 
     /// reference to all orders placed during test, keyed by ClOrdID.
     std::map<std::string, std::shared_ptr<model::Order>> _orders;
+    std::map<std::string, std::shared_ptr<model::Order>> _completedOrders;
     std::queue<std::shared_ptr<model::Order>> _orderAmends;
     std::queue<std::shared_ptr<model::Order>> _rejects;
     std::queue<std::shared_ptr<model::Order>> _newOrders;
@@ -56,9 +57,10 @@ private:
 
     // validates and rejects if necessary
     bool validateOrder(const std::shared_ptr<model::Order>& order_);
-    std::shared_ptr<model::Order> checkOrderExists(const std::shared_ptr<model::Order>& order);
     bool checkValidAmend(std::shared_ptr<model::Order> amendRequest,
                          std::shared_ptr<model::Order> originalOrder);
+
+    void wrapUpOrder(const std::shared_ptr<model::Order>& order_);
 
 
 public:

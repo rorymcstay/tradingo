@@ -5,9 +5,13 @@
 #ifndef MY_PROJECT_ALLOCATION_H
 #define MY_PROJECT_ALLOCATION_H
 
+#include <boost/uuid/uuid.hpp>            // uuid class
+#include <boost/uuid/uuid_generators.hpp> // generators
+#include <boost/uuid/uuid_io.hpp>         // streaming operators etc.
 #include <model/Order.h>
 #include <model/Execution.h>
 #include "Utils.h"
+
 
 
 using price_t = double;
@@ -15,6 +19,12 @@ using qty_t = double;
 using namespace io::swagger::client;
 using namespace tradingo_utils;
 
+// TODO move all functions to cpp file, speeds up compilation
+
+/// An Allocation represents liquidity placed onto an order book at a certain
+/// price level.
+/// It has a current size, and a target delta. The target delta is the request to
+/// an amend the size allocated at that level.
 class Allocation {
     /// the underlying order on market for price level
     std::shared_ptr<model::Order> _order;
@@ -25,9 +35,10 @@ class Allocation {
     /// the desired change in size.
     qty_t _targetDelta;
     /// incremented in the case of an amend.
-    int _version;
     /// bool
     bool _is_modified;
+
+    boost::uuids::random_generator _cl_ord_id_generator{};
 
     /// reduce an allocations size by amount_
     void reduce(qty_t amount_) { _size -= amount_; }
@@ -38,10 +49,11 @@ public:
     std::string targetSide() const { return (_size + _targetDelta < 0.0) ? "Sell" : "Buy"; }
     /// underlying order accesor
     const std::shared_ptr<model::Order> &getOrder() const { return _order; }
+    
     /// order setter.
     void setOrder(const std::shared_ptr<model::Order> &order) {
         auto update_data = order->toJson();
-        order->fromJson(update_data);
+        _order->fromJson(update_data);
     }
     // accessors
     price_t getPrice() const { return _price; }
@@ -50,23 +62,32 @@ public:
     void setSize(qty_t size) { _size = size; }
     void setTargetDelta(qty_t delta_);
     qty_t getTargetDelta() const { return _targetDelta; }
-    int getVersion() const { return _version; }
 
     /// declare an allocation reflected onto the exchange.
     void rest();
     /// cancel the change in size.
     void cancelDelta();
     /// if the targetDelta implies a change of sides. this means a cancel new.
-    bool isChangingSide() const { return sgn(_targetDelta) != sgn(_size) && std::abs(_targetDelta) > std::abs(_size); }
+    bool isChangingSide() const { return (!isNew() && sgn(_targetDelta) != sgn(_size) 
+                                            && std::abs(_targetDelta) > std::abs(_size)); }
     /// is a new order. This imples no underlying order
     bool isNew() const { return almost_equal(_size, 0.0) && !almost_equal(_targetDelta, 0.0); }
     /// is an increase in allocation size.
-    bool isAmendUp() const { return !isCancel() && !isChangingSide() && std::abs(_targetDelta+_size) > std::abs(_size); }
+    bool isAmendUp() const { return (!isNew() && !isCancel() && !isChangingSide()
+                                        && std::abs(_targetDelta+_size) > std::abs(_size)); }
     /// is a decrease in allocation size.
-    bool isAmendDown() const {return !isCancel() && !isChangingSide() && std::abs(_targetDelta+_size) < std::abs(_size); };
+    bool isAmendDown() const {return (!isNew() && !isCancel() && !isChangingSide() 
+                                        && std::abs(_targetDelta+_size) < std::abs(_size)); };
     /// is an exit of allocation.
-    bool isCancel() const { return almost_equal(_targetDelta + _size, 0.0); };
+    bool isCancel() const { return !almost_equal(_targetDelta,0.0) && almost_equal(_targetDelta + _size, 0.0); };
     void update(const std::shared_ptr<model::Execution>& exec_);
+
+    std::string makeClOrdID(const std::string& prefix_) {
+        std::stringstream ss;
+        boost::uuids::uuid uuid = _cl_ord_id_generator();
+        ss << prefix_ << uuid;
+        return ss.str();
+    }
 
 
 public:

@@ -15,6 +15,7 @@
 #include <Object.h>
 #include <Allocation.h>
 #include <model/Margin.h>
+#include <model/Order.h>
 
 #include "Utils.h"
 #include "Functional.h"
@@ -54,7 +55,14 @@ get_order_for_amend(
 void TestOrdersApi::flush() {
     while (not _newOrders.empty()) _newOrders.pop();
     while (not _orderAmends.empty()) _orderAmends.pop();
-    while (not _newOrders.empty()) _newOrders.pop();
+    while (not _orderCancels.empty()) _orderCancels.pop();
+}
+
+
+void TestOrdersApi::wrapUpOrder(
+        const std::shared_ptr<model::Order>& order_
+    ) {
+    _orders.erase(order_->getClOrdID());
 }
 
 
@@ -71,36 +79,66 @@ TestOrdersApi::order_amend(boost::optional<utility::string_t> orderID,
                            boost::optional<double> stopPx,
                            boost::optional<double> pegOffsetValue,
                            boost::optional<utility::string_t> text) {
+
+    // allocate new order
     auto order = std::make_shared<model::Order>();
-    order->setClOrdID(clOrdID.value());
-    order->setOrigClOrdID(origClOrdID.value());
-    order->setTimestamp(_time);
-    auto origOrder = checkOrderExists(order);
-    std::stringstream str;
-    if (!origOrder) {
+
+    // find original
+    if (_orders.find(origClOrdID.value()) == _orders.end()) {
+        // reject if not found
         order->setOrdStatus("Rejected");
         order->setText("Original order not found");
+        order->setClOrdID(clOrdID.value());
+        order->setOrigClOrdID(origClOrdID.value());
+        set_order_timestamp(order);
         _rejects.push(order);
         std::stringstream str;
         auto content = std::make_shared<std::istringstream>(order->toJson().serialize());
-        str << "Original order " << LOG_NVP("OrderID",order->getOrderID())
-            << LOG_NVP("ClOrdID", order->getClOrdID())
-            << LOG_NVP("OrigClOrdID", order->getOrigClOrdID()) << " not found.";
+        str << "Original order " << origClOrdID.value() << " not found.";
         _allEvents.push(order);
         throw api::ApiException(404, str.str(), content);
     }
-    double new_price;
-    double new_qty;
-    order->setOrdStatus("PendingReplace");
-    if (leavesQty.has_value())
-        order->setLeavesQty(leavesQty.value());
-    if (price.has_value()) {
-        order->setPrice(price.value());
+
+    auto origOrder = _orders.at(origClOrdID.value());
+    // copy from the original
+    auto orig_data = origOrder->toJson();
+    order->fromJson(orig_data);
+    // set the new cl ord ids
+    order->setClOrdID(clOrdID.value());
+    order->setOrigClOrdID(origClOrdID.value());
+    set_order_timestamp(order);
+
+    if (orderQty.has_value() and leavesQty.has_value()) {
+        auto msg = order->toJson().serialize();
+        auto content = std::make_shared<std::istringstream>(msg);
+        order->setText("Cannot specify both OrderQty and LeavesQty");
+        order->setOrdStatus("Rejected");
+        _rejects.push(order);
+        _allEvents.push(order);
+        throw api::ApiException(400, order->getText(), content);
+    }
+    if (price.has_value() and (leavesQty.has_value() or orderQty.has_value())) {
+        auto msg = order->toJson().serialize();
+        auto content = std::make_shared<std::istringstream>(msg);
+        order->setText("Cannot specify both Qty and Price amend");
+        order->setOrdStatus("Rejected");
+        _rejects.push(order);
+        _allEvents.push(order);
+        throw api::ApiException(400, order->getText(),content);
     }
     if (orderQty.has_value()) {
-        new_qty = orderQty.value();
-        order->setOrderQty(orderQty.value());
+        throw std::runtime_error("Order amends via OrderQty not implemented.");
     }
+
+    // populate the differences
+    if (leavesQty.has_value()) {
+        order->setLeavesQty(leavesQty.value());
+        order->setOrderQty(leavesQty.value() + order->getCumQty());    
+    }
+    if (price.has_value())
+        order->setPrice(price.value());
+    if (orderQty.has_value())
+        order->setOrderQty(orderQty.value());
     if (stopPx.has_value()) 
         order->setStopPx(stopPx.value());
     if (pegOffsetValue.has_value())
@@ -108,49 +146,33 @@ TestOrdersApi::order_amend(boost::optional<utility::string_t> orderID,
     if (text.has_value())
         order->setText(text.value());
 
-    auto origQty = origOrder->getOrderQty();
-    double diff = order->getLeavesQty() - origOrder->getLeavesQty();
     // rejects if invalid
     checkValidAmend(order, origOrder);
 
     // Do the replace
-    origOrder->setOrdStatus(origOrder->getCumQty() > 0.0 ? "PartiallyFilled" : "Replaced");
-    if (tradingo_utils::almost_equal(origOrder->getLeavesQty(), 0.0)) {
-        origOrder->setOrdStatus("Filled");
-    }
-    origOrder->setClOrdID(order->getClOrdID());
-    origOrder->setOrigClOrdID(order->getOrigClOrdID());
-    order->setOrderID(origOrder->getOrderID());
-    if (order->priceIsSet()) {
-        origOrder->setPrice(order->getPrice());
-    } else if (order->leavesQtyIsSet()) {
-        auto qtyChange = order->getLeavesQty() - origOrder->getLeavesQty();
-        origOrder->setOrderQty(origOrder->getOrderQty() + qtyChange);
-    } else {
-        throw std::runtime_error("Only price and quantity amends supported currently.");
-    }
-    origOrder->setLeavesQty(order->getLeavesQty());
-    _orders.erase(origOrder->getOrigClOrdID());
+    origOrder->setOrdStatus("Replaced");
 
-    _orders.emplace(origOrder->getClOrdID(), origOrder);
+    if (tradingo_utils::almost_equal(order->getLeavesQty(), 0.0)) {
+        // skip inserting filled order
+        order->setOrdStatus("Filled");
+        _completedOrders.emplace(order->getClOrdID(), order);
+    } else {
+        // insert the replaced order
+        _orders.emplace(order->getClOrdID(), order);
+    }
     set_order_timestamp(order);
-    order->setOrdStatus("Replaced");
-    // populate for data purposes
-    order->setOrderQty(origQty + diff);
-    order->setOrdType(origOrder->getOrdType());
-    order->setCumQty(origOrder->getCumQty());
-    order->setExecInst(origOrder->getExecInst());
-    order->setPrice(origOrder->getPrice());
-    order->setSymbol(origOrder->getSymbol());
-    order->setSide(origOrder->getSide());
-    order->setTimeInForce(origOrder->getTimeInForce());
-    order->setAvgPx(order->getAvgPx());
+
+    // put into market data
     *_marketData << origOrder;
-    
+    *_marketData << order;
+ 
     // pattern all api calls to do this last
+    //_orderAmends.push(origOrder);
     _orderAmends.push(order);
     _allEvents.push(order);
-    return pplx::task_from_result(origOrder);
+    _allEvents.push(origOrder);
+    wrapUpOrder(origOrder);
+    return pplx::task_from_result(order);
 }
 
 
@@ -166,25 +188,23 @@ TestOrdersApi::order_cancel(boost::optional<utility::string_t> orderID,
         auto content = std::make_shared<std::istringstream>(R"({"clOrdID": ")" + clOrdID.value() +  R"(" })");
         auto reject = std::make_shared<model::Order>();
         reject->setText("Order not found to cancel");
-        reject->setOrderID(clOrdID.value());
+        reject->setClOrdID(clOrdID.value());
         _rejects.push(reject);
         throw api::ApiException(404, reject->getText(), content);
     }
     auto& origOrder = _orders.at(clOrdID.value());
     origOrder->setOrdStatus("Canceled");
     auto event_order = std::make_shared<model::Order>();
-    auto event_json = _orders[clOrdID.value()]->toJson();
+    auto event_json = origOrder->toJson();
     event_order->fromJson(event_json);
     event_order->setTimestamp(_time);
-    //origOrder->setOrderQty(0.0);
-    origOrder->setLeavesQty(0.0);
     set_order_timestamp(origOrder);
     ordersRet.push_back(origOrder);
 
     _orderCancels.push(event_order);
     _allEvents.push(event_order);
     *_marketData << origOrder;
-    _orders.erase(clOrdID.value());
+    wrapUpOrder(origOrder);
     return pplx::task_from_result(ordersRet);
 }
 
@@ -269,13 +289,12 @@ TestOrdersApi::order_new(utility::string_t symbol,
     // rejects if invalid
     validateOrder(order);
     // Add the order
-    _oidSeed++;
-    order->setOrderID(std::to_string(_oidSeed));
+    order->setOrderID(std::to_string(++_oidSeed));
     _orders.emplace(order->getClOrdID(), order);
     order->setOrdStatus("New");
     order->setLeavesQty(order->getOrderQty());
     order->setCumQty(0.0);
-    set_order_timestamp(order);
+
     auto event_order = std::make_shared<model::Order>();
     auto event_json = order->toJson();
     event_order->fromJson(event_json);
@@ -415,7 +434,6 @@ void TestOrdersApi::operator >> (const std::string &outEvent_) {
     } else {
         failMessage << R"(Must specify event type - One of "ORDER_NEW", "ORDER_AMEND", "ORDER_CANCEL")";
         std::runtime_error(failMessage.str());
-
     }
 }
 
@@ -463,14 +481,6 @@ bool TestOrdersApi::hasMatchingOrder(const std::shared_ptr<model::Trade>& trade_
 }
 
 
-std::shared_ptr<model::Order> TestOrdersApi::checkOrderExists(const std::shared_ptr<model::Order> &order) {
-    if (_orders.find(order->getOrigClOrdID()) != _orders.end()) {
-        return _orders.at(order->getOrigClOrdID());
-    }
-    return nullptr;
-}
-
-
 void TestOrdersApi::operator << (const std::shared_ptr<model::Execution>& exec_) {
     if (exec_->getOrderID() == "LIQUIDATION") {
         return;
@@ -484,8 +494,12 @@ void TestOrdersApi::operator << (const std::shared_ptr<model::Execution>& exec_)
     order->setCumQty(exec_->getCumQty());
     order->setLeavesQty(exec_->getLeavesQty());
     order->setTimestamp(exec_->getTimestamp());
-    if (tradingo_utils::almost_equal(order->getLeavesQty(), 0.0)) {
-        _orders.erase(exec_->getClOrdID());
+    auto event_order = std::make_shared<model::Order>();
+    auto event_data = order->toJson();
+    event_order->fromJson(event_data);
+    _allEvents.push(event_order);
+    if (order->getOrdStatus() == "Filled") {
+        wrapUpOrder(order);
     }
 }
 
@@ -499,6 +513,10 @@ bool TestOrdersApi::validateOrder(const std::shared_ptr<model::Order> &order_) {
     auto& position = _marketData->getPositions().at(order_->getSymbol());
     auto& margin = _marketData->getMargin();
     bool fail = false;
+    if (_orders.find(order_->getClOrdID()) != _orders.end()) {
+        error = "Duplicate ClOrdID.";
+        fail = true;
+    }
     if (order_->origClOrdIDIsSet() && order_->getOrderID() != "") {
         error = "Must specify only one of orderID or origClOrdId";
         fail = true;
@@ -538,11 +556,11 @@ bool TestOrdersApi::validateOrder(const std::shared_ptr<model::Order> &order_) {
 bool TestOrdersApi::checkValidAmend(std::shared_ptr<model::Order> requestedAmend,
                                     std::shared_ptr<model::Order> originalOrder) {
 
-    if (requestedAmend->leavesQtyIsSet() and requestedAmend->orderQtyIsSet()) {
+    if (requestedAmend->getClOrdID() == originalOrder->getClOrdID()) {
         auto msg = requestedAmend->toJson().serialize();
         auto content = std::make_shared<std::istringstream>(msg);
-        requestedAmend->setText("Cannot specify both OrderQty and LeavesQty");
-        requestedAmend->setOrdStatus(originalOrder->getOrdStatus());
+        requestedAmend->setText("ClOrdID must be different from OrigClOrdID");
+        requestedAmend->setOrdStatus("Rejected");
         _rejects.push(requestedAmend);
         _allEvents.push(requestedAmend);
         throw api::ApiException(400, requestedAmend->getText(), content);
@@ -553,24 +571,12 @@ bool TestOrdersApi::checkValidAmend(std::shared_ptr<model::Order> requestedAmend
         auto msg = requestedAmend->toJson().serialize();
         auto content = std::make_shared<std::istringstream>(msg);
         requestedAmend->setText("Order is " + originalOrder->getOrdStatus());
-        requestedAmend->setOrdStatus(originalOrder->getOrdStatus());
+        requestedAmend->setOrdStatus("Rejected");
         _rejects.push(requestedAmend);
         _allEvents.push(requestedAmend);
         throw api::ApiException(400, requestedAmend->getText(), content);
     }
-    if ((requestedAmend->leavesQtyIsSet() || requestedAmend->orderQtyIsSet())
-         && requestedAmend->priceIsSet()) {
-        auto msg = requestedAmend->toJson().serialize();
-        auto content = std::make_shared<std::istringstream>(msg);
-        requestedAmend->setText("Cannot specify both Qty and Price amend");
-        requestedAmend->setOrdStatus(originalOrder->getOrdStatus());
-        _rejects.push(requestedAmend);
-        _allEvents.push(requestedAmend);
-        throw api::ApiException(400, requestedAmend->getText(),content);
-    }
-    if (requestedAmend->orderQtyIsSet()) {
-        throw std::runtime_error("Order amends via OrderQty not implemented.");
-    }
+
     auto& position = _marketData->getPositions().at(originalOrder->getSymbol());
     auto& margin = _marketData->getMargin();
     auto& instrument = _marketData->getInstruments().at(originalOrder->getSymbol());
@@ -584,9 +590,9 @@ bool TestOrdersApi::checkValidAmend(std::shared_ptr<model::Order> requestedAmend
         requestedAmend->setText("Insufficient funds available for amend. additionalCost="
                 + std::to_string((maint_margin_post - position->getMaintMargin()))
                 + ", balance=" + std::to_string(margin->getWalletBalance()));
-        requestedAmend->setOrdStatus(originalOrder->getOrdStatus());
         _rejects.push(requestedAmend);
         _allEvents.push(requestedAmend);
+        requestedAmend->setOrdStatus("Rejected");
         throw api::ApiException(400, requestedAmend->getText(), content);
     }
 

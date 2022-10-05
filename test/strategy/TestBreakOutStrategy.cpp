@@ -5,22 +5,33 @@
 #define _TURN_OFF_PLATFORM_STRING
 #include "../fwk/TestEnv.h"
 
-TEST(BreakOutStrategy, smoke_test)
+TEST(DISABLED_BreakOutStrategy, smoke_test)
 {
     TestEnv env({DEFAULT_ARGS,
         {"symbol", "XBTUSD"},
         {"clOrdPrefix", "MCST"},
         {"factoryMethod", "RegisterBreakOutStrategy"},
         {"referencePrice", "40000"},
-        {"shortTermWindow", "1"},
-        {"longTermWindow", "2"},
+        {"shortTermWindow", "0"},
+        {"longTermWindow", "0"},
         {"moving_average_crossover-interval", "10"},
         {"callback-signals", "true"},
+        {"logLevel", "debug"},
     });
-
-    env << "QUOTE askPrice=40001.0 askSize=40001.0 bidPrice=40000.0 bidSize=1000.0 symbol=XBTUSD" LN;
+    for (int i(0); i<10000; i++) {
+        env << "QUOTE askPrice=40001.0 askSize=40001.0 bidPrice=39990.0 bidSize=1000.0 symbol=XBTUSD" LN;
+        env << "QUOTE askPrice=40010.0 askSize=40001.0 bidPrice=40000.0 bidSize=1000.0 symbol=XBTUSD" LN;
+        env << "QUOTE askPrice=40020.0 askSize=40001.0 bidPrice=40010.0 bidSize=1000.0 symbol=XBTUSD" LN;
+        env << "QUOTE askPrice=40030.0 askSize=40000.0 bidPrice=40020.0 bidSize=1000.0 symbol=XBTUSD" LN;
+        env << "QUOTE askPrice=40040.0 askSize=40000.0 bidPrice=40010.0 bidSize=1000.0 symbol=XBTUSD" LN;
+        env << "QUOTE askPrice=40050.0 askSize=40000.0 bidPrice=40020.0 bidSize=1000.0 symbol=XBTUSD" LN;
+        env << "QUOTE askPrice=40060.0 askSize=40000.0 bidPrice=40030.0 bidSize=1000.0 symbol=XBTUSD" LN;
+        env << "QUOTE askPrice=40070.0 askSize=40000.0 bidPrice=40050.0 bidSize=1000.0 symbol=XBTUSD" LN;
+        env << "QUOTE askPrice=40080.0 askSize=40000.0 bidPrice=40090.0 bidSize=1000.0 symbol=XBTUSD" LN;
+        env << "QUOTE askPrice=40030.0 askSize=40001.0 bidPrice=39980.0 bidSize=1000.0 symbol=XBTUSD" LN;
+    }
     env >> "NONE" LN;
-    env << "QUOTE askPrice=40001.0 askSize=40001.0 bidPrice=40000.0 bidSize=1000.0 symbol=XBTUSD" LN;
+
     auto order = env >> "ORDER_NEW Price=40001 OrderQty=100 CumQty=0 LeavesQty=100 OrdStatus=New Side=Sell symbol=XBTUSD" LN;
     env >> "NONE" LN;
     env << "QUOTE askPrice=40002.0 askSize=40001.0 bidPrice=40001.0 bidSize=1000.0 symbol=XBTUSD" LN;

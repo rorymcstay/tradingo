@@ -31,7 +31,6 @@ void Signal::update() {
         onExec(_marketData->exec());
     */
     if (_marketData && _marketData->quote()) {
-        LOGDEBUG("Updating Signal " << LOG_VAR(_name));
         auto quote = _marketData->quote();
 
 #if defined(REPLAY_MODE) || !defined(__REPLAY_MODE_GUARD) // toggle REPLAY_MODE in replay live/fast
@@ -42,7 +41,7 @@ void Signal::update() {
             if (_time.is_initialized()) {
                 mkt_time_past = time_diff(quote->getTimestamp(), _time);
             }
-            LOGDEBUG("REPLAY_MODE: Market time past " << LOG_VAR(mkt_time_past) << LOG_VAR(_timer.interval()));
+            //LOGDEBUG("REPLAY_MODE: Market time past " << LOG_VAR(mkt_time_past) << LOG_VAR(_timer.interval()));
             if (mkt_time_past >= _timer.interval()) {
                 onQuote(quote);
                 _time = quote->getTimestamp();
@@ -50,7 +49,7 @@ void Signal::update() {
         } else {
             // TODO need to properly implement callback, as we can add extra functionality.
             // such as callback on trade, exec etc...
-            LOGDEBUG("REPLAY_MODE: Callback signal update");
+            //LOGDEBUG("REPLAY_MODE: Callback signal update");
             onQuote(quote);
         }
 #else
@@ -69,13 +68,12 @@ void Signal::init(const std::shared_ptr<Config> &config_) {
     auto storage = config_->get<std::string>("storage", "");
     if (storage.empty())
         storage = "/tmp/";
-    auto printer = [](const std::string& it_) { return it_; };
     _batchWriter = std::make_shared<Signal::Writer>(
             /*tableName_=*/_name,
             /*symbol_=*/config_->get<std::string>("symbol"),
             /*storage_=*/storage,
-            /*batchSize_=*/100000,
-            /*print_=*/printer,
+            /*batchSize_=*/config_->get<int>(_name+"-batch-size", 100000),
+            /*print_=*/[](const std::string& it_) { return it_; },
             /*rotate_=*/false,
             /*fileExtension_=*/"csv",
             /*header_=*/_header);

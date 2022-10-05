@@ -13,7 +13,9 @@ void TestPositionApi::setMarketData(const std::shared_ptr<TestMarketData>& marke
 
 void TestPositionApi::position_updateLeverage(const std::string& symbol_, double leverage_) {
     if (_marketData->getPositions().find(symbol_) != _positions.end()) {
-        _marketData->getPositions().at(symbol_)->setLeverage(leverage_);
+        auto position = _marketData->getPositions().at(symbol_);
+        position->setLeverage(leverage_);
+        position->setInitMarginReq(1/leverage_);
         return;
     }
     std::stringstream str;

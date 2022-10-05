@@ -15,27 +15,44 @@
 
 static void BM_read_quotes_json(benchmark::State& state) {
     // Perform setup here
+    //
 
-    auto config = std::make_shared<Config>();
+    std::string tick_storage = std::getenv("TICK_STORAGE");
+    std::string config_file = std::getenv("CONFIG_FILE");
+
+    auto defaults = std::make_shared<Config>();
 
     for (auto kvp : std::initializer_list<std::pair<std::string, std::string>>({
-        DEFAULT_ARGS
-    }
-         )
-    ) config->set(kvp.first, kvp.second);
+        DEFAULT_ARGS,
+        {"moving_average_crossover-callback", "true"},
+        {"moving_average_crossover-interval", "1000"},
+        {"moving_average_crossover-batch-size", "100000"},
+        {"logLevel", "info"}
+    }))
+        defaults->set(kvp.first, kvp.second);
+
+    auto config = std::make_shared<Config>(config_file);
+    *defaults += *config;
+
+    defaults->set("storage", "/tmp/benchmarking/");
+    std::cout << defaults->toJson().serialize() << '\n';
 
     std::ifstream quoteFile;
-    auto marketdata = std::make_shared<TestMarketData>(config, nullptr);
-    auto signal = std::make_shared<MovingAverageCrossOver>(marketdata,1000, 8000);
-    signal->init(config);
+    auto marketdata = std::make_shared<TestMarketData>(defaults, nullptr);
+    auto signal = std::make_shared<MovingAverageCrossOver>(marketdata,
+            defaults->get<double>("shortTermWindow"),
+            defaults->get<double>("longTermWindow")
+    );
+    signal->init(defaults);
     marketdata->setCallback([&](){ signal->update(); });
-    quoteFile.open(config->get<std::string>("tickStorage")+"/quotes_XBTUSD.json");
-    if (!quoteFile.is_open()) {
-        throw std::runtime_error("No quotes file found.");
-    }
+    auto quote_file = defaults->get<std::string>("tickStorage")+"/quotes_XBTUSD.json";
+    auto series = TestEnv::QuoteSeries(
+            quote_file,
+            /*resolution_=*/10000);
     for (auto _ : state) {
-        auto quote = getEvent<model::Quote>(quoteFile);
-        *marketdata << quote;
+        for (auto quote : series) {
+            *marketdata << quote;
+        }
     }
 }
 BENCHMARK(BM_read_quotes_json);

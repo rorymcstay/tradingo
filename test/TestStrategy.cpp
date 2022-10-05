@@ -26,13 +26,14 @@ TEST(StrategyApi, smooke)
     strategy->allocations()->addAllocation(10, 100.0);
     strategy->allocations()->placeAllocations();
     auto order = env >> "ORDER_NEW price=10 orderQty=100 symbol=XBTUSD Side=Buy LeavesQty=100" LN;
-    strategy->allocations()->addAllocation(11,100.0);
     strategy->allocations()->addAllocation(9,-100.0);
     strategy->allocations()->addAllocation(10,-100.0);
+    strategy->allocations()->addAllocation(11,100.0);
     strategy->allocations()->placeAllocations();
     auto order2 = env >> "ORDER_NEW Price=9 OrderQty=100 CumQty=0 LeavesQty=100 OrdStatus=New Side=Sell symbol=XBTUSD" LN;
-    env >> format("ORDER_CANCEL Price=10 OrderQty=0 CumQty=0 LeavesQty=0 OrdStatus=New Side=Buy symbol=XBTUSD", order);
     auto order3 = env >> "ORDER_NEW Price=11 OrderQty=100 CumQty=0 LeavesQty=100 OrdStatus=New Side=Buy symbol=XBTUSD" LN;
+    env >> format("ORDER_CANCEL Price=10 OrderQty=0 CumQty=0 LeavesQty=0 OrdStatus=New Side=Buy symbol=XBTUSD", order);
+
     env >> "NONE" LN;
 }
 
@@ -125,16 +126,16 @@ TEST(Strategy, balance_is_updated_during_test) {
     env >> "NONE" LN;
 
     // post execution
-    ASSERT_DOUBLE_EQ(position->getCurrentCost(), -751834);
+    ASSERT_DOUBLE_EQ(position->getCurrentCost(), 0.0);
     ASSERT_DOUBLE_EQ(position->getCurrentQty(), 400);
     ASSERT_DOUBLE_EQ(position->getAvgCostPrice(), 38875.375);
     ASSERT_DOUBLE_EQ(position->getBankruptPrice(), 35000.5);
-    ASSERT_DOUBLE_EQ(position->getBreakEvenPrice(), 2.5723224534811562e-05);
+    ASSERT_DOUBLE_EQ(position->getBreakEvenPrice(), 40279.5);
     ASSERT_DOUBLE_EQ(position->getLiquidationPrice(), 0.0);
     ASSERT_DOUBLE_EQ(margin->getWalletBalance(), 377063); // ~= startingBalance - currentCost
     ASSERT_DOUBLE_EQ(margin->getMaintMargin(), 82677);
-    ASSERT_DOUBLE_EQ(margin->getAvailableMargin(), 167461);
-    ASSERT_DOUBLE_EQ(margin->getUnrealisedPnl(), -253970.66226531274);
+    ASSERT_DOUBLE_EQ(margin->getAvailableMargin(), 298712);
+    ASSERT_DOUBLE_EQ(margin->getUnrealisedPnl(), 4326);
 }
 
 
@@ -189,7 +190,7 @@ TEST(Strategy, position_margin_is_updated_during_test) {
     ASSERT_EQ(alloc->getOrder()->getAvgPx(), 37663.0);
 
     ASSERT_EQ(margin->getAmount(), 351951);
-    ASSERT_EQ(margin->getMaintMargin(), 131305);
+    ASSERT_EQ(margin->getMaintMargin(), 212765);
     ASSERT_EQ(margin->getRealisedPnl(), 6290);
 
 }
