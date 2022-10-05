@@ -38,5 +38,5 @@ jobs:
       run: BUILD_TYPE=Debug ${{github.workspace}}/autogen.sh
 
     - name: Test
-      working-directory: ${{github.workspace}}/build/
+      working-directory: ${{github.workspace}}/build.debug/
       run: ctest -C ${{env.BUILD_TYPE}} --verbose
