@@ -12,6 +12,9 @@ find_package(Threads REQUIRED)
 find_package(AWSSDK REQUIRED COMPONENTS s3)
 find_package(benchmark REQUIRED)
 
+message(STATUS "AWSSDK_LIBRARIES=${AWSSDK_LIBRARIES}")
+
+
 
 include(bitmex-swagger-client REQUIRED)
 

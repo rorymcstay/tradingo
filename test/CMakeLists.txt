@@ -97,6 +97,7 @@ set(TEST_LINK_LIBRARIES
         boost_system
         boost_filesystem
         pthread
+        ${AWSSDK_LINK_LIBRARIES}
 )
 
 

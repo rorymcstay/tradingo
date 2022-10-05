@@ -16,7 +16,9 @@ option(PACKAGE_INSTALLS "Path to compiled tpps" "")
 
 enable_testing()
 
-find_library(CPPREST_LIBRARY cpprest)
+#find_library(CPPREST_LIBRARY cpprest)
+find_package(CPPRESTSDK REQUIRED)
+find_package(AWSSDK REQUIRED COMPONENTS s3)
 
 add_definitions(-DBOOST_ASIO_DISABLE_CONCEPTS=1)
 message(STATUS "Disabled boost asio concepts.")
