@@ -12,8 +12,11 @@ find_package(Threads REQUIRED)
 find_package(AWSSDK REQUIRED COMPONENTS s3)
 find_package(benchmark REQUIRED)
 
+message(STATUS "AWSSDK_LIBRARIES=${AWSSDK_LIBRARIES}")
 
-include(bitmex-swagger-client REQUIRED)
+
+
+#include(bitmex-swagger-client REQUIRED)
 
 include_directories(${OPENSSL_INCLUDE_DIR})
 include_directories(${CPPRESTSDK_INCLUDE_DIR})
@@ -21,6 +24,7 @@ include_directories(${BOOST_INCLUDE_DIR})
 set(BITMEX_INCLUDE "${PACKAGE_INSTALLS}/swagger/include" PARENT_SCOPE)
 set(AWS_INCLUDE "${PACKAGE_INSTALLS}/aws/include" PARENT_SCOPE)
 link_directories("${PACKAGE_INSTALLS}/swagger/lib")
+link_directories("${PACKAGE_INSTALLS}/aws/lib")
 #add_library(CppRestSwaggerClient STATIC IMPORTED)
 #set_property(TARGET CppRestSwaggerClient PROPERTY
 #    IMPORTED_LOCATION ${PACKAGE_INSTALLS}/swagger/lib/libCppRestSwaggerClient.a

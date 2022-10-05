@@ -21,8 +21,6 @@ cd $ROOT_DIR \
         -DCMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX:-$install_base/tradingo} \
         -DWITH_REGRESSION_TEST=1 \
         -DPACKAGE_INSTALLS="${install_base}" \
-        -DCMAKE_MODULE_PATH="${install_base}/swagger/lib/;${install_base}/aws/lib/cmake/AWSSDK/" \
-        -DPACKAGE_INSTALLS="$install_base"
         "$@" \
         ../ \
     && make install -j6

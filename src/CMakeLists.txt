@@ -61,6 +61,7 @@ target_link_libraries(trading_funcs
         ${PACKAGE_INSTALLS}/swagger/lib/libCppRestSwaggerClient.a
         ${OPENSSL_CRYPTO_LIBRARY}
         ${EXTRA_LINK_LIBRARIES}
+        ${AWSSDK_LINK_LIBRARIES}
 )
 
 
