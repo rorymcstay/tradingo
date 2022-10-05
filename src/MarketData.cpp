@@ -166,32 +166,23 @@ void MarketData::init() {
 /// if 'cancelAllAfter' is true, register it with server.
 void MarketData::subscribe() {
 
-    std::vector<std::string> topics = {
+    std::vector<std::string> default_topics = {
             "position",
             "order",
             "margin",
-            "execution:" + _symbol
-    };
-    std::vector<std::string> noAuthTopics = {
+            "execution:" + _symbol,
             "quote:"+_symbol,
             "trade:"+_symbol,
             "instrument:"+_symbol,
 
     };
-    std::vector<std::string> default_additional{};
-    std::vector<std::string> additionalTopics = _config->get("additional-topics", default_additional);
-    for (auto& topic : additionalTopics) {
-        noAuthTopics.push_back(topic+":"+_symbol);
-    }
+
+    std::vector<std::string> topics = _config->get("marketdata-topics", default_topics);
+
     auto payload = web::json::value::parse(R"({"op": "subscribe", "args": []})");
     int num = 0;
-    for (auto& topic : noAuthTopics) {
+    for (auto& topic : topics) {
         payload.at("args").as_array()[num++] = web::json::value(topic);
-    }
-    if (_shouldAuth) {
-        for (auto &topic : topics) {
-            payload.at("args").as_array()[num++] = web::json::value(topic);
-        }
     }
     web::websockets::client::websocket_outgoing_message subMessage;
     subMessage.set_utf8_message(payload.serialize());
