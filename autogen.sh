@@ -22,6 +22,7 @@ cd $ROOT_DIR \
         -DWITH_REGRESSION_TEST=1 \
         -DPACKAGE_INSTALLS="${install_base}" \
         -DCMAKE_MODULE_PATH="${install_base}/swagger/lib/;${install_base}/aws/lib/cmake/AWSSDK/" \
+        -DCMAKE_PREFIX_PATH="${install_base}/aws/lib/cmake/AWSSDK/" \
         "$@" \
         ../ \
     && make install -j6
