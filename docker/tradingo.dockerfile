@@ -1,4 +1,4 @@
-FROM rmcstay95/tradingo-base:0ee37ab-dirty as builder
+FROM rmcstay95/tradingo-base:32244df-dirty as builder
 
 # build tradingo
 ARG install_base=/usr/from-src/
@@ -12,7 +12,6 @@ RUN mkdir build.release \
         -DBOOST_ASIO_DISABLE_CONCEPTS=1 \
         -Wno-dev \
         -DCMAKE_INSTALL_PREFIX=${install_base}/tradingo \
-        -DCMAKE_PREFIX_PATH="${install_base}/cpprest;${install_base}/benchmark" \
         ../ \
     && make install -j3
 

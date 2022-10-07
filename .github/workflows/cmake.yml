@@ -18,25 +18,25 @@ jobs:
     - uses: actions/checkout@v2
     - name:  Install dependencies
       run: |
-        sudo apt-get update && sudo apt-get -y install cmake libcpprest-dev libgtest-dev libboost-program-options-dev \
-          && git clone https://github.com/google/benchmark.git /tmp/src/benchmark \
-          && mkdir -p /tmp/src/benchmark/build \
-          && /bin/sh -c 'cd /tmp/src/benchmark/build && \
-            cmake -DBENCHMARK_DOWNLOAD_DEPENDENCIES=on \
-            -DCMAKE_BUILD_TYPE=Release /tmp/src/benchmark \
-            && sudo make install -j3 '
+        sudo apt-get update && sudo apt-get -y install \
+            cmake \
+            libcpprest-dev \
+            libgtest-dev \
+            libcurl4-openssl-dev \
+            libboost-program-options-dev \
+
     - name: Clone thirdparty modules
       run: git submodule init && git submodule update
 
-    - name: Configure CMake
-      run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=Release -DCPPREST_ROOT=/usr/local -DCMAKE_INSTALL_PREFIX=${{github.workspace}}/install
+    - name: Build AWS SDK
+      run: BUILD_TYPE=Release ${{github.workspace}}/autogen-deps.sh 
 
-    - name: Build
-      run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
+    - name: Build Api Connectors
+      run: BUILD_TYPE=Debug ${{github.workspace}}/autogen-swagger.sh
 
-    - name: Install
-      run: cmake --install ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
+    - name: Build Tradingo
+      run: BUILD_TYPE=Debug ${{github.workspace}}/autogen.sh
 
     - name: Test
-      working-directory: ${{github.workspace}}/build/
+      working-directory: ${{github.workspace}}/build.debug/
       run: ctest -C ${{env.BUILD_TYPE}} --verbose

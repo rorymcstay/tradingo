@@ -11,11 +11,16 @@
 #include "Allocation.h"
 #include "Allocations.h"
 #include "Utils.h"
-using namespace io::swagger::client;
+
 
 #define SEVENNULL boost::none,boost::none,boost::none,boost::none,boost::none,boost::none,boost::none
 
 namespace func {
+using namespace io::swagger::client;
+
+static const double SATOSHI = 10e7;
+
+
 
 
 model::Instrument

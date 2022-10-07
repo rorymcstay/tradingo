@@ -5,5 +5,10 @@
     "logFileLocation": "${STORAGE}/log/",
     "storage": "${STORAGE}",
     "symbol": "${SYMBOL}",
-    "libraryLocation": "${INSTALL_LOCATION}/lib/libtest_trading_strategies.so"
+    "libraryLocation": "${INSTALL_LOCATION}/lib/libtest_trading_strategies.so",
+    "marketdata-topics": [
+        "quote:${SYMBOL}",
+        "trade:${SYMBOL}",
+        "instrument:${SYMBOL}"
+    ]
 }

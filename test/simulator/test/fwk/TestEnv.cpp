@@ -11,6 +11,7 @@
 #include "OrderBook.h"
 #include "TestDomain.h"
 
+
 #define STRINGIFY(x) #x
 #define TO_STRING(x) STRINGIFY(x)
 #define LN  " |line#:" TO_STRING(__LINE__)

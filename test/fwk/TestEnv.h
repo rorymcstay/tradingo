@@ -4,10 +4,12 @@
 
 #ifndef TRADINGO_TESTENV_H
 #define TRADINGO_TESTENV_H
+#include <functional>
 #include <gtest/gtest.h>
 
 #include <memory>
 #include <utility>
+#include <variant>
 
 #define _TURN_OFF_PLATFORM_STRING
 #include "TestMarketData.h"
@@ -52,7 +54,7 @@ using namespace io::swagger::client;
         {"initialLeverage", "15.0"}, \
         {"libraryLocation", LIBRARY_LOCATION"/libtest_trading_strategies.so" }, \
         {"storage", "./"},   \
-        {"tickStorage", "./"}
+        {"tickStorage", std::getenv("TICK_STORAGE") ? std::getenv("TICK_STORAGE") : "./"}
 
 #define INSERT_DEFAULT_ARGS(config_) \
     std::initializer_list<std::pair<std::string, std::string>> defaults = { DEFAULT_ARGS }; \
@@ -65,11 +67,58 @@ using namespace io::swagger::client;
     env << "POSITION Account=365570.0 Symbol=XBTUSD Currency=XBt Underlying=XBT QuoteCurrency=USD Commission=0.0005 InitMarginReq=0.1 MaintMarginReq=0.0035 RiskLimit=20000000000.0 Leverage=10.0 DeleveragePercentile=0.4 RebalancedPnl=-11532.0 PrevRealisedPnl=-167.0 PrevClosePrice=38468.74 OpeningTimestamp=2022-02-01 21:00:00+00:00 OpeningQty=300.0 OpeningCost=-751834.0 OpeningComm=-4502.0 OpenOrderBuyQty=500.0 OpenOrderBuyCost=-1298870.0 CurrentTimestamp=2022-02-01 21:36:56.314000+00:00 CurrentQty=300.0 CurrentCost=-751834.0 CurrentComm=-4502.0 RealisedCost=27377.0 UnrealisedCost=-779211.0 GrossOpenCost=1298870.0 IsOpen=True MarkPrice=38715.36 MarkValue=-774885.0 RiskValue=2073755.0 HomeNotional=0.00774885 ForeignNotional=-300.0 PosCost=-779211.0 PosCost2=-779211.0 PosInit=77922.0 PosComm=429.0 PosMargin=78351.0 PosMaint=3157.0 InitMargin=131251.0 MaintMargin=82677.0 RealisedGrossPnl=-27377.0 RealisedPnl=-22875.0 UnrealisedGrossPnl=4326.0 UnrealisedPnl=4326.0 UnrealisedPnlPcnt=0.0056 UnrealisedRoePcnt=0.0555 AvgCostPrice=38500.5 AvgEntryPrice=38500.5 BreakEvenPrice=40279.5 MarginCallPrice=35112.5 LiquidationPrice=35112.5 BankruptPrice=35000.5 Timestamp=2022-02-01 21:36:56.314000+00:00 LastPrice=38715.36 LastValue=-774885.0"; \
     env << "QUOTE Timestamp=2022-02-01 21:36:08.046000+00:00 Symbol=XBTUSD BidSize=100.0 BidPrice=38745.0 AskPrice=38745.5 AskSize=100.0";
 
+
+/// used to dedupe series
+struct trade_equal {
+    bool operator()(const std::shared_ptr<model::Trade>& a,
+            const std::shared_ptr<model::Trade>& b) const {
+        // Remove identical trd match ids
+        return (a->getTrdMatchID() == b->getTrdMatchID());
+    }
+};
+
+struct trade_hasher {
+    std::size_t operator()(const std::shared_ptr<model::Trade>& v) const {
+        return std::hash<std::string>{}(v->getTrdMatchID());
+    }
+};
+
+struct instrument_equal {
+    bool operator()(const std::shared_ptr<model::Instrument>& a,
+            const std::shared_ptr<model::Instrument>& b) const {
+        // Remove identical trd match ids
+        return (a->getTimestamp() == b->getTimestamp());
+    }
+};
+
+struct instrument_hasher {
+    std::size_t operator()(const std::shared_ptr<model::Instrument>& v) const {
+        return v->getTimestamp().to_interval();
+    }
+};
+
+struct quotes_equal {
+    bool operator()(const std::shared_ptr<model::Quote>& a,
+            const std::shared_ptr<model::Quote>& b) const {
+        // Remove identical trd match ids
+        return (a->getTimestamp() == b->getTimestamp());
+    }
+};
+struct quotes_hasher {
+    std::size_t operator()(const std::shared_ptr<model::Quote>& v) const {
+        return v->getTimestamp().to_interval();
+    }
+};
+
+
+
+
 class TestEnv {
     using OrderApi = TestOrdersApi;
     using PositionApi = TestPositionApi;
     using TStrategy = Strategy<OrderApi, PositionApi>;
     using TContext = std::shared_ptr<Context<TestMarketData, OrderApi, TestPositionApi>>;
+
 
     std::shared_ptr<Config> _config;
     std::shared_ptr<Context<TestMarketData, OrderApi, PositionApi>> _context;
@@ -78,12 +127,20 @@ class TestEnv {
     TestOrdersApi::Writer _orderWriter;
     TestOrdersApi::Writer _executionWriter;
     TestOrdersApi::Writer _positionWriter;
+    TestOrdersApi::Writer _marginWriter;
 
     void liquidatePositions(const std::string&);
 
     void updatePositionFromInstrument(const std::shared_ptr<model::Instrument>& instrument);
 
+    void writePosition(const std::shared_ptr<model::Position>& position_);
+    void writeMargin(const std::shared_ptr<model::Margin>& margin_);
+    void updateMargin(const utility::datetime& time_);
+
 public:
+    using InstrumentSeries = Series<model::Instrument, instrument_equal, instrument_hasher>;
+    using QuoteSeries = Series<model::Quote, quotes_equal, quotes_hasher>;
+    using TradeSeries = Series<model::Trade, trade_equal, trade_hasher>;
     /// strategy reference
     const std::shared_ptr<TStrategy>& strategy() const { return _context->strategy(); }
     /// context reference
@@ -95,9 +152,9 @@ public:
     /// test setup called on construction
     void init();
     /// playback over a file
-    void playback(const Series<model::Trade>& trades,
-                   const Series<model::Quote>& quotes,
-                   const Series<model::Instrument>& instruments);
+    void playback(const TradeSeries& trades,
+                   const QuoteSeries& quotes,
+                   const InstrumentSeries& instruments);
  
     // unittest event operators
     void operator << (const std::string& value_);

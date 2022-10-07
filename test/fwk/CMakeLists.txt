@@ -24,15 +24,20 @@ add_library(test_trading_funcs
         Params.cpp
         TempStorage.cpp
         TempStorage.h
-        )
+)
+set(TGT_LINK_LIBRARIES 
+        pthread
+        ${PACKAGE_INSTALLS}/swagger/lib/libCppRestSwaggerClient.a
+        boost_system
+        dl
+        aws-cpp-sdk-s3
+        ${OPENSSL_CRYPTO_LIBRARY})
 
 target_link_libraries(test_trading_funcs
         #${CPPREST_LIBRARY}
-        pthread
-        CppRestSwaggerClient
-        boost_system
-        dl
-        ${OPENSSL_CRYPTO_LIBRARY})
+        ${TGT_LINK_LIBRARIES}
+)
+
 install(TARGETS
             test_trading_funcs
         RUNTIME DESTINATION bin

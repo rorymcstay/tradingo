@@ -11,6 +11,7 @@
 #include "TestEnv.h"
 #define _TURN_OFF_PLATFORM_STRING
 
+#include <model/Position.h>
 #include <model/Margin.h>
 #include <model/Execution.h>
 #include <model/Instrument.h>
@@ -45,9 +46,19 @@ TestEnv::TestEnv(const std::shared_ptr<Config>& config_)
           /*tableName_=*/"replay_positions",
           /*symbol=_*/_config->get<std::string>("symbol"),
           /*storage_=*/_config->get<std::string>("storage"),
-          /*batchSize_=*/1000,
+          /*batchSize_=*/10,
           /*print_=*/[](const std::shared_ptr<model::ModelBase>& order_) {
               return order_->toJson().serialize();
+          },
+          /*rotate=*/false,
+          /*fileExtension_=*/"json"),
+      _marginWriter(
+          /*tableName_=*/"replay_margins",
+          /*symbol=_*/_config->get<std::string>("symbol"),
+          /*storage_=*/_config->get<std::string>("storage"),
+          /*batchSize_=*/1000,
+          /*print_=*/[](const std::shared_ptr<model::ModelBase>& margin_) {
+              return margin_->toJson().serialize();
           },
           /*rotate=*/false,
           /*fileExtension_=*/"json"),
@@ -86,8 +97,18 @@ TestEnv::TestEnv(
           /*symbol=_*/_config->get<std::string>("symbol"),
           /*storage_=*/_config->get<std::string>("storage"),
           /*batchSize_=*/1000,
-          /*print_=*/[](const std::shared_ptr<model::ModelBase>& order_) {
-              return order_->toJson().serialize();
+          /*print_=*/[](const std::shared_ptr<model::ModelBase>& position_) {
+              return position_->toJson().serialize();
+          },
+          /*rotate=*/false,
+          /*fileExtension_=*/"json"),
+      _marginWriter(
+          /*tableName_=*/"replay_margins",
+          /*symbol=_*/_config->get<std::string>("symbol"),
+          /*storage_=*/_config->get<std::string>("storage"),
+          /*batchSize_=*/1000,
+          /*print_=*/[](const std::shared_ptr<model::ModelBase>& margin_) {
+              return margin_->toJson().serialize();
           },
           /*rotate=*/false,
           /*fileExtension_=*/"json"),
@@ -220,9 +241,9 @@ struct PlaybackStats {
                                   utility::datetime::date_format::ISO_8601))   \
         << LOG_NVP("Positions", positions_sstr.str()));
 
-void TestEnv::playback(const Series<model::Trade>& trades,
-                       const Series<model::Quote>& quotes,
-                       const Series<model::Instrument>& instruments) {
+void TestEnv::playback(const TradeSeries& trades,
+                       const QuoteSeries& quotes,
+                       const InstrumentSeries& instruments) {
 
     auto quote = quotes.begin();
     auto trade = trades.begin();
@@ -265,6 +286,9 @@ void TestEnv::playback(const Series<model::Trade>& trades,
             if (exec) {
                 LOGINFO("Simulated execution");
                 operator<<(exec);
+                auto position_event = std::make_shared<model::Position>();
+                auto position = _context->marketData()->getPositions().at(trade->getSymbol());
+                writePosition(position);
             }
             ++trade;
             stats.trades_processed += 1;
@@ -295,6 +319,10 @@ void TestEnv::playback(const Series<model::Trade>& trades,
             ++instrument;
             stats.instruments_processed += 1;
             stats.current_time = instrument->getTimestamp();
+            if (stats.instruments_processed % 1000 == 0) {
+                for (auto& pos : _context->marketData()->getPositions())
+                    writePosition(pos.second);
+            }
             // Something has finished.
         } else {
             std::stringstream ss;
@@ -309,6 +337,8 @@ void TestEnv::playback(const Series<model::Trade>& trades,
             }
             ss << "Has completed.";
             LOGWARN(ss.str());
+            for (auto& pos : _context->marketData()->getPositions())
+                writePosition(pos.second);
         }
         // STAT interval log
         if (std::chrono::system_clock::now() - stats.last_log >
@@ -365,7 +395,6 @@ void TestEnv::operator<<(const std::shared_ptr<model::Execution>& exec_) {
         _context->marketData()->getPositions().at(exec_->getSymbol());
     auto& instrument =
         _context->marketData()->getInstruments().at(exec_->getSymbol());
-    auto& margin = _context->marketData()->getMargin();
 
     /*
         account: Your unique account ID.
@@ -436,70 +465,91 @@ void TestEnv::operator<<(const std::shared_ptr<model::Execution>& exec_) {
         qty_t oldQty = position->getCurrentQty();
 
         position->setCurrentQty(position->getCurrentQty() + positionDelta);
-        position->setCurrentCost(position->getCurrentCost() +
-                                 exec_->getExecCost());
+
         if (not tradingo_utils::almost_equal(newQty, 0.0)) {
             position->setAvgCostPrice(
                 (position->getAvgCostPrice() * oldQty / newQty) +
-                (exec_->getLastPx() * exec_->getLastQty() / newQty));
+                (exec_->getLastPx() * exec_->getLastQty() / newQty)
+            );
         }
-
-        position->setUnrealisedCost(position->getCurrentCost() -
-                                    position->getRealisedCost());
+        // add to the current cost
         position->setRealisedPnl(position->getRealisedPnl() +
                                  exec_->getExecComm());
 
+        // BUY Exec
         if (exec_->getSide() == "Buy") {
-            position->setExecBuyQty(exec_->getLastQty() +
-                                    position->getExecBuyQty());
-            position->setExecBuyCost(std::abs(exec_->getExecCost()) +
-                                     position->getExecBuyCost());
+            position->setExecBuyQty(
+                    exec_->getLastQty() + position->getExecBuyQty()
+            );
+            position->setExecBuyCost(
+                    std::abs(exec_->getExecCost()) + position->getExecBuyCost()
+            );
+
             if (not tradingo_utils::almost_equal(newQty, 0.0)) {
                 position->setAvgEntryPrice(
                     (position->getAvgEntryPrice() * oldQty / newQty) +
                     (exec_->getLastPx() * exec_->getLastQty() / newQty));
-            }
-        } else {
-            position->setExecSellQty(exec_->getLastQty() +
-                                     position->getExecSellQty());
-            position->setExecSellCost(exec_->getExecCost() +
-                                      position->getExecSellCost());
-        }
-        position->setExecQty(position->getExecBuyQty() -
-                             position->getExecSellQty());
-        position->setExecCost(position->getExecSellCost() -
-                              position->getExecBuyCost());
-        position->setExecComm(position->getExecComm() + exec_->getExecComm());
 
+            }
+        // SELL Exec
+        } else {
+            position->setExecSellQty(
+                    exec_->getLastQty() + position->getExecSellQty()
+            );
+            position->setExecSellCost(
+                    std::abs(exec_->getExecCost()) + position->getExecSellCost()
+            );
+        }
+        // EXEC
+        position->setExecQty(
+                position->getExecBuyQty() - position->getExecSellQty()
+        );
+        position->setExecCost(
+                position->getExecSellCost() - position->getExecBuyCost()
+        );
+        // EXECUTION COMMISSION
+        position->setExecComm(
+                position->getExecComm() + exec_->getExecComm()
+        );
+        // commission arrising from funding or execution
         position->setCurrentComm(
-            position->getCurrentComm() +
-            exec_->getExecComm()); // commission arising from funding +
-                                   // executions
+            position->getCurrentComm() + exec_->getExecComm()
+        );
+        // CURRENT COST
+        position->setCurrentCost(
+                position->getExecSellCost() - position->getExecBuyCost()
+        );
+        // UNREALISED
+        position->setUnrealisedCost(
+                position->getCurrentCost() - position->getRealisedCost()
+        );
+
         price_t exec_cost =
             (instrument->getMaintMargin() *
              (((exec_->getSide() == "Buy") ? -1 : 1) * exec_->getExecCost()) /
              position->getLeverage());
-        margin->setWalletBalance(margin->getAmount() +
-                                 margin->getRealisedPnl() + exec_cost);
-        margin->setMarginBalance(margin->getWalletBalance() +
-                                 margin->getUnrealisedPnl());
     }
-    updatePositionFromInstrument(instrument);
 
     // realisedCost
     // realisedCost: The realised cost of this position calculated with regard
     // to average cost accounting. unrealisedCost: currentCost - realisedCost.
-    if (position->getUnrealisedPnl() != 0.0 and
-        tradingo_utils::almost_equal(position->getCurrentQty(), 0.0)) {
-        position->setRealisedPnl(position->getRealisedPnl() +
-                                 position->getUnrealisedPnl());
-        position->setRealisedCost(position->getRealisedCost() +
-                                  position->getUnrealisedCost());
+    if (tradingo_utils::almost_equal(position->getCurrentQty(), 0.0)) {
+        // Accumulate realised pnl
+        position->setPrevRealisedPnl(position->getRealisedPnl());
+        position->setRealisedPnl(
+                position->getRealisedPnl() + position->getUnrealisedPnl()
+        );
+        // roll over unrealised pnl and reset to 0
+        position->setPrevUnrealisedPnl(position->getUnrealisedPnl());
+        position->setRealisedCost(
+                position->getUnrealisedCost()
+        );
         position->setUnrealisedPnl(0.0);
         position->setUnrealisedCost(0.0);
         position->unsetBreakEvenPrice();
         position->unsetLiquidationPrice();
     }
+    updateMargin(instrument->getTimestamp());
 
     if (_context->orderApi()->orders().find(exec_->getClOrdID()) 
             != _context->orderApi()->orders().end()) {
@@ -514,66 +564,104 @@ void TestEnv::operator<<(const std::shared_ptr<model::Execution>& exec_) {
     }
 }
 
+
+/// Set unrealsied values against Instrument MarkValue
 void TestEnv::updatePositionFromInstrument(
     const std::shared_ptr<model::Instrument>& instrument) {
     auto& position =
         _context->marketData()->getPositions().at(instrument->getSymbol());
-    auto& margin = _context->marketData()->getMargin();
-    auto old_mark_value = position->getMarkValue();
-    position->setMarkValue((position->getCurrentQty() >= 0.0 ? -1 : 1) *
-                           func::get_cost(instrument->getMarkPrice(),
-                                          position->getCurrentQty(), 1.0));
-    position->setUnrealisedPnl(position->getMarkValue() -
-                               position->getUnrealisedCost());
-    position->setLastValue(position->getMarkValue());
-    position->setMarkPrice(instrument->getMarkPrice());
-    position->setMaintMargin(
-        (1 + instrument->getMaintMargin()) *
-            (position->getMarkValue() / position->getLeverage()) +
-        position->getUnrealisedPnl());
 
-    position->setUnrealisedGrossPnl(position->getMarkValue() -
-                                    position->getUnrealisedCost());
-    position->setUnrealisedCost(position->getCurrentCost() -
-                                position->getRealisedCost());
+    position->setMarkValue(
+            func::get_cost(instrument->getMarkPrice(), -position->getCurrentQty(),1)
+    );
+    position->setUnrealisedGrossPnl(
+            position->getMarkValue() - position->getUnrealisedCost()
+    );
+    position->setUnrealisedPnl(
+            position->getUnrealisedGrossPnl()
+    );
+
+    position->setLastValue(
+            position->getMarkValue()
+    );
+    position->setMarkPrice(
+            instrument->getMarkPrice()
+    );
+    position->setMaintMarginReq(instrument->getMaintMargin());
+    position->setMaintMargin(
+        (1 + instrument->getMaintMargin()) * (position->getMarkValue() / position->getLeverage())
+            +   position->getUnrealisedPnl()
+    );
 
     // TODO Ensure this is correct
     if (not tradingo_utils::almost_equal(position->getCurrentQty(), 0.0)) {
-        auto positionTotalCost =
-            position->getAvgCostPrice() * position->getCurrentQty();
-        auto bkevenPrice = position->getCurrentQty() / (positionTotalCost);
-        position->setBreakEvenPrice(bkevenPrice);
+        position->setBreakEvenPrice(
+                std::abs(position->getCurrentQty()/position->getCurrentCost()*func::SATOSHI)
+        );
     } else {
         position->setBreakEvenPrice(0.0);
     }
     // margin
-    { // gross exec cost
-        price_t gross_exec_cost = 0.0;
-        price_t gross_unrealised_pnl = 0.0;
-        price_t gross_mark_value = 0.0;
-        price_t gross_comm = 0.0;
-        price_t gross_realised_pnl = 0.0;
-        price_t gross_maint_margin = 0.0;
-        for (auto& pos : _context->marketData()->getPositions()) {
-            gross_exec_cost += pos.second->getGrossExecCost();
-            gross_unrealised_pnl += pos.second->getUnrealisedPnl();
-            gross_mark_value += std::abs(pos.second->getMarkValue());
-            gross_comm += pos.second->getCurrentComm();
-            gross_realised_pnl += pos.second->getRealisedPnl();
-            gross_maint_margin += pos.second->getMaintMargin();
-        }
-        margin->setGrossExecCost(gross_exec_cost);
-        margin->setUnrealisedPnl(gross_unrealised_pnl);
-        margin->setGrossMarkValue(gross_mark_value);
-        margin->setGrossComm(gross_comm);
-        margin->setRealisedPnl(gross_realised_pnl);
+    updateMargin(instrument->getTimestamp());
+}
+
+void TestEnv::updateMargin(const utility::datetime& time_) {
+    auto& margin = _context->marketData()->getMargin();
+    price_t gross_exec_cost = 0.0;
+    price_t gross_unrealised_pnl = 0.0;
+    price_t gross_mark_value = 0.0;
+    price_t gross_comm = 0.0;
+    price_t gross_realised_pnl = 0.0;
+    price_t gross_maint_margin = 0.0;
+    utility::datetime time;
+    for (auto& pos : _context->marketData()->getPositions()) {
+        gross_exec_cost += pos.second->getGrossExecCost();
+        gross_unrealised_pnl += pos.second->getUnrealisedPnl();
+        gross_mark_value += std::abs(pos.second->getMarkValue());
+        gross_comm += pos.second->getCurrentComm();
+        gross_realised_pnl += pos.second->getRealisedPnl();
+        gross_maint_margin += pos.second->getMaintMargin();
     }
-    if (old_mark_value != position->getMarkValue()) {
-        auto position_event = std::make_shared<model::Position>();
-        auto pos_json = position->toJson();
-        position_event->fromJson(pos_json);
-        _positionWriter.write(position_event);
+    margin->setGrossExecCost(gross_exec_cost);
+    margin->setUnrealisedPnl(gross_unrealised_pnl);
+    margin->setGrossMarkValue(gross_mark_value);
+    margin->setGrossComm(gross_comm);
+    margin->setRealisedPnl(gross_realised_pnl);
+    margin->setTimestamp(time_); 
+    margin->setMaintMargin(gross_maint_margin);
+    margin->setWalletBalance(margin->getAmount() +
+                             margin->getRealisedPnl());
+    margin->setMarginBalance(margin->getWalletBalance() +
+                             margin->getUnrealisedPnl());
+    if (margin->getMarginBalance() != 0.0) {
+        margin->setMarginUsedPcnt(
+                margin->getMaintMargin()/margin->getMarginBalance()
+        );
+    } else {
+        margin->setMarginUsedPcnt(0.0);
     }
+
+    margin->setAvailableMargin(
+            margin->getMarginBalance() - margin->getMaintMargin()
+    );
+
+    writeMargin(margin);
+
+    //*(_context->marketData()) << margin;
+
+}
+
+void TestEnv::writePosition(const std::shared_ptr<model::Position>& position_) {
+    auto position_event = std::make_shared<model::Position>();
+    auto pos_json = position_->toJson();
+    position_event->fromJson(pos_json);
+    _positionWriter.write(position_event);
+}
+void TestEnv::writeMargin(const std::shared_ptr<model::Margin>& margin_) {
+    auto margin_event = std::make_shared<model::Margin>();
+    auto pos_json = margin_->toJson();
+    margin_event->fromJson(pos_json);
+    _marginWriter.write(margin_event);
 }
 
 void TestEnv::operator<<(const std::shared_ptr<model::Margin>& margin_) {
@@ -613,6 +701,7 @@ TestEnv::operator<<(const std::shared_ptr<model::Trade>& trade_) {
 
         if (order.second->getOrdStatus() == "Canceled" ||
             order.second->getOrdStatus() == "Rejected" ||
+            order.second->getOrdStatus() == "Replaced" ||
             order.second->getOrdStatus() == "Filled" ||
             tradingo_utils::almost_equal(orderQty, 0.0)) {
             // order is completed

@@ -8,7 +8,7 @@ add_executable(tradingo_replay
     replay.cpp)
 
 
-if(${REPLAY_MODE})
+if(REPLAY_MODE)
     message(STATUS "Replay mode is active")
     # REPLAY_MODE changes the following
     # TestEnv::replay(quote, trade) will
@@ -18,13 +18,14 @@ if(${REPLAY_MODE})
     # is passed in the market is equal to the amount of actual time passed. This is to mimick
     # realtime trading as close as possible.
     target_compile_definitions(replayTradingo PUBLIC REPLAY_MODE)
-endif(${REPLAY_MODE})
+endif(REPLAY_MODE)
 
 
 target_link_libraries(tradingo_replay
         test_trading_funcs
         ${OPENSSL_CRYPTO_LIBRARY}
-        CppRestSwaggerClient
+        ${PACKAGE_INSTALLS}/swagger/lib/libCppRestSwaggerClient.a
+        cpprest
         pthread
         ${GTEST_LIBRARY}
         boost_program_options)
@@ -33,10 +34,13 @@ target_link_libraries(replayTradingo
         test_trading_funcs
         ${GTEST_LIBRARY}
         ${OPENSSL_CRYPTO_LIBRARY}
-        CppRestSwaggerClient
+        ${PACKAGE_INSTALLS}/swagger/lib/libCppRestSwaggerClient.a
+        cpprest
         boost_system
         pthread
         boost_program_options
+        aws-cpp-sdk-s3
+        aws-cpp-sdk-core
         )
 install(TARGETS
            replayTradingo 

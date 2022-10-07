@@ -1,4 +1,4 @@
-FROM rmcstay95/tradingo-base:2da4186-dirty as builder
+FROM rmcstay95/tradingo-base:32244df-dirty as builder
 
 # build tradingo
 # TODO break this up into compilation of targets one at a time
@@ -14,13 +14,15 @@ ADD . .
 RUN git submodule update --init
 RUN mkdir build.release \
     && cd build.release \
-    && cmake -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE \
+    && cmake -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE} \
         -DCPPREST_ROOT=${install_base}/cpprest \
         -DREPLAY_MODE=1 \
+        -DPACKAGE_INSTALLS=${install_base} \
         -DBOOST_ASIO_DISABLE_CONCEPTS=1 \
         -Wno-dev \
         -DCMAKE_INSTALL_PREFIX=${install_base}/tradingo \
-        -DCMAKE_PREFIX_PATH="${install_base}/cpprest;${install_base}/benchmark" \
+        -DCMAKE_MODULE_PATH="${install_base}/swagger/lib/;${install_base}/aws/lib/cmake/AWSSDK/" \
+        -DCMAKE_PREFIX_PATH="${install_base}/cpprest;${install_base}/benchmark;${install_base}/aws;${install_base}/swagger" \
         ../ \
     && make install -j3
 
@@ -123,8 +125,13 @@ ENV TESTDATA_LOCATION=/usr/local/etc/test/data
 ARG install_base=/usr/from-src/
 COPY --from=builder ${install_base}/cpprest/lib64 /usr/local/lib
 COPY --from=builder ${install_base}/cpprest/include /usr/local/include
+COPY --from=builder ${install_base}/swagger/lib /usr/local/lib
+COPY --from=builder ${install_base}/swagger/include /usr/local/include
+COPY --from=builder ${install_base}/benchmark/lib /usr/local/lib
 COPY --from=builder ${install_base}/benchmark/lib64 /usr/local/lib
 COPY --from=builder ${install_base}/benchmark/include /usr/local/include
+COPY --from=builder ${install_base}/aws/include /usr/local/include
+COPY --from=builder ${install_base}/aws/lib /usr/local/include
 COPY --from=builder ${install_base}/tradingo/lib /usr/local/lib
 COPY --from=builder ${install_base}/tradingo/bin /usr/local/bin
 COPY --from=builder ${install_base}/tradingo/etc /usr/local/etc

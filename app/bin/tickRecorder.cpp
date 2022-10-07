@@ -95,6 +95,13 @@ int main(int argc, char **argv) {
         config->get<int>("instrumentsBatchSize", 1000),
         printer,
         false);
+    auto orderbook = std::make_shared<ModelBatchWriter>(
+        "orderbook_l2",
+        symbol,
+        storage,
+        config->get<int>("orderBookBatchSize", 1000),
+        printer,
+        false);
 
     // only run for the current date
     while (should_run(started_at)) {
@@ -114,6 +121,11 @@ int main(int argc, char **argv) {
                 case EventType::Instrument: {
                     auto inst = data->getInstrumentDelta();
                     instruments->write(inst);
+                    break;
+                }
+                case EventType::OrderBookUpdate: {
+                    auto update = data->getBookUpdate();
+                    orderbook->write(update);
                     break;
                 }
             }

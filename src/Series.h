@@ -3,19 +3,28 @@
 
 #include <cpprest/asyncrt_utils.h>
 #include <algorithm>
+#include <filesystem>
 #include <memory>
 #include <stdexcept>
 #include <string>
 #include <vector>
 #include <fstream>
+
+#include <aws/s3/S3Client.h>
+#include <aws/s3/model/GetObjectRequest.h>
+#include <aws/core/Aws.h>
+#include <aws/core/utils/memory/stl/AWSStringStream.h>
+
+
 #include <ModelBase.h>
+
 #include "Utils.h"
 
 using namespace tradingo_utils;
 
-template<typename T>
-class Series {
 
+template <typename T, typename key_equal_t, typename hasher_t>
+class Series {
 
     std::vector<std::shared_ptr<T>> _data;
     std::vector<index_t> _index;
@@ -30,7 +39,7 @@ public:
     class iterator_type {
 
         std::vector<index_t>::const_iterator _index_iter;
-        const Series<T>* _series;
+        const Series<T, key_equal_t, hasher_t>* _series;
 
         struct proxy {
             const iterator_type _client;
@@ -43,7 +52,7 @@ public:
 
         iterator_type(
                 std::vector<index_t>::const_iterator index_,
-                const Series<T>* series_
+                const Series<T, key_equal_t, hasher_t>* series_
         )
         :   _index_iter(index_)
         ,   _series(series_) {}
@@ -64,9 +73,11 @@ public:
     };
     friend iterator_type;
 
-
     Series(
         const std::string& dataFile_,
+        index_t resolution_=1);
+    Series(
+        std::ifstream dataFile_,
         index_t resolution_=1);
 
     index_t size() const;
@@ -81,6 +92,53 @@ public:
     void set_start(const std::string& start_);
     void set_end(const std::string& end_);
 
+    static Series download(
+            const std::string& type_,
+            const std::string& symbol_,
+            const std::string& trade_date_,
+            const Aws::S3::S3Client& client_,
+            const std::string& storage_,
+            index_t resolution_
+        ) {
+        std::string bucket = std::getenv("TRADINGO_BUCKET_NAME");
+        std::string file_name = trade_date_+"/"+type_+"_"+symbol_+".json";
+        std::string key = "tickRecorder/storage/"+file_name;
+        std::string object_file_path = storage_+"/"+file_name;
+        if (not std::filesystem::exists(object_file_path)) {
+            auto parent_dir = std::filesystem::path(object_file_path).parent_path();
+            if (not std::filesystem::exists(parent_dir)) {
+                std::filesystem::create_directory(parent_dir);
+            }
+            LOGINFO("Downloading " << LOG_VAR(key) << " from s3");
+            Aws::S3::Model::GetObjectRequest getObjectRequest;
+            getObjectRequest 
+                .WithBucket(bucket)
+                .WithKey(key);
+
+            auto getObjectOutcome = client_.GetObject(getObjectRequest);
+            std::ofstream object_file;
+            object_file.open(object_file_path);
+
+            if(getObjectOutcome.IsSuccess())
+            {
+                LOGINFO("Successfully retrieved "<< key << "from s3");
+                //getObjectOutcome.GetResult().GetBody()
+                object_file << getObjectOutcome.GetResult().GetBody().rdbuf() << std::endl;
+            }
+            else
+            {
+                std::stringstream error;
+                error << "Error while getting object "
+                    << LOG_VAR(key)
+                    << LOG_NVP("exception", getObjectOutcome.GetError().GetExceptionName())
+                    << LOG_NVP("message", getObjectOutcome.GetError().GetMessage());
+                throw std::runtime_error(error.str());
+            }
+        }
+        return Series(object_file_path, resolution_);
+	}
+    
+
 private:
     index_t index_of(const utility::datetime& date_) const;
     index_t make_index(const utility::datetime& date_) const;
@@ -88,24 +146,28 @@ private:
 };
 
 
-template <typename T>
-Series<T>::Series(const std::string& dataFile_, index_t resolution_)
-:   _resolution(resolution_) {
-    std::ifstream dataFile;
-
-    dataFile.open(dataFile_);
-    std::vector<std::shared_ptr<T>> tmpdata;
+template <typename T, typename key_equal_t, typename hasher_t>
+Series<T, key_equal_t, hasher_t>::Series(
+    std::ifstream dataFile,
+    index_t resolution_
+) : _resolution(resolution_)
+{
     if (not dataFile.is_open()) {
         std::stringstream msg;
-        msg << "File " << LOG_VAR(dataFile_) << " does not exist.";
+        msg << "File is not open for reading";
         throw std::runtime_error(msg.str());
     }
     std::shared_ptr<T> record = getEvent<T>(dataFile);
-
+    std::vector<std::shared_ptr<T>> tmpdata;
     tmpdata.push_back(record);
+    // TODO take start and end time as constructor, and use it to seek the file so that
+    // we dont have to read the whole thing
     for (;record = getEvent<T>(dataFile); record) {
         tmpdata.push_back(record);
     }
+    // sort on time and remove duplicates
+    tradingo_utils::remove_duplicates<key_equal_t, hasher_t, true,
+                                      std::vector<std::shared_ptr<T>>>(tmpdata);
     std::sort(tmpdata.begin(), tmpdata.end(),
               [](const std::shared_ptr<T>& it1, const std::shared_ptr<T>& it2) {
                 return it1->getTimestamp().to_interval() < it2->getTimestamp().to_interval();
@@ -117,22 +179,31 @@ Series<T>::Series(const std::string& dataFile_, index_t resolution_)
     _end_time = tmpdata.back()->getTimestamp();
     auto size = (_end_interval - _start_interval + 1)/resolution_;
     _data = std::vector<std::shared_ptr<T>>(size, nullptr);
+
     for (auto item : tmpdata) {
-        index_t index = Series<T>::make_index(item->getTimestamp());
+        index_t index = Series<T, key_equal_t, hasher_t>::make_index(item->getTimestamp());
         _data[index] = item;
         _index.push_back(index);
     }
+
 }
 
 
-template <typename T>
-std::shared_ptr<T> Series<T>::operator[](const utility::datetime& time_) const {
+template<typename T, typename key_equal_t, typename hasher_t>
+Series<T, key_equal_t, hasher_t>::Series(const std::string& dataFile_, index_t resolution_)
+: Series(std::ifstream(dataFile_), resolution_) {
+
+}
+
+
+template<typename T, typename key_equal_t, typename hasher_t>
+std::shared_ptr<T> Series<T, key_equal_t, hasher_t>::operator[](const utility::datetime& time_) const {
     auto index = index_of(time_);
     return _data[index];
 }
 
-template <typename T>
-index_t Series<T>::index_of(const utility::datetime& time_) const {
+template<typename T, typename key_equal_t, typename hasher_t>
+index_t Series<T, key_equal_t, hasher_t>::index_of(const utility::datetime& time_) const {
     if (time_.to_interval() < _start_interval) {
         throw std::runtime_error("time out of bounds");
     } else if (time_.to_interval() > _end_interval) {
@@ -148,59 +219,59 @@ index_t Series<T>::index_of(const utility::datetime& time_) const {
 }
 
 
-template <typename T>
-index_t Series<T>::make_index(const utility::datetime& time_) const {
+template<typename T, typename key_equal_t, typename hasher_t>
+index_t Series<T, key_equal_t, hasher_t>::make_index(const utility::datetime& time_) const {
     return (time_.to_interval() - _start_interval)/_resolution;
 }
 
-template <typename T> index_t Series<T>::size() const { return _index.size(); }
+template<typename T, typename key_equal_t, typename hasher_t> index_t Series<T, key_equal_t, hasher_t>::size() const { return _index.size(); }
 
 
-template <typename T>
-std::shared_ptr<T> Series<T>::operator[](const std::string& time_) const {
+template<typename T, typename key_equal_t, typename hasher_t>
+std::shared_ptr<T> Series<T, key_equal_t, hasher_t>::operator[](const std::string& time_) const {
     auto time = utility::datetime::from_string(time_, utility::datetime::date_format::ISO_8601);
     return operator[](time);
 }
 
-template <typename T>
-void Series<T>::set_start(const std::string& start_) {
+template<typename T, typename key_equal_t, typename hasher_t>
+void Series<T, key_equal_t, hasher_t>::set_start(const std::string& start_) {
     auto time = utility::datetime::from_string(start_, utility::datetime::date_format::ISO_8601);
     _start_time = time;
 }
 
-template <typename T>
-void Series<T>::set_end(const std::string& end_) {
+template<typename T, typename key_equal_t, typename hasher_t>
+void Series<T, key_equal_t, hasher_t>::set_end(const std::string& end_) {
     auto time = utility::datetime::from_string(end_, utility::datetime::date_format::ISO_8601);
     _end_time = time;
 }
 
 
-template <typename T>
-typename Series<T>::iterator_type Series<T>::begin() const {
+template<typename T, typename key_equal_t, typename hasher_t>
+typename Series<T, key_equal_t, hasher_t>::iterator_type Series<T, key_equal_t, hasher_t>::begin() const {
     auto index = index_of(_start_time);
     auto it = _index.begin();
     while (*it < index) {
         it++;
     }
-    typename Series<T>::iterator_type begin_ (it, this);
+    typename Series<T, key_equal_t, hasher_t>::iterator_type begin_ (it, this);
     return begin_; 
 }
 
 
-template <typename T>
-typename Series<T>::iterator_type Series<T>::end() const {
+template<typename T, typename key_equal_t, typename hasher_t>
+typename Series<T, key_equal_t, hasher_t>::iterator_type Series<T, key_equal_t, hasher_t>::end() const {
     auto index = index_of(_end_time);
     auto it = _index.end() - 1;
     while (*it > index) {
         it--;
     }
 
-    typename Series<T>::iterator_type end_ (it, this);
+    typename Series<T, key_equal_t, hasher_t>::iterator_type end_ (it, this);
     return end_; 
 }
 
 
-template<typename T>
+template <typename T>
 std::shared_ptr<T> getEvent(std::ifstream &fileHandle_) {
     std::string str;
     auto quote = std::make_shared<T>();

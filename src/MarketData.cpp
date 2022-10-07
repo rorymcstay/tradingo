@@ -7,12 +7,15 @@
 #include "Config.h"
 #include <model/Position.h>
 #include <model/Order.h>
+#include <model/OrderBookL2.h>
 
 #include <auth_helpers.h>
 
 #include <utility>
 #include "Functional.h"
 #include "InstrumentService.h"
+
+#include "OrderBookUtils.h"
 
 
 std::string MarketData::getConnectionUri() {
@@ -51,7 +54,7 @@ MarketData::MarketData(const std::shared_ptr<Config>& config_, std::shared_ptr<I
 ,   _heartBeat(nullptr)
 ,   _cycle(0)
 {
-    // Config TODO bool helpers + templating get
+    ;
 }
 
 /// initialise heartbeat, callback method
@@ -71,33 +74,40 @@ void MarketData::init() {
                 }
                 web::json::value msgJson = web::json::value::parse(stringVal);
                 if (msgJson.has_field("table")) {
+
                     const std::string &table = msgJson.at("table").as_string();
                     const std::string &action = msgJson.at("action").as_string();
                     web::json::array &data = msgJson.at("data").as_array();
 
                     if (table == "quote") {
-                        auto quotes = getData<model::Quote, decltype(_quotePool)>(data, _quotePool);
+                        auto quotes = getData<model::Quote>(data);
                         handleQuotes(quotes, action);
                     } else if (table == "trade") {
-                        auto trades = getData<model::Trade, decltype(_tradePool)>(data, _tradePool);
+                        auto trades = getData<model::Trade>(data);
                         handleTrades(trades, action);
                     } else if (table == "execution") {
-                        auto exec = getData<model::Execution, decltype(_execPool)>(data, _execPool);
+                        auto exec = getData<model::Execution>(data);
                         handleExecutions(exec, action);
                     } else if (table == "position") {
-                        auto positions = getData<model::Position, decltype(_positionPool)>(data, _positionPool);
+                        auto positions = getData<model::Position>(data);
                         handlePositions(positions, action);
                     } else if (table == "order") {
-                        auto orders = getData<model::Order, decltype(_orderPool)>(data, _orderPool);
+                        auto orders = getData<model::Order>(data);
                         handleOrders(orders, action);
                     } else if (table == "margin") {
-                        auto margins = getData<model::Margin, decltype(_marginPool)>(data, _marginPool);
+                        auto margins = getData<model::Margin>(data);
                         handleMargin(margins, action);
                     } else if (table == "instrument") {
-                        auto instruments = getData<model::Instrument, decltype(_instrumentPool)>(data, _instrumentPool);
+                        auto instruments = getData<model::Instrument>(data);
                         handleInstruments(instruments, action);
+                    } else if (
+                            table == "orderBookL2_25"
+                            || table == "orderBookL2"
+                            || table == "orderBookL10") {
+                        auto updates = getData<model::OrderBookL2>(data);
+                        handleOrderBookL2(updates, action);
                     }
-            } else if (msgJson.has_field("info")) {
+                } else if (msgJson.has_field("info")) {
                     LOGINFO("Connection response: " << msgJson.serialize());
                     _initialised = true;
                     return;
@@ -156,28 +166,23 @@ void MarketData::init() {
 /// if 'cancelAllAfter' is true, register it with server.
 void MarketData::subscribe() {
 
-    std::string subScribePayload = R"({"op": "subscribe", "args": ["execution:)"+_symbol+ R"(","position:)"+_symbol+ R"("]})";
-    std::vector<std::string> topics = {
+    std::vector<std::string> default_topics = {
             "position",
             "order",
             "margin",
-            "execution:" + _symbol
-    };
-    std::vector<std::string> noAuthTopics = {
+            "execution:" + _symbol,
             "quote:"+_symbol,
             "trade:"+_symbol,
-            "instrument:"+_symbol
+            "instrument:"+_symbol,
 
     };
+
+    std::vector<std::string> topics = _config->get("marketdata-topics", default_topics);
+
     auto payload = web::json::value::parse(R"({"op": "subscribe", "args": []})");
     int num = 0;
-    for (auto& topic : noAuthTopics) {
+    for (auto& topic : topics) {
         payload.at("args").as_array()[num++] = web::json::value(topic);
-    }
-    if (_shouldAuth) {
-        for (auto &topic : topics) {
-            payload.at("args").as_array()[num++] = web::json::value(topic);
-        }
     }
     web::websockets::client::websocket_outgoing_message subMessage;
     subMessage.set_utf8_message(payload.serialize());
@@ -314,43 +319,82 @@ void MarketDataInterface::handleInstruments(
         } else if (action_ == "delete") {
             _instruments.erase(symbol);
         }
+        update(instruments_);
     }
 }
 
-void MarketDataInterface::removeOrders(const std::vector<std::shared_ptr<model::Order>> &orders_) {
+void MarketDataInterface::handleOrderBookL2(
+        const std::vector<std::shared_ptr<model::OrderBookL2>>& updates_,
+        const std::string& action_) {
+
+    if (action_ == "insert" || action_ == "partial") {
+        for (auto& update : updates_) {
+            _symbolIdx = tradingo_utils::orderbook_l2::symbolIdx(
+                    update->getPrice(),
+                    update->getId(),
+                    _tickSize);
+            break;
+        }
+    }
+    if (action_ == "delete") {
+        for (auto& update : updates_) {
+            auto price = tradingo_utils::orderbook_l2::price(
+                        _symbolIdx, update->getId(), _tickSize);
+            _orderBook.removeLevel(price);
+            update->setSize(0.0);
+        }
+        return;
+    }
+    for (auto& update : updates_) {
+        auto price = tradingo_utils::orderbook_l2::price(
+                    _symbolIdx, update->getId(), _tickSize);
+        _orderBook.updateLevel(price, update);
+    }
+
+}
+
+void
+MarketDataInterface::removeOrders(const std::vector<std::shared_ptr<model::Order>> &orders_) {
     for (auto& ord : orders_)
         _orders.erase(getOrderKey(ord));
 }
 
-void MarketDataInterface::insertOrders(const std::vector<std::shared_ptr<model::Order>> &orders_) {
+void
+MarketDataInterface::insertOrders(const std::vector<std::shared_ptr<model::Order>> &orders_) {
     for (auto& ord : orders_) {
         _orders.insert(std::pair(getOrderKey(ord), ord));
     }
 }
 
-void MarketDataInterface::updateOrders(const std::vector<std::shared_ptr<model::Order>> &orders_) {
+void
+MarketDataInterface::updateOrders(const std::vector<std::shared_ptr<model::Order>> &orders_) {
     for (auto& ord : orders_) {
         auto update_json = ord->toJson();
         _orders.at(getOrderKey(ord))->fromJson(update_json);
     }
 }
 
-const std::unordered_map<std::string, MarketDataInterface::OrderPtr> &MarketDataInterface::getOrders() const {
+const std::unordered_map<std::string, MarketDataInterface::OrderPtr>&
+MarketDataInterface::getOrders() const {
     return _orders;
 }
 
-const std::queue<MarketDataInterface::ExecPtr> &MarketDataInterface::getExecutions() const {
+const std::queue<MarketDataInterface::ExecPtr>&
+MarketDataInterface::getExecutions() const {
     return _executions;
 }
 
-const std::unordered_map<std::string, MarketDataInterface::PositionPtr> &MarketDataInterface::getPositions() const {
+const std::unordered_map<std::string, MarketDataInterface::PositionPtr>&
+MarketDataInterface::getPositions() const {
     return _positions;
 }
-const MarketDataInterface::MarginPtr &MarketDataInterface::getMargin() const {
+const MarketDataInterface::MarginPtr
+&MarketDataInterface::getMargin() const {
     return _margin;
 }
 
-void MarketDataInterface::updateSignals(const std::shared_ptr<Event>& event_) {
+void
+MarketDataInterface::updateSignals(const std::shared_ptr<Event>& event_) {
     /*
     for (auto& signal : _timed_signals) {
         signal.second->update(event_);
@@ -361,15 +405,18 @@ void MarketDataInterface::initSignals(const std::string& config) {
     auto conf = std::make_shared<Config>(config);
 }
 
-const std::shared_ptr<model::Quote> MarketDataInterface::quote() const {
+const std::shared_ptr<model::Quote>
+MarketDataInterface::quote() const {
     return _quote;
 }
 
-const std::shared_ptr<model::Instrument>& MarketDataInterface::instrument() const {
+const std::shared_ptr<model::Instrument>&
+MarketDataInterface::instrument() const {
     return _instruments.at(_symbol);
 }
 
-const std::unordered_map<std::string, std::shared_ptr<model::Instrument>>& MarketDataInterface::getInstruments() const {
+const std::unordered_map<std::string, std::shared_ptr<model::Instrument>>&
+MarketDataInterface::getInstruments() const {
     return _instruments;
 }
 
@@ -377,9 +424,12 @@ const std::unordered_map<std::string, std::shared_ptr<model::Instrument>>& Marke
 MarketDataInterface::MarketDataInterface(const std::shared_ptr<Config>& config_,
                                          std::shared_ptr<InstrumentService>  instSvc_)
 :   _instSvc(std::move(instSvc_))
+,   _config(config_)
 ,   _symbol(config_->get<std::string>("symbol"))
-,   _callback([]() {}) {
-
+,   _tickSize(0.01)
+,   _callback([]() {})
+,   _orderBook(_symbol, 30000.0, _tickSize, 100.0)
+{
 
 }
 
@@ -390,6 +440,8 @@ void MarketDataInterface::setCallback(const std::function<void()> &callback) {
 MarketDataInterface::MarketDataInterface()
 :   _instSvc(nullptr)
 ,   _symbol("XBTUSD")
+,   _tickSize(0.01)
+,   _orderBook(_symbol, 30000.0, _tickSize, 100.0)
 ,   _callback([]() {}) {
 
 }

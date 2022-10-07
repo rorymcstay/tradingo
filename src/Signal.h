@@ -21,9 +21,17 @@
 
 using namespace io::swagger::client;
 
+
+enum class SignalDirection {
+    Buy, Sell, Hold
+};
+
+
 class Signal {
 
 protected:
+
+
     std::shared_ptr<Config> _config;
     std::string _name;
 
@@ -36,6 +44,10 @@ protected:
     std::string _header;
 
 public:
+    struct Value {
+        double value;
+        SignalDirection direction;
+    };
     using Ptr = std::shared_ptr<Signal>;
     using Map = std::unordered_map<std::string, std::shared_ptr<Signal>>;
     using Writer = BatchWriter<std::string>;
@@ -51,7 +63,7 @@ public:
     virtual void onTrade(const std::shared_ptr<model::Trade>& trade_) {};
     virtual void onQuote(const std::shared_ptr<model::Quote>& quote_) {};
     virtual void onExec(const std::shared_ptr<model::Execution>& exec_) {};
-    virtual long read() = 0;
+    virtual Value read() = 0;
     virtual bool isReady() = 0;
 
     const std::string& name() const { return _name; }
