@@ -1,4 +1,4 @@
-FROM rmcstay95/tradingo-base:2da4186-dirty as builder
+FROM rmcstay95/tradingo-base:653db3c-dirty as builder
 
 # build tradingo
 # TODO break this up into compilation of targets one at a time
